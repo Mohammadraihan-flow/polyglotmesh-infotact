@@ -1,39 +1,34 @@
+import { useState } from 'react'
+import ConsolePanel from './components/ConsolePanel.jsx'
+import EditorPanel from './components/EditorPanel.jsx'
+import Header from './components/Header.jsx'
+import LanguageTabs from './components/LanguageTabs.jsx'
+import Sidebar from './components/Sidebar.jsx'
 import './App.css'
 
+const languages = ['JavaScript', 'Python', 'Java']
+
 function App() {
+  const [activeLanguage, setActiveLanguage] = useState(languages[0])
+
   return (
-    <main className="app-shell">
-      <section className="hero-panel" aria-labelledby="app-title">
-        <p className="eyebrow">PolyglotMesh</p>
-        <h1 id="app-title">React frontend foundation for the sandbox</h1>
-        <p className="intro">
-          A lightweight browser IDE shell for the future Monaco-based workflow.
-        </p>
+    <main className="ide-shell">
+      <Header />
 
-        <div className="status-row" aria-label="Project status">
-          <span className="status-pill status-pill--active">Frontend ready</span>
-          <span className="status-pill">React + Vite</span>
-          <span className="status-pill">Monaco later</span>
-        </div>
-      </section>
+      <div className="ide-body">
+        <Sidebar />
 
-      <section className="overview-grid" aria-label="Workspace overview">
-        <article className="card">
-          <h2>What this commit delivers</h2>
-          <p>
-            A clean, branded entry screen that confirms the app is running and
-            leaves room for editor and runtime features later.
-          </p>
-        </article>
+        <section className="workspace" aria-label="PolyglotMesh workspace">
+          <LanguageTabs
+            activeLanguage={activeLanguage}
+            languages={languages}
+            onSelectLanguage={setActiveLanguage}
+          />
 
-        <article className="card">
-          <h2>Planned next layers</h2>
-          <p>
-            Editor surface, language tabs, run controls, and backend integration
-            will be added in later commits.
-          </p>
-        </article>
-      </section>
+          <EditorPanel activeLanguage={activeLanguage} />
+          <ConsolePanel />
+        </section>
+      </div>
     </main>
   )
 }
