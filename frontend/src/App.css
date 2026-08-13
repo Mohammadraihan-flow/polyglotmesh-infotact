@@ -187,6 +187,8 @@
   gap: 1rem;
   padding: 1.25rem;
   min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr);
+  overflow: hidden;
 }
 
 .panel-heading {
@@ -210,6 +212,34 @@
   font-weight: 700;
   cursor: not-allowed;
   opacity: 0.95;
+}
+
+.editor-panel__surface {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid rgba(23, 22, 29, 0.14);
+  border-radius: 18px;
+  background: #1e1e1e;
+}
+
+.editor-panel__editor {
+  min-height: 28rem;
+  height: 100%;
+}
+
+.editor-panel__surface .monaco-editor,
+.editor-panel__surface .monaco-editor .overflow-guard {
+  border-radius: 18px;
+}
+
+.editor-panel__surface .monaco-editor .overflow-guard {
+  overflow: hidden;
+}
+
+.editor-panel__surface .monaco-editor-background,
+.editor-panel__surface .margin,
+.editor-panel__surface .monaco-scrollable-element {
+  background: #1e1e1e !important;
 }
 
 .editor-placeholder {
