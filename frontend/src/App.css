@@ -363,6 +363,104 @@
   gap: 1rem;
 }
 
+.editor-panel__actions {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+}
+
+.settings-button {
+  border: 1px solid rgba(23, 22, 29, 0.14);
+  border-radius: 12px;
+  padding: 0.7rem 1rem;
+  background: rgba(30, 30, 30, 0.9);
+  color: rgba(255, 255, 255, 0.82);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.settings-button:hover {
+  color: #ffffff;
+  background: #2a2a2a;
+}
+
+.editor-settings__popover {
+  position: absolute;
+  top: calc(100% + 0.6rem);
+  right: 3.2rem;
+  z-index: 20;
+  width: min(22rem, calc(100vw - 2rem));
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(22, 22, 22, 0.98);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
+}
+
+.editor-settings {
+  display: grid;
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.editor-settings__section {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.editor-settings__label {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.editor-settings__select {
+  width: 100%;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 0.68rem 0.85rem;
+  background: rgba(22, 22, 22, 0.96);
+  color: #ffffff;
+  font-size: 1rem;
+  -webkit-appearance: menulist;
+  appearance: menulist;
+  outline: none;
+  box-shadow: none;
+}
+
+.editor-settings__select option {
+  background: #1e1e1e;
+  color: #ffffff;
+  padding: 0.3rem 0.5rem;
+}
+
+.editor-settings__select:focus {
+  border-color: var(--accent-border);
+  box-shadow: 0 0 0 4px rgba(139, 61, 143, 0.06);
+}
+
+.editor-settings__toggle-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.editor-settings__toggle {
+  flex: 1 1 0;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.68rem 0.85rem;
+  background: rgba(255, 255, 255, 0.05);
+  color: rgba(255, 255, 255, 0.76);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.editor-settings__toggle--active {
+  border-color: var(--accent-border);
+  background: var(--accent-soft);
+  color: #ffffff;
+}
+
 .panel-heading__title {
   margin: 0;
   font-size: 1.1rem;

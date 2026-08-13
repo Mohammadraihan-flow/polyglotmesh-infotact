@@ -1,6 +1,6 @@
 const navItems = ['Workspace', 'Scripts', 'Settings']
 
-function Sidebar() {
+function Sidebar({ onToggleSettings }) {
   return (
     <aside className="sidebar" aria-label="Workspace navigation">
       <div className="sidebar__section">
@@ -17,6 +17,7 @@ function Sidebar() {
             key={item}
             type="button"
             className={`sidebar__item${index === 0 ? ' sidebar__item--active' : ''}`}
+            onClick={item === 'Settings' ? () => onToggleSettings && onToggleSettings() : undefined}
           >
             <span className="sidebar__bullet" aria-hidden="true">
               {index + 1}

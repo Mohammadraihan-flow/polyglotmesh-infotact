@@ -159,6 +159,13 @@ function App() {
   const [activeFileName, setActiveFileName] = useState(fileDefinitions[0].name)
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
+  const [editorSettings, setEditorSettings] = useState({
+    fontSize: 14,
+    wordWrap: 'on',
+    minimap: true,
+    automaticLayout: true,
+  })
+  const [isEditorSettingsOpen, setIsEditorSettingsOpen] = useState(false)
   const runTimerRef = useRef(null)
 
   const activeFile = files.find((file) => file.name === activeFileName) ?? files[0]
@@ -267,7 +274,7 @@ function App() {
       <Header />
 
       <div className="ide-body">
-        <Sidebar />
+          <Sidebar onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)} />
 
         <section className="workspace" aria-label="PolyglotMesh workspace">
           <LanguageTabs
@@ -285,6 +292,11 @@ function App() {
             onChange={handleEditorChange}
             isRunning={isRunning}
             onRunClick={handleRunClick}
+            editorSettings={editorSettings}
+            onEditorSettingsChange={setEditorSettings}
+            isSettingsOpen={isEditorSettingsOpen}
+            onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
+            onCloseSettings={() => setIsEditorSettingsOpen(false)}
           />
 
           <ConsolePanel message={consoleMessage} isRunning={isRunning} />

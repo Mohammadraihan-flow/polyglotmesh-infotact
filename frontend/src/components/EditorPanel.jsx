@@ -1,16 +1,15 @@
+import { useEffect, useRef } from 'react'
 import Editor from '@monaco-editor/react'
+import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
 
-const editorOptions = {
-  automaticLayout: true,
+const baseEditorOptions = {
   fontSize: 14,
   fontFamily: 'Cascadia Code, Consolas, "Courier New", monospace',
   lineNumbers: 'on',
-  minimap: { enabled: true },
   scrollBeyondLastLine: false,
   smoothScrolling: true,
   tabSize: 2,
-  wordWrap: 'on',
   renderWhitespace: 'selection',
 }
 
@@ -23,8 +22,39 @@ function EditorPanel({
   onChange,
   isRunning,
   onRunClick,
+  editorSettings,
+  onEditorSettingsChange,
+  isSettingsOpen,
+  onCloseSettings,
 }) {
   const monacoLanguage = activeFile?.monacoLanguage ?? 'javascript'
+  const settingsContainerRef = useRef(null)
+
+  const editorOptions = {
+    ...baseEditorOptions,
+    fontSize: editorSettings.fontSize,
+    wordWrap: editorSettings.wordWrap,
+    minimap: { enabled: editorSettings.minimap },
+    automaticLayout: editorSettings.automaticLayout,
+  }
+
+  useEffect(() => {
+    const handleDocumentMouseDown = (event) => {
+      if (!isSettingsOpen) {
+        return
+      }
+
+      if (settingsContainerRef.current && !settingsContainerRef.current.contains(event.target)) {
+        onCloseSettings?.()
+      }
+    }
+
+    document.addEventListener('mousedown', handleDocumentMouseDown)
+
+    return () => {
+      document.removeEventListener('mousedown', handleDocumentMouseDown)
+    }
+  }, [isSettingsOpen, onCloseSettings])
 
   return (
     <section className="editor-panel" aria-labelledby="editor-panel-title">
@@ -36,9 +66,17 @@ function EditorPanel({
           </h2>
         </div>
 
-        <button type="button" className="run-button" disabled={isRunning} onClick={onRunClick}>
-          {isRunning ? 'Running...' : 'Run'}
-        </button>
+        <div className="editor-panel__actions" ref={settingsContainerRef}>
+          {isSettingsOpen ? (
+            <div className="editor-settings__popover">
+              <EditorSettings settings={editorSettings} onChange={onEditorSettingsChange} />
+            </div>
+          ) : null}
+
+          <button type="button" className="run-button" disabled={isRunning} onClick={onRunClick}>
+            {isRunning ? 'Running...' : 'Run'}
+          </button>
+        </div>
       </div>
 
       <EditorTabs
