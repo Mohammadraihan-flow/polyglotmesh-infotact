@@ -1,13 +1,5 @@
-import { useState } from 'react'
 import Editor from '@monaco-editor/react'
-
-const starterCodeByLanguage = {
-  JavaScript: 'console.log("Hello, PolyglotMesh!");\n',
-  Python: 'print("Hello, PolyglotMesh!")\n',
-  Java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, PolyglotMesh!");\n    }\n}\n',
-  C: '#include <stdio.h>\n\nint main() {\n    printf("Hello, PolyglotMesh!\\n");\n    return 0;\n}\n',
-  'C++': '#include <iostream>\n\nint main() {\n    std::cout << "Hello, PolyglotMesh!" << std::endl;\n    return 0;\n}\n',
-}
+import EditorTabs from './EditorTabs.jsx'
 
 const monacoLanguageByTab = {
   JavaScript: 'javascript',
@@ -30,13 +22,8 @@ const editorOptions = {
   renderWhitespace: 'selection',
 }
 
-function EditorPanel({ activeLanguage }) {
-  const monacoLanguage = monacoLanguageByTab[activeLanguage] ?? 'javascript'
-  const [code, setCode] = useState(starterCodeByLanguage[activeLanguage] ?? starterCodeByLanguage.JavaScript)
-
-  const handleEditorChange = (value) => {
-    setCode(value ?? '')
-  }
+function EditorPanel({ activeFile, files, onSelectFile, onChange }) {
+  const monacoLanguage = monacoLanguageByTab[activeFile?.language] ?? 'javascript'
 
   return (
     <section className="editor-panel" aria-labelledby="editor-panel-title">
@@ -44,7 +31,7 @@ function EditorPanel({ activeLanguage }) {
         <div>
           <p className="panel-heading__eyebrow">Editor</p>
           <h2 id="editor-panel-title" className="panel-heading__title">
-            {activeLanguage} workspace
+            {activeFile?.name ?? 'Editor'} workspace
           </h2>
         </div>
 
@@ -53,14 +40,16 @@ function EditorPanel({ activeLanguage }) {
         </button>
       </div>
 
+      <EditorTabs files={files} activeFileName={activeFile?.name} onSelectFile={onSelectFile} />
+
       <div className="editor-panel__surface">
         <Editor
           className="editor-panel__editor"
           defaultLanguage="javascript"
           language={monacoLanguage}
           theme="polyglotmesh-dark"
-          value={code}
-          onChange={handleEditorChange}
+          value={activeFile?.code ?? ''}
+          onChange={onChange}
           beforeMount={(monaco) => {
             monaco.editor.defineTheme('polyglotmesh-dark', {
               base: 'vs-dark',
