@@ -1,16 +1,11 @@
-import { useState } from 'react'
 import Editor from '@monaco-editor/react'
-
-const starterCodeByLanguage = {
-  JavaScript: 'function main() {\n  console.log("Hello, PolyglotMesh!");\n}\n\nmain();\n',
-  Python: 'def main():\n    print("Hello, PolyglotMesh!")\n\n\nif __name__ == "__main__":\n    main()\n',
-  Java: 'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, PolyglotMesh!");\n    }\n}\n',
-}
 
 const monacoLanguageByTab = {
   JavaScript: 'javascript',
   Python: 'python',
   Java: 'java',
+  C: 'c',
+  'C++': 'cpp',
 }
 
 const editorOptions = {
@@ -26,18 +21,8 @@ const editorOptions = {
   renderWhitespace: 'selection',
 }
 
-function EditorPanel({ activeLanguage }) {
-  const [codeByLanguage, setCodeByLanguage] = useState(starterCodeByLanguage)
-
-  const code = codeByLanguage[activeLanguage] ?? starterCodeByLanguage.JavaScript
+function EditorPanel({ activeLanguage, code, onChange }) {
   const monacoLanguage = monacoLanguageByTab[activeLanguage] ?? 'javascript'
-
-  const handleEditorChange = (value) => {
-    setCodeByLanguage((currentCodeByLanguage) => ({
-      ...currentCodeByLanguage,
-      [activeLanguage]: value ?? '',
-    }))
-  }
 
   return (
     <section className="editor-panel" aria-labelledby="editor-panel-title">
@@ -61,7 +46,7 @@ function EditorPanel({ activeLanguage }) {
           language={monacoLanguage}
           theme="polyglotmesh-dark"
           value={code}
-          onChange={handleEditorChange}
+          onChange={onChange}
           beforeMount={(monaco) => {
             monaco.editor.defineTheme('polyglotmesh-dark', {
               base: 'vs-dark',
