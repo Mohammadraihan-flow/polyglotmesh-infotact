@@ -182,12 +182,17 @@
   font-weight: 700;
 }
 
+.editor-tabs__shell {
+  display: grid;
+  gap: 0.65rem;
+}
+
 .editor-tabs {
   display: flex;
-  align-items: flex-end;
-  gap: 0.35rem;
-  padding: 0 0.15rem;
+  align-items: center;
+  gap: 0.5rem;
   overflow-x: auto;
+  padding: 0 0.15rem;
 }
 
 .editor-tabs::-webkit-scrollbar {
@@ -199,6 +204,11 @@
   border-radius: 999px;
 }
 
+.editor-tabs__tab-shell {
+  position: relative;
+  flex: 0 0 auto;
+}
+
 .editor-tabs__tab {
   appearance: none;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -206,7 +216,8 @@
   border-radius: 12px 12px 0 0;
   background: rgba(30, 30, 30, 0.88);
   color: rgba(255, 255, 255, 0.72);
-  padding: 0.72rem 1rem;
+  padding: 0.72rem 2.35rem 0.72rem 1rem;
+  min-width: 7.5rem;
   white-space: nowrap;
   cursor: pointer;
   transition:
@@ -225,6 +236,115 @@
   border-color: rgba(255, 255, 255, 0.16);
   font-weight: 700;
   transform: translateY(1px);
+}
+
+.editor-tabs__delete-button {
+  position: absolute;
+  top: 0.4rem;
+  right: 0.45rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  border: none;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.72);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.editor-tabs__delete-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.editor-tabs__delete-button:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+.editor-tabs__create-button {
+  align-self: flex-start;
+  width: 2.4rem;
+  height: 2.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(30, 30, 30, 0.88);
+  color: #ffffff;
+  font-size: 1.15rem;
+  font-weight: 700;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+
+.editor-tabs__create-button:hover {
+  background: #2a2a2a;
+}
+
+.editor-tabs__create-panel {
+  display: grid;
+  gap: 0.55rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  background: rgba(22, 22, 22, 0.96);
+}
+
+.editor-tabs__create-label {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 0.92rem;
+  font-weight: 700;
+}
+
+.editor-tabs__create-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.editor-tabs__create-input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 0.72rem 0.9rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: #ffffff;
+}
+
+.editor-tabs__create-input::placeholder {
+  color: rgba(255, 255, 255, 0.42);
+}
+
+.editor-tabs__create-confirm,
+.editor-tabs__create-cancel {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.7rem 0.95rem;
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.editor-tabs__create-confirm {
+  background: var(--accent-soft);
+  border-color: var(--accent-border);
+  color: #ffffff;
+}
+
+.editor-tabs__create-hint {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 0.86rem;
+}
+
+.editor-tabs__create-error {
+  margin: 0;
+  color: #ff9da6;
+  font-size: 0.86rem;
 }
 
 .editor-panel {

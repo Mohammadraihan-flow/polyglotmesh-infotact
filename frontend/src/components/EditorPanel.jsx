@@ -1,14 +1,6 @@
 import Editor from '@monaco-editor/react'
 import EditorTabs from './EditorTabs.jsx'
 
-const monacoLanguageByTab = {
-  JavaScript: 'javascript',
-  Python: 'python',
-  Java: 'java',
-  C: 'c',
-  'C++': 'cpp',
-}
-
 const editorOptions = {
   automaticLayout: true,
   fontSize: 14,
@@ -22,8 +14,8 @@ const editorOptions = {
   renderWhitespace: 'selection',
 }
 
-function EditorPanel({ activeFile, files, onSelectFile, onChange }) {
-  const monacoLanguage = monacoLanguageByTab[activeFile?.language] ?? 'javascript'
+function EditorPanel({ activeFile, files, onSelectFile, onCreateFile, onDeleteFile, onChange }) {
+  const monacoLanguage = activeFile?.monacoLanguage ?? 'javascript'
 
   return (
     <section className="editor-panel" aria-labelledby="editor-panel-title">
@@ -40,7 +32,13 @@ function EditorPanel({ activeFile, files, onSelectFile, onChange }) {
         </button>
       </div>
 
-      <EditorTabs files={files} activeFileName={activeFile?.name} onSelectFile={onSelectFile} />
+      <EditorTabs
+        files={files}
+        activeFileName={activeFile?.name}
+        onSelectFile={onSelectFile}
+        onCreateFile={onCreateFile}
+        onDeleteFile={onDeleteFile}
+      />
 
       <div className="editor-panel__surface">
         <Editor
