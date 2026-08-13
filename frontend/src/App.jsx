@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import ConsolePanel from './components/ConsolePanel.jsx'
 import EditorPanel from './components/EditorPanel.jsx'
 import Header from './components/Header.jsx'
@@ -157,6 +157,9 @@ function makeUniqueFileName(desiredName, existingFiles) {
 function App() {
   const [files, setFiles] = useState(createInitialFiles)
   const [activeFileName, setActiveFileName] = useState(fileDefinitions[0].name)
+  const [isRunning, setIsRunning] = useState(false)
+  const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
+  const runTimerRef = useRef(null)
 
   const activeFile = files.find((file) => file.name === activeFileName) ?? files[0]
   const activeLanguage = activeFile?.label ?? languages[0]
@@ -231,6 +234,34 @@ function App() {
     )
   }
 
+  const handleRunClick = () => {
+    if (isRunning) {
+      return
+    }
+
+    if (runTimerRef.current) {
+      clearTimeout(runTimerRef.current)
+    }
+
+    setIsRunning(true)
+    setConsoleMessage('Execution started...')
+
+    runTimerRef.current = window.setTimeout(() => {
+      setIsRunning(false)
+      setConsoleMessage('Ready for backend execution.')
+      runTimerRef.current = null
+    }, 1000)
+  }
+
+  useEffect(
+    () => () => {
+      if (runTimerRef.current) {
+        clearTimeout(runTimerRef.current)
+      }
+    },
+    [],
+  )
+
   return (
     <main className="ide-shell">
       <Header />
@@ -252,9 +283,11 @@ function App() {
             onCreateFile={handleCreateFile}
             onDeleteFile={handleDeleteFile}
             onChange={handleEditorChange}
+            isRunning={isRunning}
+            onRunClick={handleRunClick}
           />
 
-          <ConsolePanel />
+          <ConsolePanel message={consoleMessage} isRunning={isRunning} />
         </section>
       </div>
     </main>

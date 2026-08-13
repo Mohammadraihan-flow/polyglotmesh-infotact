@@ -1,4 +1,4 @@
-function ConsolePanel() {
+function ConsolePanel({ message, isRunning }) {
   return (
     <section className="console-panel" aria-labelledby="console-panel-title">
       <div className="panel-heading panel-heading--console">
@@ -10,12 +10,15 @@ function ConsolePanel() {
         </div>
 
         <div className="status-chip" aria-label="Console status">
-          <span className="status-dot status-dot--ready" aria-hidden="true" />
-          Ready
+          <span className={`status-dot${isRunning ? '' : ' status-dot--ready'}`} aria-hidden="true" />
+          {isRunning ? 'Running' : 'Ready'}
         </div>
       </div>
 
-      <div className="console-panel__empty">Execution output will appear here.</div>
+      <div className="console-panel__output" role="status" aria-live="polite">
+        <p className="console-panel__message">{message}</p>
+        <p className="console-panel__hint">The current run state is simulated in the frontend only.</p>
+      </div>
     </section>
   )
 }

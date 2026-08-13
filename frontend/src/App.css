@@ -439,6 +439,28 @@
   color: var(--text);
 }
 
+.console-panel__output {
+  border-radius: 16px;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.38);
+  border: 1px solid rgba(23, 22, 29, 0.08);
+  min-height: 7rem;
+  display: grid;
+  align-content: start;
+  gap: 0.55rem;
+}
+
+.console-panel__message {
+  margin: 0;
+  color: var(--text-strong);
+  font-weight: 700;
+}
+
+.console-panel__hint {
+  margin: 0;
+  color: var(--text);
+}
+
 .console-panel {
   padding: 1rem 1.25rem;
   display: grid;
@@ -446,16 +468,6 @@
 }
 
 .panel-heading--console {
-  align-items: center;
-}
-
-.console-panel__empty {
-  border-radius: 16px;
-  padding: 1rem 1.1rem;
-  background: rgba(255, 255, 255, 0.38);
-  border: 1px solid rgba(23, 22, 29, 0.08);
-  min-height: 7rem;
-  display: flex;
   align-items: center;
 }
 

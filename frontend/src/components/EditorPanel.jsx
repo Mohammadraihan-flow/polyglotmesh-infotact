@@ -14,7 +14,16 @@ const editorOptions = {
   renderWhitespace: 'selection',
 }
 
-function EditorPanel({ activeFile, files, onSelectFile, onCreateFile, onDeleteFile, onChange }) {
+function EditorPanel({
+  activeFile,
+  files,
+  onSelectFile,
+  onCreateFile,
+  onDeleteFile,
+  onChange,
+  isRunning,
+  onRunClick,
+}) {
   const monacoLanguage = activeFile?.monacoLanguage ?? 'javascript'
 
   return (
@@ -27,8 +36,8 @@ function EditorPanel({ activeFile, files, onSelectFile, onCreateFile, onDeleteFi
           </h2>
         </div>
 
-        <button type="button" className="run-button" disabled>
-          Run
+        <button type="button" className="run-button" disabled={isRunning} onClick={onRunClick}>
+          {isRunning ? 'Running...' : 'Run'}
         </button>
       </div>
 
