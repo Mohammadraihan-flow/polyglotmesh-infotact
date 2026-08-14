@@ -392,14 +392,29 @@ function App() {
   }
 
   const handleRenameFile = (oldFileName, newFileName) => {
-    const trimmedNewName = newFileName.trim()
+    let trimmedNewName = newFileName.trim()
 
     if (!trimmedNewName) {
       return { success: false, message: 'File name cannot be empty.' }
     }
 
+    const oldExt = getExtension(oldFileName)
+    const newExt = getExtension(trimmedNewName)
+
+    if (!newExt && oldExt) {
+      trimmedNewName = `${trimmedNewName}.${oldExt}`
+    }
+
     if (!isValidFileName(trimmedNewName)) {
       return { success: false, message: 'Enter a valid file name.' }
+    }
+
+    const finalExt = getExtension(trimmedNewName)
+    if (!templateByExtension[finalExt]) {
+      return {
+        success: false,
+        message: 'Extension must be one of: .js, .py, .java, .c, .cpp, .h, .json, .html, .css',
+      }
     }
 
     if (trimmedNewName === oldFileName) {
