@@ -49,6 +49,11 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
                 title={file.name}
               >
                 <span className="editor-tabs__tab-name">{file.name}</span>
+                {file.isDirty ? (
+                  <span className="editor-tabs__dirty-dot" title="Unsaved changes">
+                    ●
+                  </span>
+                ) : null}
               </button>
 
               <button

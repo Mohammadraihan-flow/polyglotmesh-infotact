@@ -210,6 +210,11 @@ function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, 
                   <FileIcon extension={ext} />
                 </span>
                 <span className="file-explorer__name">{file.name}</span>
+                {file.isDirty ? (
+                  <span className="file-explorer__dirty-dot" title="Unsaved changes">
+                    ●
+                  </span>
+                ) : null}
 
                 <div className="file-explorer__actions">
                   <button

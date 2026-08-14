@@ -228,6 +228,14 @@
     transform 0.16s ease;
 }
 
+.editor-tabs__dirty-dot {
+  display: inline-block;
+  margin-left: 0.35rem;
+  font-size: 0.65rem;
+  color: var(--accent-strong);
+  vertical-align: middle;
+}
+
 .editor-tabs__tab:hover {
   color: #ffffff;
 }
@@ -887,7 +895,16 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  flex: 1;
+  flex: 0 1 auto;
+}
+
+.file-explorer__dirty-dot {
+  display: inline-block;
+  margin-left: 0.3rem;
+  margin-right: 0.4rem;
+  font-size: 0.65rem;
+  color: var(--accent-strong);
+  vertical-align: middle;
 }
 
 .file-explorer__empty {

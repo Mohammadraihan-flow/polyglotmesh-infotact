@@ -185,6 +185,7 @@ function createInitialFiles() {
     label,
     monacoLanguage,
     code: starterCode,
+    isDirty: false,
   }))
 }
 
@@ -295,6 +296,7 @@ function App() {
             label: targetTemplate.label,
             monacoLanguage: targetTemplate.monacoLanguage,
             code: targetTemplate.starterCode,
+            isDirty: false,
           }
         }
         return file
@@ -347,6 +349,7 @@ function App() {
         label: template.label,
         monacoLanguage: template.monacoLanguage,
         code: template.starterCode,
+        isDirty: false,
       },
     ])
 
@@ -464,7 +467,9 @@ function App() {
 
     setFiles((currentFiles) =>
       currentFiles.map((file) =>
-        file.name === currentActiveName ? { ...file, code: value ?? '' } : file,
+        file.name === currentActiveName
+          ? { ...file, code: value ?? '', isDirty: true }
+          : file,
       ),
     )
   }, [])
