@@ -32,16 +32,23 @@ function EditorSettings({ settings, onChange }) {
           {[
             { label: 'On', value: 'on' },
             { label: 'Off', value: 'off' },
-          ].map((option) => (
-            <button
-              key={option.value}
-              type="button"
-              className={`editor-settings__toggle${settings.wordWrap === option.value ? ' editor-settings__toggle--active' : ''}`}
-              onClick={() => handleSettingChange('wordWrap', option.value)}
-            >
-              {option.label}
-            </button>
-          ))}
+          ].map((option) => {
+            const isActive =
+              settings.wordWrap === option.value ||
+              (option.value === 'on' && settings.wordWrap === true) ||
+              (option.value === 'off' && settings.wordWrap === false)
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                onClick={() => handleSettingChange('wordWrap', option.value)}
+              >
+                {option.label}
+              </button>
+            )
+          })}
         </div>
       </div>
 

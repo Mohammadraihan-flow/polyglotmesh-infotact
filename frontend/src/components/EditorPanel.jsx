@@ -35,7 +35,7 @@ function EditorPanel({
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: editorSettings.fontSize,
-    wordWrap: editorSettings.wordWrap,
+    wordWrap: typeof editorSettings.wordWrap === 'boolean' ? (editorSettings.wordWrap ? 'on' : 'off') : (editorSettings.wordWrap ?? 'on'),
     minimap: { enabled: editorSettings.minimap },
     automaticLayout: editorSettings.automaticLayout,
   }
