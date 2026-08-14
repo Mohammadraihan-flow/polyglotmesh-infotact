@@ -14,34 +14,34 @@ const fileDefinitions = [
     name: 'main.js',
     label: 'JavaScript',
     monacoLanguage: 'javascript',
-    starterCode: 'console.log("Hello, PolyglotMesh!");\n',
+    starterCode: 'console.log("Hello from JavaScript");\n',
   },
   {
     name: 'main.py',
     label: 'Python',
     monacoLanguage: 'python',
-    starterCode: 'print("Hello, PolyglotMesh!")\n',
+    starterCode: 'print("Hello from Python");\n',
   },
   {
     name: 'Main.java',
     label: 'Java',
     monacoLanguage: 'java',
     starterCode:
-      'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, PolyglotMesh!");\n    }\n}\n',
+      'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java");\n    }\n}\n',
   },
   {
     name: 'main.c',
     label: 'C',
     monacoLanguage: 'c',
     starterCode:
-      '#include <stdio.h>\n\nint main() {\n    printf("Hello, PolyglotMesh!\\n");\n    return 0;\n}\n',
+      '#include <stdio.h>\n\nint main() {\n    printf("Hello from C");\n    return 0;\n}\n',
   },
   {
     name: 'main.cpp',
     label: 'C++',
     monacoLanguage: 'cpp',
     starterCode:
-      '#include <iostream>\n\nint main() {\n    std::cout << "Hello, PolyglotMesh!" << std::endl;\n    return 0;\n}\n',
+      '#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++";\n    return 0;\n}\n',
   },
 ]
 
@@ -49,53 +49,53 @@ const templateByExtension = {
   js: {
     label: 'JavaScript',
     monacoLanguage: 'javascript',
-    starterCode: 'console.log("Hello, PolyglotMesh!");\n',
+    starterCode: 'console.log("Hello from JavaScript");\n',
   },
   py: {
     label: 'Python',
     monacoLanguage: 'python',
-    starterCode: 'print("Hello, PolyglotMesh!")\n',
+    starterCode: 'print("Hello from Python");\n',
   },
   java: {
     label: 'Java',
     monacoLanguage: 'java',
     starterCode:
-      'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello, PolyglotMesh!");\n    }\n}\n',
+      'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java");\n    }\n}\n',
   },
   c: {
     label: 'C',
     monacoLanguage: 'c',
     starterCode:
-      '#include <stdio.h>\n\nint main() {\n    printf("Hello, PolyglotMesh!\\n");\n    return 0;\n}\n',
+      '#include <stdio.h>\n\nint main() {\n    printf("Hello from C");\n    return 0;\n}\n',
   },
   cpp: {
     label: 'C++',
     monacoLanguage: 'cpp',
     starterCode:
-      '#include <iostream>\n\nint main() {\n    std::cout << "Hello, PolyglotMesh!" << std::endl;\n    return 0;\n}\n',
+      '#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++";\n    return 0;\n}\n',
   },
   h: {
-    label: 'C++',
+    label: 'C/C++ Header',
     monacoLanguage: 'cpp',
     starterCode:
-      '#include <iostream>\n\nint main() {\n    std::cout << "Hello, PolyglotMesh!" << std::endl;\n    return 0;\n}\n',
+      '#ifndef POLYGLOTMESH_H\n#define POLYGLOTMESH_H\n\nvoid hello();\n\n#endif\n',
   },
   json: {
     label: 'JSON',
     monacoLanguage: 'json',
-    starterCode: '{\n  "message": "Hello, PolyglotMesh!"\n}\n',
+    starterCode: '{\n  "name": "PolyglotMesh"\n}\n',
   },
   html: {
     label: 'HTML',
     monacoLanguage: 'html',
     starterCode:
-      '<!doctype html>\n<html lang="en">\n  <head>\n    <meta charset="UTF-8" />\n    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <title>PolyglotMesh</title>\n  </head>\n  <body>\n    <h1>Hello, PolyglotMesh!</h1>\n  </body>\n</html>\n',
+      '<!DOCTYPE html>\n<html>\n<head>\n    <title>PolyglotMesh</title>\n</head>\n<body>\n    <h1>PolyglotMesh</h1>\n</body>\n</html>\n',
   },
   css: {
     label: 'CSS',
     monacoLanguage: 'css',
     starterCode:
-      'body {\n  margin: 0;\n  font-family: sans-serif;\n}\n',
+      'body {\n    font-family: sans-serif;\n}\n',
   },
 }
 
@@ -349,7 +349,12 @@ function App() {
       <Header />
 
       <div className="ide-body">
-        <Sidebar onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)} />
+        <Sidebar
+          files={files}
+          activeFileName={activeFile?.name}
+          onSelectFile={handleSelectFile}
+          onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
+        />
 
         <section className="workspace" aria-label="PolyglotMesh workspace">
           <LanguageTabs

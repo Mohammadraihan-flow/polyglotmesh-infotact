@@ -1,6 +1,8 @@
+import FileExplorer from './FileExplorer.jsx'
+
 const navItems = ['Workspace', 'Scripts', 'Settings']
 
-function Sidebar({ onToggleSettings }) {
+function Sidebar({ files, activeFileName, onSelectFile, onToggleSettings }) {
   return (
     <aside className="sidebar" aria-label="Workspace navigation">
       <div className="sidebar__section">
@@ -10,6 +12,12 @@ function Sidebar({ onToggleSettings }) {
           Organize sandbox assets, scripts, and local IDE settings.
         </p>
       </div>
+
+      <FileExplorer
+        files={files}
+        activeFileName={activeFileName}
+        onSelectFile={onSelectFile}
+      />
 
       <nav className="sidebar__nav" aria-label="Primary workspace navigation">
         {navItems.map((item, index) => (
@@ -30,4 +38,4 @@ function Sidebar({ onToggleSettings }) {
   )
 }
 
-export default Sidebar
+export default Sidebar
