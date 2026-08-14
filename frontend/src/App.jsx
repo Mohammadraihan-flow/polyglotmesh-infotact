@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import CommandPalette from './components/CommandPalette.jsx'
 import ConsolePanel from './components/ConsolePanel.jsx'
 import EditorPanel from './components/EditorPanel.jsx'
 import Header from './components/Header.jsx'
@@ -166,7 +167,10 @@ function App() {
     automaticLayout: true,
   })
   const [isEditorSettingsOpen, setIsEditorSettingsOpen] = useState(false)
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
+  const [saveMessage, setSaveMessage] = useState('')
   const runTimerRef = useRef(null)
+  const saveTimerRef = useRef(null)
 
   const activeFile = files.find((file) => file.name === activeFileName) ?? files[0]
   const activeLanguage = activeFile?.label ?? languages[0]
@@ -241,7 +245,7 @@ function App() {
     )
   }
 
-  const handleRunClick = () => {
+  const handleRunClick = useCallback(() => {
     if (isRunning) {
       return
     }
@@ -258,23 +262,94 @@ function App() {
       setConsoleMessage('Ready for backend execution.')
       runTimerRef.current = null
     }, 1000)
-  }
+  }, [isRunning])
+
+  const handleSave = useCallback(() => {
+    setSaveMessage(`Saved ${activeFile?.name ?? 'file'}`)
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+    saveTimerRef.current = window.setTimeout(() => {
+      setSaveMessage('')
+      saveTimerRef.current = null
+    }, 2500)
+  }, [activeFile?.name])
 
   useEffect(
     () => () => {
       if (runTimerRef.current) {
         clearTimeout(runTimerRef.current)
       }
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
     },
     [],
   )
+
+  const handleKeyDown = useCallback(
+    (event) => {
+      const isMac = typeof navigator !== 'undefined' && /Mac|iPod|iPhone|iPad/.test(navigator.platform)
+      const modifier = isMac ? event.metaKey : event.ctrlKey
+      const key = event.key.toLowerCase()
+
+      // 1. Ctrl+Shift+P / Cmd+Shift+P -> Command Palette
+      if (modifier && event.shiftKey && key === 'p') {
+        event.preventDefault()
+        event.stopPropagation()
+        setIsCommandPaletteOpen((prev) => !prev)
+        return
+      }
+
+      // 2. Escape -> Close Command Palette or Settings panel
+      if (event.key === 'Escape') {
+        if (isCommandPaletteOpen) {
+          event.preventDefault()
+          event.stopPropagation()
+          setIsCommandPaletteOpen(false)
+          return
+        }
+        if (isEditorSettingsOpen) {
+          event.preventDefault()
+          event.stopPropagation()
+          setIsEditorSettingsOpen(false)
+          return
+        }
+        return
+      }
+
+      // 3. Ctrl+S / Cmd+S -> Save
+      if (modifier && key === 's' && !event.shiftKey && !event.altKey) {
+        event.preventDefault()
+        event.stopPropagation()
+        handleSave()
+        return
+      }
+
+      // 4. Ctrl+Enter / Cmd+Enter -> Run
+      if (modifier && event.key === 'Enter') {
+        event.preventDefault()
+        event.stopPropagation()
+        handleRunClick()
+        return
+      }
+    },
+    [isCommandPaletteOpen, isEditorSettingsOpen, handleSave, handleRunClick],
+  )
+
+  useEffect(() => {
+    window.addEventListener('keydown', handleKeyDown, true)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown, true)
+    }
+  }, [handleKeyDown])
 
   return (
     <main className="ide-shell">
       <Header />
 
       <div className="ide-body">
-          <Sidebar onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)} />
+        <Sidebar onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)} />
 
         <section className="workspace" aria-label="PolyglotMesh workspace">
           <LanguageTabs
@@ -297,11 +372,20 @@ function App() {
             isSettingsOpen={isEditorSettingsOpen}
             onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
             onCloseSettings={() => setIsEditorSettingsOpen(false)}
+            saveMessage={saveMessage}
           />
 
           <ConsolePanel message={consoleMessage} isRunning={isRunning} />
         </section>
       </div>
+
+      <CommandPalette
+        isOpen={isCommandPaletteOpen}
+        onClose={() => setIsCommandPaletteOpen(false)}
+        onRun={handleRunClick}
+        onSave={handleSave}
+        onOpenSettings={() => setIsEditorSettingsOpen(true)}
+      />
     </main>
   )
 }

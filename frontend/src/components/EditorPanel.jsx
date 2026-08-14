@@ -26,6 +26,7 @@ function EditorPanel({
   onEditorSettingsChange,
   isSettingsOpen,
   onCloseSettings,
+  saveMessage,
 }) {
   const monacoLanguage = activeFile?.monacoLanguage ?? 'javascript'
   const settingsContainerRef = useRef(null)
@@ -61,9 +62,16 @@ function EditorPanel({
       <div className="panel-heading">
         <div>
           <p className="panel-heading__eyebrow">Editor</p>
-          <h2 id="editor-panel-title" className="panel-heading__title">
-            {activeFile?.name ?? 'Editor'} workspace
-          </h2>
+          <div className="panel-heading__title-row">
+            <h2 id="editor-panel-title" className="panel-heading__title">
+              {activeFile?.name ?? 'Editor'} workspace
+            </h2>
+            {saveMessage ? (
+              <span className="save-status-badge" role="status">
+                ✓ {saveMessage}
+              </span>
+            ) : null}
+          </div>
         </div>
 
         <div className="editor-panel__actions" ref={settingsContainerRef}>
