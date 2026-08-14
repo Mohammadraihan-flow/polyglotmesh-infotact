@@ -24,7 +24,14 @@ public class ExecutionController {
 
         String language = request.getLanguage();
 
-        if (language == null || !SUPPORTED_LANGUAGES.contains(language)) {
+if (request.getCode() == null || request.getCode().isBlank()) {
+    return new ExecutionResponse(
+            null,
+            "Code cannot be empty"
+    );
+}
+
+if (language == null || !SUPPORTED_LANGUAGES.contains(language)) {
             return new ExecutionResponse(
                     null,
                     "Unsupported language: " + language
