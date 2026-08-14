@@ -826,6 +826,62 @@
   font-weight: 700;
 }
 
+.file-explorer__search-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  margin-top: 0.4rem;
+  margin-bottom: 0.1rem;
+}
+
+.file-explorer__search-icon {
+  position: absolute;
+  left: 0.55rem;
+  font-size: 0.75rem;
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.file-explorer__search-input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 0.38rem 1.75rem 0.38rem 1.8rem;
+  color: #ffffff;
+  font-size: 0.82rem;
+  outline: none;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.file-explorer__search-input::placeholder {
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.file-explorer__search-input:focus {
+  border-color: var(--accent-border);
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.file-explorer__search-clear {
+  position: absolute;
+  right: 0.4rem;
+  appearance: none;
+  background: transparent;
+  border: none;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+  cursor: pointer;
+  padding: 0 0.25rem;
+  line-height: 1;
+  border-radius: 999px;
+  transition: color 0.15s ease;
+}
+
+.file-explorer__search-clear:hover {
+  color: #ffffff;
+}
+
 .file-explorer__tree {
   display: flex;
   flex-direction: column;

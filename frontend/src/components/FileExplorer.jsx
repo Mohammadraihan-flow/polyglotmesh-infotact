@@ -88,6 +88,7 @@ function FileIcon({ extension }) {
 }
 
 function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, onDeleteFile }) {
+  const [searchQuery, setSearchQuery] = useState('')
   const [renamingFileName, setRenamingFileName] = useState(null)
   const [renameInput, setRenameInput] = useState('')
   const [renameError, setRenameError] = useState('')
@@ -127,18 +128,51 @@ function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, 
     handleCancelRename()
   }
 
+  const trimmedQuery = searchQuery.trim().toLowerCase()
+  const filteredFiles = trimmedQuery
+    ? files.filter((file) => file.name.toLowerCase().includes(trimmedQuery))
+    : files
+
   return (
     <div className="file-explorer" aria-label="Project File Explorer">
       <div className="file-explorer__header">
         <p className="file-explorer__eyebrow">POLYGLOTMESH</p>
         <h3 className="file-explorer__title">Files</h3>
+        <div className="file-explorer__search-wrapper">
+          <span className="file-explorer__search-icon" aria-hidden="true">
+            🔍
+          </span>
+          <input
+            type="text"
+            className="file-explorer__search-input"
+            placeholder="Search files..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Search files"
+            autoComplete="off"
+            spellCheck="false"
+          />
+          {searchQuery ? (
+            <button
+              type="button"
+              className="file-explorer__search-clear"
+              aria-label="Clear search"
+              title="Clear search"
+              onClick={() => setSearchQuery('')}
+            >
+              ×
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="file-explorer__tree" role="tree" aria-label="Project files list">
         {files.length === 0 ? (
           <p className="file-explorer__empty">No files available</p>
+        ) : filteredFiles.length === 0 ? (
+          <p className="file-explorer__empty">No files matching "{searchQuery}"</p>
         ) : (
-          files.map((file) => {
+          filteredFiles.map((file) => {
             const isActive = file.name === activeFileName
             const isRenaming = file.name === renamingFileName
             const ext = isRenaming ? getFileExtension(renameInput) : getFileExtension(file.name)
