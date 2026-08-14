@@ -72,6 +72,33 @@ function EditorSettings({ settings, onChange }) {
       </div>
 
       <div className="editor-settings__section">
+        <span className="editor-settings__label">Line Numbers</span>
+        <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Line Numbers">
+          {[
+            { label: 'On', value: 'on' },
+            { label: 'Off', value: 'off' },
+          ].map((option) => {
+            const isActive =
+              settings.lineNumbers === option.value ||
+              (option.value === 'on' && settings.lineNumbers === true) ||
+              (option.value === 'off' && settings.lineNumbers === false) ||
+              (option.value === 'on' && (settings.lineNumbers === undefined || settings.lineNumbers === null))
+
+            return (
+              <button
+                key={option.value}
+                type="button"
+                className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                onClick={() => handleSettingChange('lineNumbers', option.value)}
+              >
+                {option.label}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
+      <div className="editor-settings__section">
         <span className="editor-settings__label">Automatic Layout</span>
         <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Automatic Layout">
           {[

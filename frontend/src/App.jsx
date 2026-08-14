@@ -248,6 +248,7 @@ function App() {
     fontSize: 14,
     wordWrap: 'on',
     minimap: true,
+    lineNumbers: 'on',
     automaticLayout: true,
   })
   const [isEditorSettingsOpen, setIsEditorSettingsOpen] = useState(false)
