@@ -249,6 +249,8 @@ function App() {
     wordWrap: 'on',
     minimap: true,
     lineNumbers: 'on',
+    tabSize: 4,
+    autoIndent: 'full',
     automaticLayout: true,
   })
   const [isEditorSettingsOpen, setIsEditorSettingsOpen] = useState(false)

@@ -32,12 +32,23 @@ function EditorPanel({
   const monacoLanguage = activeFile?.monacoLanguage ?? 'javascript'
   const settingsContainerRef = useRef(null)
 
+  const validTabSizes = [2, 4, 8]
+  const parsedTabSize = Number(editorSettings.tabSize)
+  const tabSize = validTabSizes.includes(parsedTabSize) ? parsedTabSize : 4
+
+  const autoIndentSetting =
+    editorSettings.autoIndent === false || editorSettings.autoIndent === 'none'
+      ? 'none'
+      : 'full'
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: editorSettings.fontSize,
     wordWrap: typeof editorSettings.wordWrap === 'boolean' ? (editorSettings.wordWrap ? 'on' : 'off') : (editorSettings.wordWrap ?? 'on'),
     minimap: { enabled: editorSettings.minimap },
     lineNumbers: typeof editorSettings.lineNumbers === 'boolean' ? (editorSettings.lineNumbers ? 'on' : 'off') : (editorSettings.lineNumbers ?? 'on'),
+    tabSize,
+    autoIndent: autoIndentSetting,
     automaticLayout: editorSettings.automaticLayout,
   }
 

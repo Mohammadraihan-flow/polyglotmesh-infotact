@@ -436,16 +436,66 @@
   right: 3.2rem;
   z-index: 20;
   width: min(22rem, calc(100vw - 2rem));
+  max-height: min(28rem, calc(100vh - 8rem));
+  display: flex;
+  flex-direction: column;
   border-radius: 16px;
   border: 1px solid rgba(255, 255, 255, 0.12);
   background: rgba(22, 22, 22, 0.98);
   box-shadow: 0 24px 48px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
 }
 
 .editor-settings {
-  display: grid;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-height: min(28rem, calc(100vh - 8rem));
+  min-height: 0;
+  overflow: hidden;
+}
+
+.editor-settings__header {
+  padding: 0.9rem 1rem 0.65rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  flex: 0 0 auto;
+}
+
+.editor-settings__title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: var(--accent-strong);
+}
+
+.editor-settings__content {
+  display: flex;
+  flex-direction: column;
   gap: 0.9rem;
   padding: 1rem;
+  overflow-y: auto;
+  min-height: 0;
+  flex: 1;
+}
+
+.editor-settings__content::-webkit-scrollbar {
+  width: 0.4rem;
+}
+
+.editor-settings__content::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 999px;
+}
+
+.editor-settings__content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 999px;
+}
+
+.editor-settings__content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .editor-settings__section {
