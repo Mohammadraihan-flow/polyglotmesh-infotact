@@ -46,8 +46,8 @@ function EditorSettings({ settings, onChange }) {
       </div>
 
       <div className="editor-settings__section">
-        <span className="editor-settings__label">Minimap</span>
-        <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Minimap">
+        <span className="editor-settings__label">Show Minimap</span>
+        <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Show Minimap">
           {[
             { label: 'On', value: true },
             { label: 'Off', value: false },
