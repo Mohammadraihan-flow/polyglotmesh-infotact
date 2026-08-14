@@ -237,6 +237,9 @@ function makeUniqueFileName(desiredName, existingFiles) {
 
 function App() {
   const [files, setFiles] = useState(createInitialFiles)
+  const [openFileNames, setOpenFileNames] = useState(() =>
+    fileDefinitions.map((f) => f.name),
+  )
   const [activeFileName, setActiveFileName] = useState(fileDefinitions[0].name)
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
@@ -258,8 +261,11 @@ function App() {
     activeFileNameRef.current = activeFileName
   }, [activeFileName])
 
-  const activeFile = files.find((file) => file.name === activeFileName) ?? files[0]
+  const activeFile = files.find((file) => file.name === activeFileName) ?? null
   const activeLanguage = activeFile?.label ?? languages[0]
+  const openFiles = openFileNames
+    .map((name) => files.find((file) => file.name === name))
+    .filter(Boolean)
 
   const handleSelectLanguage = (targetLanguage) => {
     const targetTemplate =
@@ -295,11 +301,35 @@ function App() {
       }),
     )
 
+    setOpenFileNames((prevOpen) =>
+      prevOpen.map((name) => (name === currentFile.name ? newFileName : name)),
+    )
+
     setActiveFileName(newFileName)
   }
 
   const handleSelectFile = (fileName) => {
+    setOpenFileNames((prevOpen) =>
+      prevOpen.includes(fileName) ? prevOpen : [...prevOpen, fileName],
+    )
     setActiveFileName(fileName)
+  }
+
+  const handleCloseTab = (fileName) => {
+    const index = openFileNames.indexOf(fileName)
+    if (index === -1) return
+
+    const nextOpenNames = openFileNames.filter((name) => name !== fileName)
+    setOpenFileNames(nextOpenNames)
+
+    if (fileName === activeFileName) {
+      if (nextOpenNames.length === 0) {
+        setActiveFileName(null)
+      } else {
+        const nextActive = nextOpenNames[index - 1] ?? nextOpenNames[index] ?? nextOpenNames[0]
+        setActiveFileName(nextActive)
+      }
+    }
   }
 
   const handleCreateFile = (fileName) => {
@@ -319,6 +349,11 @@ function App() {
         code: template.starterCode,
       },
     ])
+
+    setOpenFileNames((prevOpen) =>
+      prevOpen.includes(uniqueName) ? prevOpen : [...prevOpen, uniqueName],
+    )
+
     setActiveFileName(uniqueName)
 
     return {
@@ -332,27 +367,28 @@ function App() {
   }
 
   const handleDeleteFile = (fileName) => {
-    if (files.length === 1) {
-      return
-    }
-
     const fileIndex = files.findIndex((file) => file.name === fileName)
-
-    if (fileIndex === -1) {
-      return
-    }
+    if (fileIndex === -1) return
 
     const nextFiles = files.filter((file) => file.name !== fileName)
+    setFiles(nextFiles)
+
+    const openIndex = openFileNames.indexOf(fileName)
+    const nextOpenNames = openFileNames.filter((name) => name !== fileName)
+    setOpenFileNames(nextOpenNames)
 
     if (fileName === activeFileName) {
-      const nextActiveFile = nextFiles[fileIndex] ?? nextFiles[fileIndex - 1] ?? nextFiles[0]
-
-      if (nextActiveFile) {
-        setActiveFileName(nextActiveFile.name)
+      if (nextOpenNames.length > 0) {
+        const nextActive = nextOpenNames[Math.max(0, openIndex - 1)] ?? nextOpenNames[0]
+        setActiveFileName(nextActive)
+      } else if (nextFiles.length > 0) {
+        const fallbackFile = nextFiles[Math.max(0, fileIndex - 1)] ?? nextFiles[0]
+        setOpenFileNames([fallbackFile.name])
+        setActiveFileName(fallbackFile.name)
+      } else {
+        setActiveFileName(null)
       }
     }
-
-    setFiles(nextFiles)
   }
 
   const handleRenameFile = (oldFileName, newFileName) => {
@@ -394,6 +430,10 @@ function App() {
         }
         return file
       }),
+    )
+
+    setOpenFileNames((prevOpen) =>
+      prevOpen.map((name) => (name === oldFileName ? trimmedNewName : name)),
     )
 
     if (oldFileName === activeFileName) {
@@ -523,6 +563,7 @@ function App() {
           activeFileName={activeFile?.name}
           onSelectFile={handleSelectFile}
           onRenameFile={handleRenameFile}
+          onDeleteFile={handleDeleteFile}
           onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
         />
 
@@ -535,8 +576,10 @@ function App() {
 
           <EditorPanel
             activeFile={activeFile}
+            openFiles={openFiles}
             files={files}
             onSelectFile={handleSelectFile}
+            onCloseTab={handleCloseTab}
             onCreateFile={handleCreateFile}
             onDeleteFile={handleDeleteFile}
             onChange={handleEditorChange}

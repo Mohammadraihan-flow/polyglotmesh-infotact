@@ -1,6 +1,6 @@
 import { useState } from 'react'
 
-function EditorTabs({ files, activeFileName, onSelectFile, onCreateFile, onDeleteFile }) {
+function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, onCreateFile }) {
   const [isCreatingFile, setIsCreatingFile] = useState(false)
   const [fileName, setFileName] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
@@ -35,9 +35,8 @@ function EditorTabs({ files, activeFileName, onSelectFile, onCreateFile, onDelet
   return (
     <div className="editor-tabs__shell">
       <div className="editor-tabs" role="tablist" aria-label="Editor file tabs">
-        {files.map((file) => {
+        {openFiles.map((file) => {
           const isActive = file.name === activeFileName
-          const canDelete = files.length > 1
 
           return (
             <div key={file.name} className={`editor-tabs__tab-shell${isActive ? ' editor-tabs__tab-shell--active' : ''}`}>
@@ -47,16 +46,20 @@ function EditorTabs({ files, activeFileName, onSelectFile, onCreateFile, onDelet
                 aria-selected={isActive}
                 className={`editor-tabs__tab${isActive ? ' editor-tabs__tab--active' : ''}`}
                 onClick={() => onSelectFile(file.name)}
+                title={file.name}
               >
                 <span className="editor-tabs__tab-name">{file.name}</span>
               </button>
 
               <button
                 type="button"
-                className="editor-tabs__delete-button"
-                aria-label={`Delete ${file.name}`}
-                disabled={!canDelete}
-                onClick={() => onDeleteFile(file.name)}
+                className="editor-tabs__close-button"
+                aria-label={`Close ${file.name} tab`}
+                title="Close tab"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  onCloseTab?.(file.name)
+                }}
               >
                 ×
               </button>

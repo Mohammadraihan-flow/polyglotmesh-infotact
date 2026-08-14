@@ -15,8 +15,9 @@ const baseEditorOptions = {
 
 function EditorPanel({
   activeFile,
-  files,
+  openFiles = [],
   onSelectFile,
+  onCloseTab,
   onCreateFile,
   onDeleteFile,
   onChange,
@@ -64,7 +65,7 @@ function EditorPanel({
           <p className="panel-heading__eyebrow">Editor</p>
           <div className="panel-heading__title-row">
             <h2 id="editor-panel-title" className="panel-heading__title">
-              {activeFile?.name ?? 'Editor'} workspace
+              {activeFile ? `${activeFile.name} workspace` : 'No open file'}
             </h2>
             {saveMessage ? (
               <span className="save-status-badge" role="status">
@@ -81,61 +82,73 @@ function EditorPanel({
             </div>
           ) : null}
 
-          <button type="button" className="run-button" disabled={isRunning} onClick={onRunClick}>
+          <button type="button" className="run-button" disabled={isRunning || !activeFile} onClick={onRunClick}>
             {isRunning ? 'Running...' : 'Run'}
           </button>
         </div>
       </div>
 
       <EditorTabs
-        files={files}
+        openFiles={openFiles}
         activeFileName={activeFile?.name}
         onSelectFile={onSelectFile}
+        onCloseTab={onCloseTab}
         onCreateFile={onCreateFile}
-        onDeleteFile={onDeleteFile}
       />
 
       <div className="editor-panel__surface">
-        <Editor
-          key={activeFile?.name}
-          path={activeFile?.name}
-          className="editor-panel__editor"
-          defaultLanguage="javascript"
-          language={monacoLanguage}
-          theme="polyglotmesh-dark"
-          value={activeFile?.code ?? ''}
-          onChange={onChange}
-          beforeMount={(monaco) => {
-            monaco.editor.defineTheme('polyglotmesh-dark', {
-              base: 'vs-dark',
-              inherit: true,
-              rules: [
-                { token: '', foreground: 'd4d4d4' },
-                { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
-                { token: 'keyword', foreground: 'c586c0' },
-                { token: 'string', foreground: 'ce9178' },
-                { token: 'number', foreground: 'b5cea8' },
-                { token: 'type.identifier', foreground: '4ec9b0' },
-              ],
-              colors: {
-                'editor.background': '#1e1e1e',
-                'editor.foreground': '#d4d4d4',
-                'editorLineNumber.foreground': '#858585',
-                'editorLineNumber.activeForeground': '#c6c6c6',
-                'editorCursor.foreground': '#ffffff',
-                'editor.selectionBackground': '#264f78',
-                'editor.inactiveSelectionBackground': '#3a3d41',
-                'editor.lineHighlightBackground': '#2a2d2e',
-                'editorIndentGuide.background1': '#404040',
-                'editorIndentGuide.activeBackground1': '#707070',
-                'scrollbarSlider.background': '#5a5a5a66',
-                'scrollbarSlider.hoverBackground': '#79797966',
-                'scrollbarSlider.activeBackground': '#bfbfbf66',
-              },
-            })
-          }}
-          options={editorOptions}
-        />
+        {activeFile ? (
+          <Editor
+            key={activeFile.name}
+            path={activeFile.name}
+            className="editor-panel__editor"
+            defaultLanguage="javascript"
+            language={monacoLanguage}
+            theme="polyglotmesh-dark"
+            value={activeFile.code ?? ''}
+            onChange={onChange}
+            beforeMount={(monaco) => {
+              monaco.editor.defineTheme('polyglotmesh-dark', {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                  { token: '', foreground: 'd4d4d4' },
+                  { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
+                  { token: 'keyword', foreground: 'c586c0' },
+                  { token: 'string', foreground: 'ce9178' },
+                  { token: 'number', foreground: 'b5cea8' },
+                  { token: 'type.identifier', foreground: '4ec9b0' },
+                ],
+                colors: {
+                  'editor.background': '#1e1e1e',
+                  'editor.foreground': '#d4d4d4',
+                  'editorLineNumber.foreground': '#858585',
+                  'editorLineNumber.activeForeground': '#c6c6c6',
+                  'editorCursor.foreground': '#ffffff',
+                  'editor.selectionBackground': '#264f78',
+                  'editor.inactiveSelectionBackground': '#3a3d41',
+                  'editor.lineHighlightBackground': '#2a2d2e',
+                  'editorIndentGuide.background1': '#404040',
+                  'editorIndentGuide.activeBackground1': '#707070',
+                  'scrollbarSlider.background': '#5a5a5a66',
+                  'scrollbarSlider.hoverBackground': '#79797966',
+                  'scrollbarSlider.activeBackground': '#bfbfbf66',
+                },
+              })
+            }}
+            options={editorOptions}
+          />
+        ) : (
+          <div className="editor-panel__empty-state">
+            <div className="editor-panel__empty-content">
+              <span className="editor-panel__empty-icon">📂</span>
+              <h3 className="editor-panel__empty-title">Select a file to start editing</h3>
+              <p className="editor-panel__empty-description">
+                Open a file from the File Explorer sidebar or click + to create a new file.
+              </p>
+            </div>
+          </div>
+        )}
       </div>
     </section>
   )

@@ -2,7 +2,7 @@ import FileExplorer from './FileExplorer.jsx'
 
 const navItems = ['Workspace', 'Scripts', 'Settings']
 
-function Sidebar({ files, activeFileName, onSelectFile, onRenameFile, onToggleSettings }) {
+function Sidebar({ files, activeFileName, onSelectFile, onRenameFile, onDeleteFile, onToggleSettings }) {
   return (
     <aside className="sidebar" aria-label="Workspace navigation">
       <div className="sidebar__section">
@@ -18,6 +18,7 @@ function Sidebar({ files, activeFileName, onSelectFile, onRenameFile, onToggleSe
         activeFileName={activeFileName}
         onSelectFile={onSelectFile}
         onRenameFile={onRenameFile}
+        onDeleteFile={onDeleteFile}
       />
 
       <nav className="sidebar__nav" aria-label="Primary workspace navigation">
@@ -39,4 +40,4 @@ function Sidebar({ files, activeFileName, onSelectFile, onRenameFile, onToggleSe
   )
 }
 
-export default Sidebar
+export default Sidebar
