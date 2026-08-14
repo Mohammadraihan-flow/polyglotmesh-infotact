@@ -7,7 +7,87 @@ import LanguageTabs from './components/LanguageTabs.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import './App.css'
 
-const languages = ['JavaScript', 'Python', 'Java', 'C', 'C++']
+const languages = [
+  'JavaScript',
+  'Python',
+  'Java',
+  'C',
+  'C++',
+  'C/C++ Header',
+  'JSON',
+  'HTML',
+  'CSS',
+]
+
+const languageToTemplateMap = {
+  JavaScript: {
+    extension: '.js',
+    label: 'JavaScript',
+    monacoLanguage: 'javascript',
+    starterCode: 'console.log("Hello from JavaScript");\n',
+  },
+  Python: {
+    extension: '.py',
+    label: 'Python',
+    monacoLanguage: 'python',
+    starterCode: 'print("Hello from Python");\n',
+  },
+  Java: {
+    extension: '.java',
+    label: 'Java',
+    monacoLanguage: 'java',
+    starterCode:
+      'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java");\n    }\n}\n',
+  },
+  C: {
+    extension: '.c',
+    label: 'C',
+    monacoLanguage: 'c',
+    starterCode:
+      '#include <stdio.h>\n\nint main() {\n    printf("Hello from C");\n    return 0;\n}\n',
+  },
+  'C++': {
+    extension: '.cpp',
+    label: 'C++',
+    monacoLanguage: 'cpp',
+    starterCode:
+      '#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++";\n    return 0;\n}\n',
+  },
+  'C/C++ Header': {
+    extension: '.h',
+    label: 'C/C++ Header',
+    monacoLanguage: 'cpp',
+    starterCode:
+      '#ifndef POLYGLOTMESH_H\n#define POLYGLOTMESH_H\n\nvoid hello();\n\n#endif\n',
+  },
+  Header: {
+    extension: '.h',
+    label: 'C/C++ Header',
+    monacoLanguage: 'cpp',
+    starterCode:
+      '#ifndef POLYGLOTMESH_H\n#define POLYGLOTMESH_H\n\nvoid hello();\n\n#endif\n',
+  },
+  JSON: {
+    extension: '.json',
+    label: 'JSON',
+    monacoLanguage: 'json',
+    starterCode: '{\n  "name": "PolyglotMesh"\n}\n',
+  },
+  HTML: {
+    extension: '.html',
+    label: 'HTML',
+    monacoLanguage: 'html',
+    starterCode:
+      '<!DOCTYPE html>\n<html>\n<head>\n    <title>PolyglotMesh</title>\n</head>\n<body>\n    <h1>PolyglotMesh</h1>\n</body>\n</html>\n',
+  },
+  CSS: {
+    extension: '.css',
+    label: 'CSS',
+    monacoLanguage: 'css',
+    starterCode:
+      'body {\n    font-family: sans-serif;\n}\n',
+  },
+}
 
 const fileDefinitions = [
   {
@@ -172,12 +252,50 @@ function App() {
   const runTimerRef = useRef(null)
   const saveTimerRef = useRef(null)
 
+  const activeFileNameRef = useRef(activeFileName)
+
+  useEffect(() => {
+    activeFileNameRef.current = activeFileName
+  }, [activeFileName])
+
   const activeFile = files.find((file) => file.name === activeFileName) ?? files[0]
   const activeLanguage = activeFile?.label ?? languages[0]
 
-  const handleSelectLanguage = (language) => {
-    const matchingFile = files.find((file) => file.label === language)
-    setActiveFileName(matchingFile?.name ?? fileDefinitions[0].name)
+  const handleSelectLanguage = (targetLanguage) => {
+    const targetTemplate =
+      languageToTemplateMap[targetLanguage] ?? languageToTemplateMap['JavaScript']
+    const currentActiveName = activeFileNameRef.current ?? activeFileName
+    const currentFile = files.find((file) => file.name === currentActiveName) ?? files[0]
+
+    if (!currentFile) return
+
+    const dotIndex = currentFile.name.lastIndexOf('.')
+    let stem = dotIndex > 0 ? currentFile.name.slice(0, dotIndex) : currentFile.name
+
+    if (targetTemplate.extension === '.java' && stem.toLowerCase() === 'main') {
+      stem = 'Main'
+    }
+
+    const desiredName = `${stem}${targetTemplate.extension}`
+    const otherFiles = files.filter((file) => file.name !== currentFile.name)
+    const newFileName = makeUniqueFileName(desiredName, otherFiles)
+
+    setFiles((currentFiles) =>
+      currentFiles.map((file) => {
+        if (file.name === currentFile.name) {
+          return {
+            ...file,
+            name: newFileName,
+            label: targetTemplate.label,
+            monacoLanguage: targetTemplate.monacoLanguage,
+            code: targetTemplate.starterCode,
+          }
+        }
+        return file
+      }),
+    )
+
+    setActiveFileName(newFileName)
   }
 
   const handleSelectFile = (fileName) => {
@@ -237,13 +355,64 @@ function App() {
     setFiles(nextFiles)
   }
 
-  const handleEditorChange = (value) => {
+  const handleRenameFile = (oldFileName, newFileName) => {
+    const trimmedNewName = newFileName.trim()
+
+    if (!trimmedNewName) {
+      return { success: false, message: 'File name cannot be empty.' }
+    }
+
+    if (!isValidFileName(trimmedNewName)) {
+      return { success: false, message: 'Enter a valid file name.' }
+    }
+
+    if (trimmedNewName === oldFileName) {
+      return { success: true, message: 'No changes made.' }
+    }
+
+    const isDuplicate = files.some(
+      (file) =>
+        file.name.toLowerCase() === trimmedNewName.toLowerCase() &&
+        file.name.toLowerCase() !== oldFileName.toLowerCase(),
+    )
+
+    if (isDuplicate) {
+      return { success: false, message: 'A file with this name already exists.' }
+    }
+
+    const template = getFileTemplate(trimmedNewName)
+
+    setFiles((currentFiles) =>
+      currentFiles.map((file) => {
+        if (file.name === oldFileName) {
+          return {
+            ...file,
+            name: trimmedNewName,
+            label: template.label,
+            monacoLanguage: template.monacoLanguage,
+          }
+        }
+        return file
+      }),
+    )
+
+    if (oldFileName === activeFileName) {
+      setActiveFileName(trimmedNewName)
+    }
+
+    return { success: true, message: 'File renamed.' }
+  }
+
+  const handleEditorChange = useCallback((value) => {
+    const currentActiveName = activeFileNameRef.current
+    if (!currentActiveName) return
+
     setFiles((currentFiles) =>
       currentFiles.map((file) =>
-        file.name === activeFileName ? { ...file, code: value ?? '' } : file,
+        file.name === currentActiveName ? { ...file, code: value ?? '' } : file,
       ),
     )
-  }
+  }, [])
 
   const handleRunClick = useCallback(() => {
     if (isRunning) {
@@ -353,6 +522,7 @@ function App() {
           files={files}
           activeFileName={activeFile?.name}
           onSelectFile={handleSelectFile}
+          onRenameFile={handleRenameFile}
           onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
         />
 

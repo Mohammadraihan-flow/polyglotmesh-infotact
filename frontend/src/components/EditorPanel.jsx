@@ -97,6 +97,8 @@ function EditorPanel({
 
       <div className="editor-panel__surface">
         <Editor
+          key={activeFile?.name}
+          path={activeFile?.name}
           className="editor-panel__editor"
           defaultLanguage="javascript"
           language={monacoLanguage}

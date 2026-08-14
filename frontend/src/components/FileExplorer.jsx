@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 
 function getFileExtension(fileName) {
   const trimmed = fileName.trim()
@@ -87,7 +87,46 @@ function FileIcon({ extension }) {
   }
 }
 
-function FileExplorer({ files = [], activeFileName, onSelectFile }) {
+function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile }) {
+  const [renamingFileName, setRenamingFileName] = useState(null)
+  const [renameInput, setRenameInput] = useState('')
+  const [renameError, setRenameError] = useState('')
+  const inputRef = useRef(null)
+
+  useEffect(() => {
+    if (renamingFileName) {
+      inputRef.current?.focus()
+      inputRef.current?.select()
+    }
+  }, [renamingFileName])
+
+  const handleStartRename = (fileName) => {
+    setRenamingFileName(fileName)
+    setRenameInput(fileName)
+    setRenameError('')
+  }
+
+  const handleCancelRename = () => {
+    setRenamingFileName(null)
+    setRenameInput('')
+    setRenameError('')
+  }
+
+  const handleConfirmRename = (oldFileName) => {
+    if (!onRenameFile) {
+      handleCancelRename()
+      return
+    }
+
+    const result = onRenameFile(oldFileName, renameInput)
+    if (!result?.success) {
+      setRenameError(result?.message ?? 'Rename failed.')
+      return
+    }
+
+    handleCancelRename()
+  }
+
   return (
     <div className="file-explorer" aria-label="Project File Explorer">
       <div className="file-explorer__header">
@@ -98,23 +137,90 @@ function FileExplorer({ files = [], activeFileName, onSelectFile }) {
       <div className="file-explorer__tree" role="tree" aria-label="Project files list">
         {files.map((file) => {
           const isActive = file.name === activeFileName
-          const ext = getFileExtension(file.name)
+          const isRenaming = file.name === renamingFileName
+          const ext = isRenaming ? getFileExtension(renameInput) : getFileExtension(file.name)
+
+          if (isRenaming) {
+            return (
+              <form
+                key={file.name}
+                className="file-explorer__rename-form"
+                onSubmit={(e) => {
+                  e.preventDefault()
+                  handleConfirmRename(file.name)
+                }}
+              >
+                <div className="file-explorer__rename-row">
+                  <span className="file-explorer__icon" aria-hidden="true">
+                    <FileIcon extension={ext} />
+                  </span>
+                  <input
+                    ref={inputRef}
+                    type="text"
+                    className="file-explorer__rename-input"
+                    value={renameInput}
+                    onChange={(e) => {
+                      setRenameInput(e.target.value)
+                      if (renameError) setRenameError('')
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') {
+                        e.preventDefault()
+                        e.stopPropagation()
+                        handleCancelRename()
+                      }
+                    }}
+                    autoComplete="off"
+                    spellCheck="false"
+                  />
+                  <button type="submit" className="file-explorer__action-btn" title="Confirm rename">
+                    ✓
+                  </button>
+                  <button
+                    type="button"
+                    className="file-explorer__action-btn"
+                    onClick={handleCancelRename}
+                    title="Cancel rename"
+                  >
+                    ✕
+                  </button>
+                </div>
+                {renameError ? <p className="file-explorer__rename-error">{renameError}</p> : null}
+              </form>
+            )
+          }
 
           return (
-            <button
+            <div
               key={file.name}
-              type="button"
               role="treeitem"
               aria-selected={isActive}
               className={`file-explorer__item${isActive ? ' file-explorer__item--active' : ''}`}
               onClick={() => onSelectFile?.(file.name)}
+              onContextMenu={(e) => {
+                e.preventDefault()
+                handleStartRename(file.name)
+              }}
               title={file.name}
             >
               <span className="file-explorer__icon" aria-hidden="true">
                 <FileIcon extension={ext} />
               </span>
               <span className="file-explorer__name">{file.name}</span>
-            </button>
+
+              <button
+                type="button"
+                className="file-explorer__rename-btn"
+                aria-label={`Rename ${file.name}`}
+                title="Rename file"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  handleStartRename(file.name)
+                }}
+              >
+                ✏️
+              </button>
+            </div>
           )
         })}
       </div>
