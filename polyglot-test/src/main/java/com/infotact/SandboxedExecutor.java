@@ -2,6 +2,7 @@ package com.infotact;
 import org.graalvm.polyglot.Context;
 import org.graalvm.polyglot.HostAccess;
 import org.graalvm.polyglot.PolyglotException;
+import org.graalvm.polyglot.ResourceLimits;
 import org.graalvm.polyglot.Source;
 import java.io.OutputStream;
 import java.util.concurrent.ExecutorService;
@@ -16,6 +17,7 @@ public class SandboxedExecutor {
     	    ExecutorService executor = Executors.newSingleThreadExecutor();
     	    try {
     	    	    Future<String> future = executor.submit(()->{
+    	    	    	 ResourceLimits limits = ResourceLimits.newBuilder().statementLimit(10000, null).build();
     		        StringBuilder sb = new StringBuilder();
                 OutputStream capture = new OutputStream() {
                     public void write(int b) {
@@ -28,6 +30,7 @@ public class SandboxedExecutor {
                 .allowIO(false)
                 .allowCreateThread(false)
                 .allowNativeAccess(false)
+                .resourceLimits(limits)
                 .out(capture)
                 .build()) {
                       ctx.eval(Source.create(lang, code));
@@ -61,4 +64,5 @@ public class SandboxedExecutor {
         System.out.println(execute("js", "console.log('Sandboxed JS running')"));
         System.out.println(execute("python", "open('C:/test.txt', 'w')"));
     }
+
 }
