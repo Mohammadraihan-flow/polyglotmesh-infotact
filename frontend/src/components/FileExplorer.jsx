@@ -1,13 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-
-function getFileExtension(fileName) {
-  const trimmed = fileName.trim()
-  const dotIndex = trimmed.lastIndexOf('.')
-  if (dotIndex <= 0 || dotIndex === trimmed.length - 1) {
-    return ''
-  }
-  return trimmed.slice(dotIndex + 1).toLowerCase()
-}
+import { getExtension } from '../utils/languageUtils.js'
 
 function FileIcon({ extension }) {
   switch (extension) {
@@ -175,7 +167,7 @@ function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, 
           filteredFiles.map((file) => {
             const isActive = file.name === activeFileName
             const isRenaming = file.name === renamingFileName
-            const ext = isRenaming ? getFileExtension(renameInput) : getFileExtension(file.name)
+            const ext = isRenaming ? getExtension(renameInput) : getExtension(file.name)
 
             if (isRenaming) {
               return (

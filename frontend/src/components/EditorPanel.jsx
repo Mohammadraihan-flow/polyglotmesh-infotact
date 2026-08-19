@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react'
 import Editor from '@monaco-editor/react'
 import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
+import { getMonacoLanguageFromFileName } from '../utils/languageUtils.js'
 
 const baseEditorOptions = {
   fontSize: 14,
@@ -29,8 +30,13 @@ function EditorPanel({
   onCloseSettings,
   saveMessage,
 }) {
-  const monacoLanguage = activeFile?.monacoLanguage ?? 'javascript'
+  const monacoLanguage = activeFile
+    ? getMonacoLanguageFromFileName(activeFile.name)
+    : 'plaintext'
+
   const settingsContainerRef = useRef(null)
+  const editorRef = useRef(null)
+  const monacoRef = useRef(null)
 
   const validTabSizes = [2, 4, 8]
   const parsedTabSize = Number(editorSettings.tabSize)
@@ -44,9 +50,19 @@ function EditorPanel({
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: editorSettings.fontSize,
-    wordWrap: typeof editorSettings.wordWrap === 'boolean' ? (editorSettings.wordWrap ? 'on' : 'off') : (editorSettings.wordWrap ?? 'on'),
+    wordWrap:
+      typeof editorSettings.wordWrap === 'boolean'
+        ? editorSettings.wordWrap
+          ? 'on'
+          : 'off'
+        : editorSettings.wordWrap ?? 'on',
     minimap: { enabled: editorSettings.minimap },
-    lineNumbers: typeof editorSettings.lineNumbers === 'boolean' ? (editorSettings.lineNumbers ? 'on' : 'off') : (editorSettings.lineNumbers ?? 'on'),
+    lineNumbers:
+      typeof editorSettings.lineNumbers === 'boolean'
+        ? editorSettings.lineNumbers
+          ? 'on'
+          : 'off'
+        : editorSettings.lineNumbers ?? 'on',
     tabSize,
     autoIndent: autoIndentSetting,
     automaticLayout: editorSettings.automaticLayout,
@@ -69,6 +85,18 @@ function EditorPanel({
       document.removeEventListener('mousedown', handleDocumentMouseDown)
     }
   }, [isSettingsOpen, onCloseSettings])
+
+  useEffect(() => {
+    if (editorRef.current && monacoRef.current && activeFile) {
+      const model = editorRef.current.getModel()
+      if (model) {
+        const currentLang = model.getLanguageId()
+        if (currentLang !== monacoLanguage) {
+          monacoRef.current.editor.setModelLanguage(model, monacoLanguage)
+        }
+      }
+    }
+  }, [monacoLanguage, activeFile])
 
   return (
     <section className="editor-panel" aria-labelledby="editor-panel-title">
@@ -111,14 +139,17 @@ function EditorPanel({
       <div className="editor-panel__surface">
         {activeFile ? (
           <Editor
-            key={activeFile.name}
             path={activeFile.name}
             className="editor-panel__editor"
-            defaultLanguage="javascript"
+            defaultLanguage="plaintext"
             language={monacoLanguage}
             theme="polyglotmesh-dark"
-            value={activeFile.code ?? ''}
+            value={activeFile.code ?? activeFile.content ?? ''}
             onChange={onChange}
+            onMount={(editor, monaco) => {
+              editorRef.current = editor
+              monacoRef.current = monaco
+            }}
             beforeMount={(monaco) => {
               monaco.editor.defineTheme('polyglotmesh-dark', {
                 base: 'vs-dark',

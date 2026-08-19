@@ -5,6 +5,13 @@ import EditorPanel from './components/EditorPanel.jsx'
 import Header from './components/Header.jsx'
 import LanguageTabs from './components/LanguageTabs.jsx'
 import Sidebar from './components/Sidebar.jsx'
+import {
+  getExtension,
+  getLanguageLabelFromFileName,
+  getMonacoLanguageFromFileName,
+  getStarterCodeFromFileName,
+  LANGUAGE_TO_EXTENSION_MAP,
+} from './utils/languageUtils.js'
 import './App.css'
 
 const languages = [
@@ -19,193 +26,30 @@ const languages = [
   'CSS',
 ]
 
-const languageToTemplateMap = {
-  JavaScript: {
-    extension: '.js',
-    label: 'JavaScript',
-    monacoLanguage: 'javascript',
-    starterCode: 'console.log("Hello from JavaScript");\n',
-  },
-  Python: {
-    extension: '.py',
-    label: 'Python',
-    monacoLanguage: 'python',
-    starterCode: 'print("Hello from Python");\n',
-  },
-  Java: {
-    extension: '.java',
-    label: 'Java',
-    monacoLanguage: 'java',
-    starterCode:
-      'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java");\n    }\n}\n',
-  },
-  C: {
-    extension: '.c',
-    label: 'C',
-    monacoLanguage: 'c',
-    starterCode:
-      '#include <stdio.h>\n\nint main() {\n    printf("Hello from C");\n    return 0;\n}\n',
-  },
-  'C++': {
-    extension: '.cpp',
-    label: 'C++',
-    monacoLanguage: 'cpp',
-    starterCode:
-      '#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++";\n    return 0;\n}\n',
-  },
-  'C/C++ Header': {
-    extension: '.h',
-    label: 'C/C++ Header',
-    monacoLanguage: 'cpp',
-    starterCode:
-      '#ifndef POLYGLOTMESH_H\n#define POLYGLOTMESH_H\n\nvoid hello();\n\n#endif\n',
-  },
-  Header: {
-    extension: '.h',
-    label: 'C/C++ Header',
-    monacoLanguage: 'cpp',
-    starterCode:
-      '#ifndef POLYGLOTMESH_H\n#define POLYGLOTMESH_H\n\nvoid hello();\n\n#endif\n',
-  },
-  JSON: {
-    extension: '.json',
-    label: 'JSON',
-    monacoLanguage: 'json',
-    starterCode: '{\n  "name": "PolyglotMesh"\n}\n',
-  },
-  HTML: {
-    extension: '.html',
-    label: 'HTML',
-    monacoLanguage: 'html',
-    starterCode:
-      '<!DOCTYPE html>\n<html>\n<head>\n    <title>PolyglotMesh</title>\n</head>\n<body>\n    <h1>PolyglotMesh</h1>\n</body>\n</html>\n',
-  },
-  CSS: {
-    extension: '.css',
-    label: 'CSS',
-    monacoLanguage: 'css',
-    starterCode:
-      'body {\n    font-family: sans-serif;\n}\n',
-  },
-}
-
 const fileDefinitions = [
-  {
-    name: 'main.js',
-    label: 'JavaScript',
-    monacoLanguage: 'javascript',
-    starterCode: 'console.log("Hello from JavaScript");\n',
-  },
-  {
-    name: 'main.py',
-    label: 'Python',
-    monacoLanguage: 'python',
-    starterCode: 'print("Hello from Python");\n',
-  },
-  {
-    name: 'Main.java',
-    label: 'Java',
-    monacoLanguage: 'java',
-    starterCode:
-      'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java");\n    }\n}\n',
-  },
-  {
-    name: 'main.c',
-    label: 'C',
-    monacoLanguage: 'c',
-    starterCode:
-      '#include <stdio.h>\n\nint main() {\n    printf("Hello from C");\n    return 0;\n}\n',
-  },
-  {
-    name: 'main.cpp',
-    label: 'C++',
-    monacoLanguage: 'cpp',
-    starterCode:
-      '#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++";\n    return 0;\n}\n',
-  },
+  { name: 'main.js' },
+  { name: 'main.py' },
+  { name: 'Main.java' },
+  { name: 'main.c' },
+  { name: 'main.cpp' },
 ]
 
-const templateByExtension = {
-  js: {
-    label: 'JavaScript',
-    monacoLanguage: 'javascript',
-    starterCode: 'console.log("Hello from JavaScript");\n',
-  },
-  py: {
-    label: 'Python',
-    monacoLanguage: 'python',
-    starterCode: 'print("Hello from Python");\n',
-  },
-  java: {
-    label: 'Java',
-    monacoLanguage: 'java',
-    starterCode:
-      'public class Main {\n    public static void main(String[] args) {\n        System.out.println("Hello from Java");\n    }\n}\n',
-  },
-  c: {
-    label: 'C',
-    monacoLanguage: 'c',
-    starterCode:
-      '#include <stdio.h>\n\nint main() {\n    printf("Hello from C");\n    return 0;\n}\n',
-  },
-  cpp: {
-    label: 'C++',
-    monacoLanguage: 'cpp',
-    starterCode:
-      '#include <iostream>\n\nint main() {\n    std::cout << "Hello from C++";\n    return 0;\n}\n',
-  },
-  h: {
-    label: 'C/C++ Header',
-    monacoLanguage: 'cpp',
-    starterCode:
-      '#ifndef POLYGLOTMESH_H\n#define POLYGLOTMESH_H\n\nvoid hello();\n\n#endif\n',
-  },
-  json: {
-    label: 'JSON',
-    monacoLanguage: 'json',
-    starterCode: '{\n  "name": "PolyglotMesh"\n}\n',
-  },
-  html: {
-    label: 'HTML',
-    monacoLanguage: 'html',
-    starterCode:
-      '<!DOCTYPE html>\n<html>\n<head>\n    <title>PolyglotMesh</title>\n</head>\n<body>\n    <h1>PolyglotMesh</h1>\n</body>\n</html>\n',
-  },
-  css: {
-    label: 'CSS',
-    monacoLanguage: 'css',
-    starterCode:
-      'body {\n    font-family: sans-serif;\n}\n',
-  },
-}
-
 function createInitialFiles() {
-  return fileDefinitions.map(({ name, label, monacoLanguage, starterCode }) => ({
-    name,
-    label,
-    monacoLanguage,
-    code: starterCode,
-    isDirty: false,
-  }))
-}
-
-function getExtension(fileName) {
-  const trimmedName = fileName.trim()
-  const dotIndex = trimmedName.lastIndexOf('.')
-
-  if (dotIndex <= 0 || dotIndex === trimmedName.length - 1) {
-    return ''
-  }
-
-  return trimmedName.slice(dotIndex + 1).toLowerCase()
-}
-
-function getFileTemplate(fileName) {
-  return templateByExtension[getExtension(fileName)] ?? {
-    label: 'Plain Text',
-    monacoLanguage: 'plaintext',
-    starterCode: '',
-  }
+  return fileDefinitions.map(({ name }) => {
+    const monacoLanguage = getMonacoLanguageFromFileName(name)
+    const label = getLanguageLabelFromFileName(name)
+    const starterCode = getStarterCodeFromFileName(name)
+    return {
+      id: name,
+      name,
+      label,
+      language: monacoLanguage,
+      monacoLanguage,
+      code: starterCode,
+      content: starterCode,
+      isDirty: false,
+    }
+  })
 }
 
 function isValidFileName(fileName) {
@@ -266,14 +110,15 @@ function App() {
   }, [activeFileName])
 
   const activeFile = files.find((file) => file.name === activeFileName) ?? null
-  const activeLanguage = activeFile?.label ?? languages[0]
+  const activeLanguage = activeFile
+    ? getLanguageLabelFromFileName(activeFile.name)
+    : languages[0]
   const openFiles = openFileNames
     .map((name) => files.find((file) => file.name === name))
     .filter(Boolean)
 
   const handleSelectLanguage = (targetLanguage) => {
-    const targetTemplate =
-      languageToTemplateMap[targetLanguage] ?? languageToTemplateMap['JavaScript']
+    const targetExtension = LANGUAGE_TO_EXTENSION_MAP[targetLanguage] ?? '.js'
     const currentActiveName = activeFileNameRef.current ?? activeFileName
     const currentFile = files.find((file) => file.name === currentActiveName) ?? files[0]
 
@@ -282,24 +127,27 @@ function App() {
     const dotIndex = currentFile.name.lastIndexOf('.')
     let stem = dotIndex > 0 ? currentFile.name.slice(0, dotIndex) : currentFile.name
 
-    if (targetTemplate.extension === '.java' && stem.toLowerCase() === 'main') {
+    if (targetExtension === '.java' && stem.toLowerCase() === 'main') {
       stem = 'Main'
     }
 
-    const desiredName = `${stem}${targetTemplate.extension}`
+    const desiredName = `${stem}${targetExtension}`
     const otherFiles = files.filter((file) => file.name !== currentFile.name)
     const newFileName = makeUniqueFileName(desiredName, otherFiles)
+
+    const monacoLanguage = getMonacoLanguageFromFileName(newFileName)
+    const label = getLanguageLabelFromFileName(newFileName)
 
     setFiles((currentFiles) =>
       currentFiles.map((file) => {
         if (file.name === currentFile.name) {
           return {
             ...file,
+            id: newFileName,
             name: newFileName,
-            label: targetTemplate.label,
-            monacoLanguage: targetTemplate.monacoLanguage,
-            code: targetTemplate.starterCode,
-            isDirty: false,
+            label,
+            language: monacoLanguage,
+            monacoLanguage,
           }
         }
         return file
@@ -343,15 +191,20 @@ function App() {
     }
 
     const uniqueName = makeUniqueFileName(fileName, files)
-    const template = getFileTemplate(uniqueName)
+    const monacoLanguage = getMonacoLanguageFromFileName(uniqueName)
+    const label = getLanguageLabelFromFileName(uniqueName)
+    const starterCode = getStarterCodeFromFileName(uniqueName)
 
     setFiles((currentFiles) => [
       ...currentFiles,
       {
+        id: uniqueName,
         name: uniqueName,
-        label: template.label,
-        monacoLanguage: template.monacoLanguage,
-        code: template.starterCode,
+        label,
+        language: monacoLanguage,
+        monacoLanguage,
+        code: starterCode,
+        content: starterCode,
         isDirty: false,
       },
     ])
@@ -415,38 +268,33 @@ function App() {
       return { success: false, message: 'Enter a valid file name.' }
     }
 
-    const finalExt = getExtension(trimmedNewName)
-    if (!templateByExtension[finalExt]) {
-      return {
-        success: false,
-        message: 'Extension must be one of: .js, .py, .java, .c, .cpp, .h, .json, .html, .css',
+    if (trimmedNewName.toLowerCase() === oldFileName.toLowerCase()) {
+      if (trimmedNewName === oldFileName) {
+        return { success: true, message: 'No changes made.' }
+      }
+    } else {
+      const isDuplicate = files.some(
+        (file) => file.name.toLowerCase() === trimmedNewName.toLowerCase(),
+      )
+
+      if (isDuplicate) {
+        return { success: false, message: 'A file with this name already exists.' }
       }
     }
 
-    if (trimmedNewName === oldFileName) {
-      return { success: true, message: 'No changes made.' }
-    }
-
-    const isDuplicate = files.some(
-      (file) =>
-        file.name.toLowerCase() === trimmedNewName.toLowerCase() &&
-        file.name.toLowerCase() !== oldFileName.toLowerCase(),
-    )
-
-    if (isDuplicate) {
-      return { success: false, message: 'A file with this name already exists.' }
-    }
-
-    const template = getFileTemplate(trimmedNewName)
+    const monacoLanguage = getMonacoLanguageFromFileName(trimmedNewName)
+    const label = getLanguageLabelFromFileName(trimmedNewName)
 
     setFiles((currentFiles) =>
       currentFiles.map((file) => {
         if (file.name === oldFileName) {
           return {
             ...file,
+            id: trimmedNewName,
             name: trimmedNewName,
-            label: template.label,
-            monacoLanguage: template.monacoLanguage,
+            label,
+            language: monacoLanguage,
+            monacoLanguage,
           }
         }
         return file
@@ -471,7 +319,7 @@ function App() {
     setFiles((currentFiles) =>
       currentFiles.map((file) =>
         file.name === currentActiveName
-          ? { ...file, code: value ?? '', isDirty: true }
+          ? { ...file, code: value ?? '', content: value ?? '', isDirty: true }
           : file,
       ),
     )
