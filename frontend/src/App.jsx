@@ -8,7 +8,6 @@ import {
   getExtension,
   getLanguageLabelFromFileName,
   getMonacoLanguageFromFileName,
-  getStarterCodeFromFileName,
   LANGUAGE_DEFAULT_FILENAMES,
 } from './utils/languageUtils.js'
 import './App.css'
@@ -113,7 +112,6 @@ function App() {
     const uniqueName = makeUniqueFileName(trimmedName, files)
     const monacoLanguage = getMonacoLanguageFromFileName(uniqueName)
     const label = getLanguageLabelFromFileName(uniqueName)
-    const starterCode = getStarterCodeFromFileName(uniqueName)
 
     const newFile = {
       id: uniqueName,
@@ -121,8 +119,8 @@ function App() {
       label,
       language: monacoLanguage,
       monacoLanguage,
-      code: starterCode,
-      content: starterCode,
+      code: '',
+      content: '',
       isDirty: false,
     }
 
