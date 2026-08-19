@@ -3,7 +3,6 @@ import CommandPalette from './components/CommandPalette.jsx'
 import ConsolePanel from './components/ConsolePanel.jsx'
 import EditorPanel from './components/EditorPanel.jsx'
 import Header from './components/Header.jsx'
-import LanguageTabs from './components/LanguageTabs.jsx'
 import Sidebar from './components/Sidebar.jsx'
 import {
   getExtension,
@@ -401,12 +400,6 @@ function App() {
         />
 
         <section className="workspace" aria-label="PolyglotMesh workspace">
-          <LanguageTabs
-            activeLanguage={activeLanguage}
-            languages={languages}
-            onSelectLanguage={handleSelectLanguage}
-          />
-
           <EditorPanel
             activeFile={activeFile}
             openFiles={openFiles}
