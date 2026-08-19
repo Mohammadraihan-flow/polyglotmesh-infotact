@@ -1,3 +1,50 @@
+import React from 'react'
+
+const THEMES = [
+  {
+    id: 'vs-dark',
+    name: 'Dark',
+    bg: '#1e1e1e',
+    fg: '#d4d4d4',
+    accents: ['#c586c0', '#ce9178', '#4ec9b0'],
+  },
+  {
+    id: 'vs',
+    name: 'Light',
+    bg: '#ffffff',
+    fg: '#000000',
+    accents: ['#0000ff', '#a31515', '#098658'],
+  },
+  {
+    id: 'hc-black',
+    name: 'High Contrast',
+    bg: '#000000',
+    fg: '#ffffff',
+    accents: ['#ffff00', '#00ffff', '#ff00ff'],
+  },
+  {
+    id: 'monokai',
+    name: 'Monokai',
+    bg: '#272822',
+    fg: '#f8f8f2',
+    accents: ['#f92672', '#e6db74', '#66d9ef'],
+  },
+  {
+    id: 'dracula',
+    name: 'Dracula',
+    bg: '#282a36',
+    fg: '#f8f8f2',
+    accents: ['#ff79c6', '#f1fa8c', '#8be9fd'],
+  },
+  {
+    id: 'solarized-dark',
+    name: 'Solarized Dark',
+    bg: '#002b36',
+    fg: '#839496',
+    accents: ['#859900', '#2aa198', '#b58900'],
+  },
+]
+
 function EditorSettings({ settings, onChange }) {
   const handleSettingChange = (key, value) => {
     onChange((currentSettings) => ({
@@ -6,6 +53,8 @@ function EditorSettings({ settings, onChange }) {
     }))
   }
 
+  const currentTheme = settings.theme ?? 'vs-dark'
+
   return (
     <div className="editor-settings" role="dialog" aria-label="Editor settings">
       <div className="editor-settings__header">
@@ -13,162 +62,209 @@ function EditorSettings({ settings, onChange }) {
       </div>
 
       <div className="editor-settings__content">
-        <div className="editor-settings__section">
-          <label className="editor-settings__label" htmlFor="editor-font-size">
-            Font Size
-          </label>
-          <select
-            id="editor-font-size"
-            className="editor-settings__select"
-            value={settings.fontSize}
-            onChange={(event) => handleSettingChange('fontSize', Number(event.target.value))}
-          >
-            {[12, 14, 16, 18, 20].map((fontSize) => (
-              <option key={fontSize} value={fontSize}>
-                {fontSize}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Appearance Section */}
+        <div className="editor-settings__group">
+          <h5 className="editor-settings__group-title">Appearance</h5>
 
-        <div className="editor-settings__section">
-          <span className="editor-settings__label">Show Minimap</span>
-          <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Show Minimap">
-            {[
-              { label: 'On', value: true },
-              { label: 'Off', value: false },
-            ].map((option) => (
-              <button
-                key={String(option.value)}
-                type="button"
-                className={`editor-settings__toggle${settings.minimap === option.value ? ' editor-settings__toggle--active' : ''}`}
-                onClick={() => handleSettingChange('minimap', option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Editor Theme</span>
+            <div className="editor-settings__themes-grid" role="radiogroup" aria-label="Editor Theme">
+              {THEMES.map((theme) => {
+                const isActive = currentTheme === theme.id
+
+                return (
+                  <button
+                    key={theme.id}
+                    type="button"
+                    className={`theme-card${isActive ? ' theme-card--active' : ''}`}
+                    onClick={() => handleSettingChange('theme', theme.id)}
+                    role="radio"
+                    aria-checked={isActive}
+                  >
+                    <div className="theme-card__swatch" style={{ backgroundColor: theme.bg }}>
+                      <div className="theme-card__dots">
+                        {theme.accents.map((color, i) => (
+                          <span key={i} className="theme-card__dot" style={{ backgroundColor: color }} />
+                        ))}
+                      </div>
+                    </div>
+                    <div className="theme-card__info">
+                      <span className="theme-card__name">{theme.name}</span>
+                      {isActive ? <span className="theme-card__check">✓</span> : null}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="editor-settings__section">
-          <span className="editor-settings__label">Word Wrap</span>
-          <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Word Wrap">
-            {[
-              { label: 'On', value: 'on' },
-              { label: 'Off', value: 'off' },
-            ].map((option) => {
-              const isActive =
-                settings.wordWrap === option.value ||
-                (option.value === 'on' && settings.wordWrap === true) ||
-                (option.value === 'off' && settings.wordWrap === false)
+        {/* Editor Section */}
+        <div className="editor-settings__group">
+          <h5 className="editor-settings__group-title">Editor</h5>
 
-              return (
+          <div className="editor-settings__section">
+            <label className="editor-settings__label" htmlFor="editor-font-size">
+              Font Size
+            </label>
+            <select
+              id="editor-font-size"
+              className="editor-settings__select"
+              value={settings.fontSize}
+              onChange={(event) => handleSettingChange('fontSize', Number(event.target.value))}
+            >
+              {[12, 14, 16, 18, 20].map((fontSize) => (
+                <option key={fontSize} value={fontSize}>
+                  {fontSize}px
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="editor-settings__section">
+            <label className="editor-settings__label" htmlFor="editor-tab-size">
+              Tab Size
+            </label>
+            <select
+              id="editor-tab-size"
+              className="editor-settings__select"
+              value={[2, 4, 8].includes(Number(settings.tabSize)) ? Number(settings.tabSize) : 4}
+              onChange={(event) => {
+                const val = Number(event.target.value)
+                if ([2, 4, 8].includes(val)) {
+                  handleSettingChange('tabSize', val)
+                }
+              }}
+            >
+              {[2, 4, 8].map((tabSize) => (
+                <option key={tabSize} value={tabSize}>
+                  {tabSize} spaces
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Line Numbers</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Line Numbers">
+              {[
+                { label: 'On', value: 'on' },
+                { label: 'Off', value: 'off' },
+              ].map((option) => {
+                const isActive =
+                  settings.lineNumbers === option.value ||
+                  (option.value === 'on' && settings.lineNumbers === true) ||
+                  (option.value === 'off' && settings.lineNumbers === false) ||
+                  (option.value === 'on' && (settings.lineNumbers === undefined || settings.lineNumbers === null))
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('lineNumbers', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Show Minimap</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Show Minimap">
+              {[
+                { label: 'On', value: true },
+                { label: 'Off', value: false },
+              ].map((option) => (
                 <button
-                  key={option.value}
+                  key={String(option.value)}
                   type="button"
-                  className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
-                  onClick={() => handleSettingChange('wordWrap', option.value)}
+                  className={`editor-settings__toggle${settings.minimap === option.value ? ' editor-settings__toggle--active' : ''}`}
+                  onClick={() => handleSettingChange('minimap', option.value)}
                 >
                   {option.label}
                 </button>
-              )
-            })}
+              ))}
+            </div>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Word Wrap</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Word Wrap">
+              {[
+                { label: 'On', value: 'on' },
+                { label: 'Off', value: 'off' },
+              ].map((option) => {
+                const isActive =
+                  settings.wordWrap === option.value ||
+                  (option.value === 'on' && settings.wordWrap === true) ||
+                  (option.value === 'off' && settings.wordWrap === false)
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('wordWrap', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
           </div>
         </div>
 
-        <div className="editor-settings__section">
-          <span className="editor-settings__label">Line Numbers</span>
-          <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Line Numbers">
-            {[
-              { label: 'On', value: 'on' },
-              { label: 'Off', value: 'off' },
-            ].map((option) => {
-              const isActive =
-                settings.lineNumbers === option.value ||
-                (option.value === 'on' && settings.lineNumbers === true) ||
-                (option.value === 'off' && settings.lineNumbers === false) ||
-                (option.value === 'on' && (settings.lineNumbers === undefined || settings.lineNumbers === null))
+        {/* Behavior Section */}
+        <div className="editor-settings__group">
+          <h5 className="editor-settings__group-title">Behavior</h5>
 
-              return (
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Auto Indent</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Auto Indent">
+              {[
+                { label: 'On', value: 'full' },
+                { label: 'Off', value: 'none' },
+              ].map((option) => {
+                const isActive =
+                  settings.autoIndent === option.value ||
+                  (option.value === 'full' && settings.autoIndent === true) ||
+                  (option.value === 'none' && settings.autoIndent === false) ||
+                  (option.value === 'full' && (settings.autoIndent === undefined || settings.autoIndent === null))
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('autoIndent', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Automatic Layout</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Automatic Layout">
+              {[
+                { label: 'On', value: true },
+                { label: 'Off', value: false },
+              ].map((option) => (
                 <button
-                  key={option.value}
+                  key={String(option.value)}
                   type="button"
-                  className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
-                  onClick={() => handleSettingChange('lineNumbers', option.value)}
+                  className={`editor-settings__toggle${settings.automaticLayout === option.value ? ' editor-settings__toggle--active' : ''}`}
+                  onClick={() => handleSettingChange('automaticLayout', option.value)}
                 >
                   {option.label}
                 </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="editor-settings__section">
-          <label className="editor-settings__label" htmlFor="editor-tab-size">
-            Tab Size
-          </label>
-          <select
-            id="editor-tab-size"
-            className="editor-settings__select"
-            value={[2, 4, 8].includes(Number(settings.tabSize)) ? Number(settings.tabSize) : 4}
-            onChange={(event) => {
-              const val = Number(event.target.value)
-              if ([2, 4, 8].includes(val)) {
-                handleSettingChange('tabSize', val)
-              }
-            }}
-          >
-            {[2, 4, 8].map((tabSize) => (
-              <option key={tabSize} value={tabSize}>
-                {tabSize}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="editor-settings__section">
-          <span className="editor-settings__label">Auto Indent</span>
-          <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Auto Indent">
-            {[
-              { label: 'On', value: 'full' },
-              { label: 'Off', value: 'none' },
-            ].map((option) => {
-              const isActive =
-                settings.autoIndent === option.value ||
-                (option.value === 'full' && settings.autoIndent === true) ||
-                (option.value === 'none' && settings.autoIndent === false) ||
-                (option.value === 'full' && (settings.autoIndent === undefined || settings.autoIndent === null))
-
-              return (
-                <button
-                  key={option.value}
-                  type="button"
-                  className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
-                  onClick={() => handleSettingChange('autoIndent', option.value)}
-                >
-                  {option.label}
-                </button>
-              )
-            })}
-          </div>
-        </div>
-
-        <div className="editor-settings__section">
-          <span className="editor-settings__label">Automatic Layout</span>
-          <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Automatic Layout">
-            {[
-              { label: 'On', value: true },
-              { label: 'Off', value: false },
-            ].map((option) => (
-              <button
-                key={String(option.value)}
-                type="button"
-                className={`editor-settings__toggle${settings.automaticLayout === option.value ? ' editor-settings__toggle--active' : ''}`}
-                onClick={() => handleSettingChange('automaticLayout', option.value)}
-              >
-                {option.label}
-              </button>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>

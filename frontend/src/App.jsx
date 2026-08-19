@@ -52,26 +52,55 @@ function makeUniqueFileName(desiredName, existingFiles) {
   return candidateName
 }
 
+const defaultSettings = {
+  fontSize: 14,
+  wordWrap: 'on',
+  minimap: true,
+  lineNumbers: 'on',
+  tabSize: 4,
+  autoIndent: 'full',
+  automaticLayout: true,
+  theme: 'vs-dark',
+}
+
+const getInitialSettings = () => {
+  let settings = defaultSettings
+  try {
+    const stored = localStorage.getItem('polyglotmesh_editor_settings')
+    if (stored) {
+      settings = { ...defaultSettings, ...JSON.parse(stored) }
+    }
+  } catch (e) {
+    // Ignore error
+  }
+  if (typeof document !== 'undefined') {
+    document.documentElement.setAttribute('data-theme', settings.theme ?? 'vs-dark')
+  }
+  return settings
+}
+
 function App() {
   const [files, setFiles] = useState([])
   const [openFileNames, setOpenFileNames] = useState([])
   const [activeFileName, setActiveFileName] = useState(null)
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
-  const [editorSettings, setEditorSettings] = useState({
-    fontSize: 14,
-    wordWrap: 'on',
-    minimap: true,
-    lineNumbers: 'on',
-    tabSize: 4,
-    autoIndent: 'full',
-    automaticLayout: true,
-  })
+  const [editorSettings, setEditorSettings] = useState(getInitialSettings)
   const [isEditorSettingsOpen, setIsEditorSettingsOpen] = useState(false)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
   const [saveMessage, setSaveMessage] = useState('')
   const runTimerRef = useRef(null)
   const saveTimerRef = useRef(null)
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('polyglotmesh_editor_settings', JSON.stringify(editorSettings))
+    } catch (e) {
+      // Ignore error
+    }
+    const currentTheme = editorSettings.theme ?? 'vs-dark'
+    document.documentElement.setAttribute('data-theme', currentTheme)
+  }, [editorSettings])
 
   const activeFileNameRef = useRef(activeFileName)
 

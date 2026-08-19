@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import Editor from '@monaco-editor/react'
+import Editor, { useMonaco } from '@monaco-editor/react'
 import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
 import { getMonacoLanguageFromFileName } from '../utils/languageUtils.js'
@@ -12,6 +12,101 @@ const baseEditorOptions = {
   smoothScrolling: true,
   tabSize: 2,
   renderWhitespace: 'selection',
+}
+
+function defineMonacoThemes(monaco) {
+  if (!monaco) return
+
+  try {
+    monaco.editor.defineTheme('monokai', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: '', foreground: 'f8f8f2' },
+        { token: 'comment', foreground: '75715e', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'f92672' },
+        { token: 'string', foreground: 'e6db74' },
+        { token: 'number', foreground: 'ae81ff' },
+        { token: 'type', foreground: '66d9ef' },
+        { token: 'type.identifier', foreground: '66d9ef' },
+        { token: 'function', foreground: 'a6e22e' },
+        { token: 'variable', foreground: 'f8f8f2' },
+        { token: 'delimiter', foreground: 'f8f8f2' },
+      ],
+      colors: {
+        'editor.background': '#272822',
+        'editor.foreground': '#f8f8f2',
+        'editorCursor.foreground': '#f8f8f0',
+        'editor.selectionBackground': '#49483e',
+        'editor.inactiveSelectionBackground': '#3a3a30',
+        'editor.lineHighlightBackground': '#3e3d32',
+        'editorLineNumber.foreground': '#90908a',
+        'editorLineNumber.activeForeground': '#c4c4bf',
+        'editorIndentGuide.background': '#464741',
+        'editorIndentGuide.activeBackground': '#767771',
+      },
+    })
+
+    monaco.editor.defineTheme('dracula', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: '', foreground: 'f8f8f2' },
+        { token: 'comment', foreground: '6272a4', fontStyle: 'italic' },
+        { token: 'keyword', foreground: 'ff79c6' },
+        { token: 'string', foreground: 'f1fa8c' },
+        { token: 'number', foreground: 'bd93f9' },
+        { token: 'type', foreground: '8be9fd' },
+        { token: 'type.identifier', foreground: '8be9fd' },
+        { token: 'function', foreground: '50fa7b' },
+        { token: 'variable', foreground: 'f8f8f2' },
+        { token: 'delimiter', foreground: 'f8f8f2' },
+      ],
+      colors: {
+        'editor.background': '#282a36',
+        'editor.foreground': '#f8f8f2',
+        'editorCursor.foreground': '#f8f8f2',
+        'editor.selectionBackground': '#44475a',
+        'editor.inactiveSelectionBackground': '#343746',
+        'editor.lineHighlightBackground': '#44475a44',
+        'editorLineNumber.foreground': '#6272a4',
+        'editorLineNumber.activeForeground': '#f8f8f2',
+        'editorIndentGuide.background': '#3b3d4f',
+        'editorIndentGuide.activeBackground': '#6272a4',
+      },
+    })
+
+    monaco.editor.defineTheme('solarized-dark', {
+      base: 'vs-dark',
+      inherit: true,
+      rules: [
+        { token: '', foreground: '839496' },
+        { token: 'comment', foreground: '586e75', fontStyle: 'italic' },
+        { token: 'keyword', foreground: '859900' },
+        { token: 'string', foreground: '2aa198' },
+        { token: 'number', foreground: 'd33682' },
+        { token: 'type', foreground: 'b58900' },
+        { token: 'type.identifier', foreground: 'b58900' },
+        { token: 'function', foreground: '268bd2' },
+        { token: 'variable', foreground: '839496' },
+        { token: 'delimiter', foreground: '839496' },
+      ],
+      colors: {
+        'editor.background': '#002b36',
+        'editor.foreground': '#839496',
+        'editorCursor.foreground': '#839496',
+        'editor.selectionBackground': '#073642',
+        'editor.inactiveSelectionBackground': '#002129',
+        'editor.lineHighlightBackground': '#073642',
+        'editorLineNumber.foreground': '#586e75',
+        'editorLineNumber.activeForeground': '#93a1a1',
+        'editorIndentGuide.background': '#073642',
+        'editorIndentGuide.activeBackground': '#586e75',
+      },
+    })
+  } catch (e) {
+    // Ignore theme re-definition errors
+  }
 }
 
 function EditorPanel({
@@ -34,9 +129,12 @@ function EditorPanel({
     ? getMonacoLanguageFromFileName(activeFile.name)
     : 'plaintext'
 
+  const selectedTheme = editorSettings.theme ?? 'vs-dark'
+
   const settingsContainerRef = useRef(null)
   const editorRef = useRef(null)
   const monacoRef = useRef(null)
+  const globalMonaco = useMonaco()
 
   const validTabSizes = [2, 4, 8]
   const parsedTabSize = Number(editorSettings.tabSize)
@@ -98,6 +196,14 @@ function EditorPanel({
     }
   }, [monacoLanguage, activeFile])
 
+  useEffect(() => {
+    const activeMonaco = globalMonaco || monacoRef.current
+    if (activeMonaco && selectedTheme) {
+      defineMonacoThemes(activeMonaco)
+      activeMonaco.editor.setTheme(selectedTheme)
+    }
+  }, [globalMonaco, selectedTheme])
+
   return (
     <section className="editor-panel" aria-labelledby="editor-panel-title">
       <div className="panel-heading">
@@ -143,41 +249,17 @@ function EditorPanel({
             className="editor-panel__editor"
             defaultLanguage="plaintext"
             language={monacoLanguage}
-            theme="polyglotmesh-dark"
+            theme={selectedTheme}
             value={activeFile.code ?? activeFile.content ?? ''}
             onChange={onChange}
             onMount={(editor, monaco) => {
               editorRef.current = editor
               monacoRef.current = monaco
+              defineMonacoThemes(monaco)
+              monaco.editor.setTheme(selectedTheme)
             }}
             beforeMount={(monaco) => {
-              monaco.editor.defineTheme('polyglotmesh-dark', {
-                base: 'vs-dark',
-                inherit: true,
-                rules: [
-                  { token: '', foreground: 'd4d4d4' },
-                  { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
-                  { token: 'keyword', foreground: 'c586c0' },
-                  { token: 'string', foreground: 'ce9178' },
-                  { token: 'number', foreground: 'b5cea8' },
-                  { token: 'type.identifier', foreground: '4ec9b0' },
-                ],
-                colors: {
-                  'editor.background': '#1e1e1e',
-                  'editor.foreground': '#d4d4d4',
-                  'editorLineNumber.foreground': '#858585',
-                  'editorLineNumber.activeForeground': '#c6c6c6',
-                  'editorCursor.foreground': '#ffffff',
-                  'editor.selectionBackground': '#264f78',
-                  'editor.inactiveSelectionBackground': '#3a3d41',
-                  'editor.lineHighlightBackground': '#2a2d2e',
-                  'editorIndentGuide.background1': '#404040',
-                  'editorIndentGuide.activeBackground1': '#707070',
-                  'scrollbarSlider.background': '#5a5a5a66',
-                  'scrollbarSlider.hoverBackground': '#79797966',
-                  'scrollbarSlider.activeBackground': '#bfbfbf66',
-                },
-              })
+              defineMonacoThemes(monaco)
             }}
             options={editorOptions}
           />
