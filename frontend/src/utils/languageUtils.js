@@ -1,6 +1,6 @@
 /**
  * Central utility for detecting Monaco editor language, labels,
- * and starter templates from filenames and extensions.
+ * default filenames, and starter templates from filenames and extensions.
  */
 
 const EXTENSION_MAP = {
@@ -114,6 +114,22 @@ export function getLanguageLabelFromFileName(fileName) {
 export function getStarterCodeFromFileName(fileName) {
   const ext = getExtension(fileName)
   return EXTENSION_MAP[ext]?.starterCode ?? FALLBACK_CONFIG.starterCode
+}
+
+/**
+ * Mapping of UI language names to default filenames.
+ */
+export const LANGUAGE_DEFAULT_FILENAMES = {
+  JavaScript: 'main.js',
+  Python: 'main.py',
+  Java: 'Main.java',
+  C: 'main.c',
+  'C++': 'main.cpp',
+  'C/C++ Header': 'main.h',
+  Header: 'main.h',
+  JSON: 'data.json',
+  HTML: 'index.html',
+  CSS: 'styles.css',
 }
 
 /**

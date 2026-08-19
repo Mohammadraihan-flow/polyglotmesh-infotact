@@ -10,7 +10,7 @@ import {
   getLanguageLabelFromFileName,
   getMonacoLanguageFromFileName,
   getStarterCodeFromFileName,
-  LANGUAGE_TO_EXTENSION_MAP,
+  LANGUAGE_DEFAULT_FILENAMES,
 } from './utils/languageUtils.js'
 import './App.css'
 
@@ -26,34 +26,8 @@ const languages = [
   'CSS',
 ]
 
-const fileDefinitions = [
-  { name: 'main.js' },
-  { name: 'main.py' },
-  { name: 'Main.java' },
-  { name: 'main.c' },
-  { name: 'main.cpp' },
-]
-
-function createInitialFiles() {
-  return fileDefinitions.map(({ name }) => {
-    const monacoLanguage = getMonacoLanguageFromFileName(name)
-    const label = getLanguageLabelFromFileName(name)
-    const starterCode = getStarterCodeFromFileName(name)
-    return {
-      id: name,
-      name,
-      label,
-      language: monacoLanguage,
-      monacoLanguage,
-      code: starterCode,
-      content: starterCode,
-      isDirty: false,
-    }
-  })
-}
-
 function isValidFileName(fileName) {
-  const trimmedName = fileName.trim()
+  const trimmedName = fileName ? fileName.trim() : ''
   return trimmedName.length > 0 && !/[\\/:*?"<>|]/.test(trimmedName)
 }
 
@@ -81,11 +55,9 @@ function makeUniqueFileName(desiredName, existingFiles) {
 }
 
 function App() {
-  const [files, setFiles] = useState(createInitialFiles)
-  const [openFileNames, setOpenFileNames] = useState(() =>
-    fileDefinitions.map((f) => f.name),
-  )
-  const [activeFileName, setActiveFileName] = useState(fileDefinitions[0].name)
+  const [files, setFiles] = useState([])
+  const [openFileNames, setOpenFileNames] = useState([])
+  const [activeFileName, setActiveFileName] = useState(null)
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
   const [editorSettings, setEditorSettings] = useState({
@@ -112,53 +84,83 @@ function App() {
   const activeFile = files.find((file) => file.name === activeFileName) ?? null
   const activeLanguage = activeFile
     ? getLanguageLabelFromFileName(activeFile.name)
-    : languages[0]
+    : ''
   const openFiles = openFileNames
     .map((name) => files.find((file) => file.name === name))
     .filter(Boolean)
 
-  const handleSelectLanguage = (targetLanguage) => {
-    const targetExtension = LANGUAGE_TO_EXTENSION_MAP[targetLanguage] ?? '.js'
-    const currentActiveName = activeFileNameRef.current ?? activeFileName
-    const currentFile = files.find((file) => file.name === currentActiveName) ?? files[0]
-
-    if (!currentFile) return
-
-    const dotIndex = currentFile.name.lastIndexOf('.')
-    let stem = dotIndex > 0 ? currentFile.name.slice(0, dotIndex) : currentFile.name
-
-    if (targetExtension === '.java' && stem.toLowerCase() === 'main') {
-      stem = 'Main'
+  const handleCreateFile = (fileName) => {
+    const trimmedName = fileName ? fileName.trim() : ''
+    if (!isValidFileName(trimmedName)) {
+      return { success: false, message: 'Enter a valid file name.' }
     }
 
-    const desiredName = `${stem}${targetExtension}`
-    const otherFiles = files.filter((file) => file.name !== currentFile.name)
-    const newFileName = makeUniqueFileName(desiredName, otherFiles)
-
-    const monacoLanguage = getMonacoLanguageFromFileName(newFileName)
-    const label = getLanguageLabelFromFileName(newFileName)
-
-    setFiles((currentFiles) =>
-      currentFiles.map((file) => {
-        if (file.name === currentFile.name) {
-          return {
-            ...file,
-            id: newFileName,
-            name: newFileName,
-            label,
-            language: monacoLanguage,
-            monacoLanguage,
-          }
-        }
-        return file
-      }),
+    const existingFile = files.find(
+      (file) => file.name.toLowerCase() === trimmedName.toLowerCase(),
     )
+
+    if (existingFile) {
+      if (!openFileNames.includes(existingFile.name)) {
+        setOpenFileNames((prevOpen) => [...prevOpen, existingFile.name])
+      }
+      setActiveFileName(existingFile.name)
+      return {
+        success: true,
+        fileName: existingFile.name,
+        message: `Selected existing ${existingFile.name}.`,
+      }
+    }
+
+    const uniqueName = makeUniqueFileName(trimmedName, files)
+    const monacoLanguage = getMonacoLanguageFromFileName(uniqueName)
+    const label = getLanguageLabelFromFileName(uniqueName)
+    const starterCode = getStarterCodeFromFileName(uniqueName)
+
+    const newFile = {
+      id: uniqueName,
+      name: uniqueName,
+      label,
+      language: monacoLanguage,
+      monacoLanguage,
+      code: starterCode,
+      content: starterCode,
+      isDirty: false,
+    }
+
+    setFiles((currentFiles) => [...currentFiles, newFile])
 
     setOpenFileNames((prevOpen) =>
-      prevOpen.map((name) => (name === currentFile.name ? newFileName : name)),
+      prevOpen.includes(uniqueName) ? prevOpen : [...prevOpen, uniqueName],
     )
 
-    setActiveFileName(newFileName)
+    setActiveFileName(uniqueName)
+
+    return {
+      success: true,
+      fileName: uniqueName,
+      message:
+        uniqueName === trimmedName
+          ? 'File created.'
+          : `File created as ${uniqueName}.`,
+    }
+  }
+
+  const handleSelectLanguage = (targetLanguage) => {
+    const defaultFileName = LANGUAGE_DEFAULT_FILENAMES[targetLanguage] ?? 'main.js'
+
+    const existingFile = files.find(
+      (file) => file.name.toLowerCase() === defaultFileName.toLowerCase(),
+    )
+
+    if (existingFile) {
+      if (!openFileNames.includes(existingFile.name)) {
+        setOpenFileNames((prevOpen) => [...prevOpen, existingFile.name])
+      }
+      setActiveFileName(existingFile.name)
+      return
+    }
+
+    handleCreateFile(defaultFileName)
   }
 
   const handleSelectFile = (fileName) => {
@@ -182,46 +184,6 @@ function App() {
         const nextActive = nextOpenNames[index - 1] ?? nextOpenNames[index] ?? nextOpenNames[0]
         setActiveFileName(nextActive)
       }
-    }
-  }
-
-  const handleCreateFile = (fileName) => {
-    if (!isValidFileName(fileName)) {
-      return { success: false, message: 'Enter a valid file name.' }
-    }
-
-    const uniqueName = makeUniqueFileName(fileName, files)
-    const monacoLanguage = getMonacoLanguageFromFileName(uniqueName)
-    const label = getLanguageLabelFromFileName(uniqueName)
-    const starterCode = getStarterCodeFromFileName(uniqueName)
-
-    setFiles((currentFiles) => [
-      ...currentFiles,
-      {
-        id: uniqueName,
-        name: uniqueName,
-        label,
-        language: monacoLanguage,
-        monacoLanguage,
-        code: starterCode,
-        content: starterCode,
-        isDirty: false,
-      },
-    ])
-
-    setOpenFileNames((prevOpen) =>
-      prevOpen.includes(uniqueName) ? prevOpen : [...prevOpen, uniqueName],
-    )
-
-    setActiveFileName(uniqueName)
-
-    return {
-      success: true,
-      fileName: uniqueName,
-      message:
-        uniqueName === fileName.trim()
-          ? 'File created.'
-          : `File created as ${uniqueName}.`,
     }
   }
 

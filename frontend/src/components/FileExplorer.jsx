@@ -160,9 +160,9 @@ function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, 
 
       <div className="file-explorer__tree" role="tree" aria-label="Project files list">
         {files.length === 0 ? (
-          <p className="file-explorer__empty">No files available</p>
+          <p className="file-explorer__empty">No files created</p>
         ) : filteredFiles.length === 0 ? (
-          <p className="file-explorer__empty">No files matching "{searchQuery}"</p>
+          <p className="file-explorer__empty">No files found</p>
         ) : (
           filteredFiles.map((file) => {
             const isActive = file.name === activeFileName
