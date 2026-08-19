@@ -162,7 +162,7 @@ function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, 
         {files.length === 0 ? (
           <p className="file-explorer__empty">No files created</p>
         ) : filteredFiles.length === 0 ? (
-          <p className="file-explorer__empty">No files found</p>
+          <p className="file-explorer__empty">No matching files</p>
         ) : (
           filteredFiles.map((file) => {
             const isActive = file.name === activeFileName
