@@ -52,13 +52,13 @@ public class SandboxedExecutor {
     	    {
     	        Thread.currentThread().interrupt();
     	        return "ERROR: Execution interrupted.";
-
     	    }
     	    catch (Exception e)
     	    {
     	        return "ERROR: " + e.getMessage();
     	    }
-    	    finally {
+    	    finally
+    	    {
     	        executor.shutdownNow();
     	    }
     	}
@@ -74,21 +74,15 @@ public class SandboxedExecutor {
         {
 
             Map<String, Object> data = new HashMap<>();
-
             data.put("price", 50000);
             data.put("quantity", 2);
-
             ProxyObject proxyData = ProxyObject.fromMap(data);
-
             ctx.getBindings("python").putMember("data", proxyData);
-
-            var result = ctx.eval(
-                    "python",
-                    "data.price * data.quantity"
-            );
+            var result = ctx.eval("python","data.price * data.quantity");
             System.out.println("Python calculated total: " + result);
-
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             System.out.println("ERROR: " + e.getMessage());
         }
     }
@@ -97,13 +91,14 @@ public class SandboxedExecutor {
         System.out.println(execute("python", "print('Sandboxed Python running')"));
         System.out.println(execute("js", "console.log('Sandboxed JS running')"));
         System.out.println(execute("python", "open('C:/test.txt', 'w')"));
-//        System.out.println(execute("python", "while True: pass"));
-//        System.out.println(execute("python", "import urllib.request; urllib.request.urlopen('https://example.com')"));
-//        System.out.println(
-//        	    execute("python", "import socket; socket.create_connection(('example.com', 443), 3)")
-//        	);
-//        System.out.println(execute("python", "while True: pass"));
+//      System.out.println(execute("python", "while True: pass"));
+//      System.out.println(execute("python", "import urllib.request; urllib.request.urlopen('https://example.com')"));
+//      System.out.println(execute("python", "import socket; socket.create_connection(('example.com', 443), 3)"));
+//      System.out.println(execute("python", "while True: pass"));
         testJavaToPython();
+//      System.out.println(execute("python", "x = [0] * 10000000")	);
+//      System.out.println(execute("python", "x = [0] * 10000000; print(len(x))"));
+//      System.out.println(execute("python", "raise Exception('Malicious code test')"));
+        System.out.println(execute("js", "throw new Error('JavaScript error test')"));
     }
-
 }
