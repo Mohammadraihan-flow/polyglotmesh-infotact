@@ -146,15 +146,17 @@ function EditorPanel({
       ? 'none'
       : 'full'
 
+  const wordWrapSetting =
+    editorSettings.wordWrap === 'wordWrapColumn'
+      ? 'wordWrapColumn'
+      : editorSettings.wordWrap === 'off' || editorSettings.wordWrap === false
+      ? 'off'
+      : 'on'
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: editorSettings.fontSize,
-    wordWrap:
-      typeof editorSettings.wordWrap === 'boolean'
-        ? editorSettings.wordWrap
-          ? 'on'
-          : 'off'
-        : editorSettings.wordWrap ?? 'on',
+    wordWrap: wordWrapSetting,
     minimap: { enabled: editorSettings.minimap },
     lineNumbers:
       typeof editorSettings.lineNumbers === 'boolean'
@@ -166,6 +168,12 @@ function EditorPanel({
     autoIndent: autoIndentSetting,
     automaticLayout: editorSettings.automaticLayout,
   }
+
+  useEffect(() => {
+    if (editorRef.current) {
+      editorRef.current.updateOptions(editorOptions)
+    }
+  }, [editorSettings, wordWrapSetting, tabSize, autoIndentSetting])
 
   useEffect(() => {
     const handleDocumentMouseDown = (event) => {

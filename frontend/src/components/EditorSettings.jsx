@@ -191,29 +191,25 @@ function EditorSettings({ settings, onChange }) {
           </div>
 
           <div className="editor-settings__section">
-            <span className="editor-settings__label">Word Wrap</span>
-            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Word Wrap">
-              {[
-                { label: 'On', value: 'on' },
-                { label: 'Off', value: 'off' },
-              ].map((option) => {
-                const isActive =
-                  settings.wordWrap === option.value ||
-                  (option.value === 'on' && settings.wordWrap === true) ||
-                  (option.value === 'off' && settings.wordWrap === false)
-
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
-                    onClick={() => handleSettingChange('wordWrap', option.value)}
-                  >
-                    {option.label}
-                  </button>
-                )
-              })}
-            </div>
+            <label className="editor-settings__label" htmlFor="editor-word-wrap">
+              Word Wrap
+            </label>
+            <select
+              id="editor-word-wrap"
+              className="editor-settings__select"
+              value={
+                ['on', 'off', 'wordWrapColumn'].includes(settings.wordWrap)
+                  ? settings.wordWrap
+                  : settings.wordWrap === false
+                  ? 'off'
+                  : 'on'
+              }
+              onChange={(event) => handleSettingChange('wordWrap', event.target.value)}
+            >
+              <option value="on">On</option>
+              <option value="off">Off</option>
+              <option value="wordWrapColumn">Word Wrap Column</option>
+            </select>
           </div>
         </div>
 

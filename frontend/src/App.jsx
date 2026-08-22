@@ -67,8 +67,29 @@ const getInitialSettings = () => {
   let settings = defaultSettings
   try {
     const stored = localStorage.getItem('polyglotmesh_editor_settings')
+    const storedWordWrap = localStorage.getItem('polyglotmesh-word-wrap')
+
+    let wordWrapVal = undefined
+    if (storedWordWrap && ['on', 'off', 'wordWrapColumn'].includes(storedWordWrap)) {
+      wordWrapVal = storedWordWrap
+    }
+
     if (stored) {
-      settings = { ...defaultSettings, ...JSON.parse(stored) }
+      const parsed = JSON.parse(stored)
+      if (!wordWrapVal) {
+        if (parsed.wordWrap === true) wordWrapVal = 'on'
+        else if (parsed.wordWrap === false) wordWrapVal = 'off'
+        else if (['on', 'off', 'wordWrapColumn'].includes(parsed.wordWrap)) {
+          wordWrapVal = parsed.wordWrap
+        }
+      }
+      settings = {
+        ...defaultSettings,
+        ...parsed,
+        wordWrap: wordWrapVal ?? 'on',
+      }
+    } else if (wordWrapVal) {
+      settings = { ...defaultSettings, wordWrap: wordWrapVal }
     }
   } catch (e) {
     // Ignore error
@@ -95,6 +116,9 @@ function App() {
   useEffect(() => {
     try {
       localStorage.setItem('polyglotmesh_editor_settings', JSON.stringify(editorSettings))
+      if (editorSettings.wordWrap && ['on', 'off', 'wordWrapColumn'].includes(editorSettings.wordWrap)) {
+        localStorage.setItem('polyglotmesh-word-wrap', editorSettings.wordWrap)
+      }
     } catch (e) {
       // Ignore error
     }
