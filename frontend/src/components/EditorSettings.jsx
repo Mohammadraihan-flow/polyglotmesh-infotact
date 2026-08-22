@@ -263,6 +263,37 @@ function EditorSettings({ settings, onChange }) {
             </div>
           </div>
         </div>
+
+        {/* Keyboard Shortcuts Section */}
+        <div className="editor-settings__group">
+          <h5 className="editor-settings__group-title">Keyboard Shortcuts</h5>
+          <div className="editor-settings__shortcuts-list">
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Save File</span>
+              <kbd className="editor-settings__kbd">Ctrl+S / Cmd+S</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">New File</span>
+              <kbd className="editor-settings__kbd">Ctrl+N / Cmd+N</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Close Tab</span>
+              <kbd className="editor-settings__kbd">Ctrl+W / Ctrl+Alt+W</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Switch Tab</span>
+              <kbd className="editor-settings__kbd">Ctrl+Tab / Ctrl+Alt+→</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Command Palette</span>
+              <kbd className="editor-settings__kbd">Ctrl+Shift+P / Cmd+Shift+P</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Run Program</span>
+              <kbd className="editor-settings__kbd">Ctrl+Enter / Cmd+Enter</kbd>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

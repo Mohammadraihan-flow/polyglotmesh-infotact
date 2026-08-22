@@ -126,7 +126,17 @@ function App() {
     document.documentElement.setAttribute('data-theme', currentTheme)
   }, [editorSettings])
 
+  const filesRef = useRef(files)
+  const openFileNamesRef = useRef(openFileNames)
   const activeFileNameRef = useRef(activeFileName)
+
+  useEffect(() => {
+    filesRef.current = files
+  }, [files])
+
+  useEffect(() => {
+    openFileNamesRef.current = openFileNames
+  }, [openFileNames])
 
   useEffect(() => {
     activeFileNameRef.current = activeFileName
@@ -140,18 +150,21 @@ function App() {
     .map((name) => files.find((file) => file.name === name))
     .filter(Boolean)
 
-  const handleCreateFile = (fileName) => {
-    const trimmedName = fileName ? fileName.trim() : ''
+  const handleCreateFile = useCallback((fileName) => {
+    const trimmedName = fileName ? fileName.trim() : 'untitled.js'
     if (!isValidFileName(trimmedName)) {
       return { success: false, message: 'Enter a valid file name.' }
     }
 
-    const existingFile = files.find(
+    const currentFiles = filesRef.current
+    const currentOpenNames = openFileNamesRef.current
+
+    const existingFile = currentFiles.find(
       (file) => file.name.toLowerCase() === trimmedName.toLowerCase(),
     )
 
     if (existingFile) {
-      if (!openFileNames.includes(existingFile.name)) {
+      if (!currentOpenNames.includes(existingFile.name)) {
         setOpenFileNames((prevOpen) => [...prevOpen, existingFile.name])
       }
       setActiveFileName(existingFile.name)
@@ -162,7 +175,7 @@ function App() {
       }
     }
 
-    const uniqueName = makeUniqueFileName(trimmedName, files)
+    const uniqueName = makeUniqueFileName(trimmedName, currentFiles)
     const monacoLanguage = getMonacoLanguageFromFileName(uniqueName)
     const label = getLanguageLabelFromFileName(uniqueName)
 
@@ -177,12 +190,10 @@ function App() {
       isDirty: false,
     }
 
-    setFiles((currentFiles) => [...currentFiles, newFile])
-
+    setFiles((prevFiles) => [...prevFiles, newFile])
     setOpenFileNames((prevOpen) =>
       prevOpen.includes(uniqueName) ? prevOpen : [...prevOpen, uniqueName],
     )
-
     setActiveFileName(uniqueName)
 
     return {
@@ -193,7 +204,7 @@ function App() {
           ? 'File created.'
           : `File created as ${uniqueName}.`,
     }
-  }
+  }, [])
 
   const handleSelectLanguage = (targetLanguage) => {
     const defaultFileName = LANGUAGE_DEFAULT_FILENAMES[targetLanguage] ?? 'main.js'
@@ -220,14 +231,22 @@ function App() {
     setActiveFileName(fileName)
   }
 
-  const handleCloseTab = (fileName) => {
-    const index = openFileNames.indexOf(fileName)
+  const handleCloseTab = useCallback((fileName) => {
+    const index = openFileNamesRef.current.indexOf(fileName)
     if (index === -1) return
 
-    const nextOpenNames = openFileNames.filter((name) => name !== fileName)
+    const targetFile = filesRef.current.find((f) => f.name === fileName)
+    if (targetFile?.isDirty) {
+      const confirmClose = window.confirm(
+        `"${fileName}" has unsaved changes. Are you sure you want to close it?`,
+      )
+      if (!confirmClose) return
+    }
+
+    const nextOpenNames = openFileNamesRef.current.filter((name) => name !== fileName)
     setOpenFileNames(nextOpenNames)
 
-    if (fileName === activeFileName) {
+    if (fileName === activeFileNameRef.current) {
       if (nextOpenNames.length === 0) {
         setActiveFileName(null)
       } else {
@@ -235,7 +254,29 @@ function App() {
         setActiveFileName(nextActive)
       }
     }
-  }
+  }, [])
+
+  const handleCloseActiveTab = useCallback(() => {
+    const currentActiveName = activeFileNameRef.current
+    if (!currentActiveName) return
+    handleCloseTab(currentActiveName)
+  }, [handleCloseTab])
+
+  const handleNextTab = useCallback(() => {
+    const openNames = openFileNamesRef.current
+    if (openNames.length <= 1) return
+    const currentIndex = openNames.indexOf(activeFileNameRef.current)
+    const nextIndex = (currentIndex + 1) % openNames.length
+    setActiveFileName(openNames[nextIndex])
+  }, [])
+
+  const handlePrevTab = useCallback(() => {
+    const openNames = openFileNamesRef.current
+    if (openNames.length <= 1) return
+    const currentIndex = openNames.indexOf(activeFileNameRef.current)
+    const prevIndex = (currentIndex - 1 + openNames.length) % openNames.length
+    setActiveFileName(openNames[prevIndex])
+  }, [])
 
   const handleDeleteFile = (fileName) => {
     const fileIndex = files.findIndex((file) => file.name === fileName)
@@ -357,7 +398,16 @@ function App() {
   }, [isRunning])
 
   const handleSave = useCallback(() => {
-    setSaveMessage(`Saved ${activeFile?.name ?? 'file'}`)
+    const currentActiveName = activeFileNameRef.current
+    if (!currentActiveName) return
+
+    setFiles((currentFiles) =>
+      currentFiles.map((file) =>
+        file.name === currentActiveName ? { ...file, isDirty: false } : file,
+      ),
+    )
+
+    setSaveMessage(`Saved ${currentActiveName}`)
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
     }
@@ -365,7 +415,7 @@ function App() {
       setSaveMessage('')
       saveTimerRef.current = null
     }, 2500)
-  }, [activeFile?.name])
+  }, [])
 
   useEffect(
     () => () => {
@@ -418,7 +468,47 @@ function App() {
         return
       }
 
-      // 4. Ctrl+Enter / Cmd+Enter -> Run
+      // 4. Ctrl+N / Cmd+N -> New File
+      if (modifier && key === 'n' && !event.shiftKey && !event.altKey) {
+        event.preventDefault()
+        event.stopPropagation()
+        handleCreateFile('untitled.js')
+        return
+      }
+
+      // 5. Ctrl+W / Cmd+W or Ctrl+Alt+W -> Close Tab
+      if (modifier && key === 'w' && !event.shiftKey) {
+        event.preventDefault()
+        event.stopPropagation()
+        handleCloseActiveTab()
+        return
+      }
+
+      // 6. Ctrl+Tab / Ctrl+Alt+Right / Cmd+Alt+Right / Ctrl+PageDown -> Next Tab
+      if (
+        (modifier && event.key === 'Tab' && !event.shiftKey) ||
+        (modifier && event.altKey && event.key === 'ArrowRight') ||
+        (modifier && event.key === 'PageDown')
+      ) {
+        event.preventDefault()
+        event.stopPropagation()
+        handleNextTab()
+        return
+      }
+
+      // 7. Ctrl+Shift+Tab / Ctrl+Alt+Left / Cmd+Alt+Left / Ctrl+PageUp -> Prev Tab
+      if (
+        (modifier && event.key === 'Tab' && event.shiftKey) ||
+        (modifier && event.altKey && event.key === 'ArrowLeft') ||
+        (modifier && event.key === 'PageUp')
+      ) {
+        event.preventDefault()
+        event.stopPropagation()
+        handlePrevTab()
+        return
+      }
+
+      // 8. Ctrl+Enter / Cmd+Enter -> Run
       if (modifier && event.key === 'Enter') {
         event.preventDefault()
         event.stopPropagation()
@@ -426,7 +516,16 @@ function App() {
         return
       }
     },
-    [isCommandPaletteOpen, isEditorSettingsOpen, handleSave, handleRunClick],
+    [
+      isCommandPaletteOpen,
+      isEditorSettingsOpen,
+      handleSave,
+      handleCreateFile,
+      handleCloseActiveTab,
+      handleNextTab,
+      handlePrevTab,
+      handleRunClick,
+    ],
   )
 
   useEffect(() => {
