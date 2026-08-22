@@ -694,10 +694,35 @@
   white-space: nowrap;
 }
 
+.panel-heading__title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .panel-heading__title {
   margin: 0;
   font-size: 1.1rem;
   color: var(--text-strong);
+}
+
+.save-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--pill-bg);
+  color: var(--accent-strong);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.save-status-badge--saving {
+  color: var(--button-muted-text);
+  border-style: dashed;
 }
 
 .run-button {

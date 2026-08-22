@@ -274,6 +274,9 @@ function EditorPanel({
             onMount={(editor, monaco) => {
               editorRef.current = editor
               monacoRef.current = monaco
+              if (typeof window !== 'undefined') {
+                window.monaco = monaco
+              }
               defineMonacoThemes(monaco)
               monaco.editor.setTheme(selectedTheme)
             }}

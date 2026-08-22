@@ -112,6 +112,8 @@ function App() {
   const [saveMessage, setSaveMessage] = useState('')
   const runTimerRef = useRef(null)
   const saveTimerRef = useRef(null)
+  const autoSaveTimerRef = useRef(null)
+  const pendingChangeRef = useRef(null)
 
   useEffect(() => {
     try {
@@ -141,6 +143,35 @@ function App() {
   useEffect(() => {
     activeFileNameRef.current = activeFileName
   }, [activeFileName])
+
+  const flushAutoSave = useCallback(() => {
+    if (autoSaveTimerRef.current) {
+      clearTimeout(autoSaveTimerRef.current)
+      autoSaveTimerRef.current = null
+    }
+
+    if (pendingChangeRef.current) {
+      const { fileName, value } = pendingChangeRef.current
+      pendingChangeRef.current = null
+
+      setFiles((currentFiles) =>
+        currentFiles.map((file) =>
+          file.name === fileName
+            ? { ...file, code: value, content: value, isDirty: false }
+            : file,
+        ),
+      )
+
+      setSaveMessage('Saved')
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+      saveTimerRef.current = setTimeout(() => {
+        setSaveMessage('')
+        saveTimerRef.current = null
+      }, 2000)
+    }
+  }, [])
 
   const activeFile = files.find((file) => file.name === activeFileName) ?? null
   const activeLanguage = activeFile
@@ -224,37 +255,45 @@ function App() {
     handleCreateFile(defaultFileName)
   }
 
-  const handleSelectFile = (fileName) => {
-    setOpenFileNames((prevOpen) =>
-      prevOpen.includes(fileName) ? prevOpen : [...prevOpen, fileName],
-    )
-    setActiveFileName(fileName)
-  }
-
-  const handleCloseTab = useCallback((fileName) => {
-    const index = openFileNamesRef.current.indexOf(fileName)
-    if (index === -1) return
-
-    const targetFile = filesRef.current.find((f) => f.name === fileName)
-    if (targetFile?.isDirty) {
-      const confirmClose = window.confirm(
-        `"${fileName}" has unsaved changes. Are you sure you want to close it?`,
+  const handleSelectFile = useCallback(
+    (fileName) => {
+      flushAutoSave()
+      setOpenFileNames((prevOpen) =>
+        prevOpen.includes(fileName) ? prevOpen : [...prevOpen, fileName],
       )
-      if (!confirmClose) return
-    }
+      setActiveFileName(fileName)
+    },
+    [flushAutoSave],
+  )
 
-    const nextOpenNames = openFileNamesRef.current.filter((name) => name !== fileName)
-    setOpenFileNames(nextOpenNames)
+  const handleCloseTab = useCallback(
+    (fileName) => {
+      flushAutoSave()
+      const index = openFileNamesRef.current.indexOf(fileName)
+      if (index === -1) return
 
-    if (fileName === activeFileNameRef.current) {
-      if (nextOpenNames.length === 0) {
-        setActiveFileName(null)
-      } else {
-        const nextActive = nextOpenNames[index - 1] ?? nextOpenNames[index] ?? nextOpenNames[0]
-        setActiveFileName(nextActive)
+      const targetFile = filesRef.current.find((f) => f.name === fileName)
+      if (targetFile?.isDirty) {
+        const confirmClose = window.confirm(
+          `"${fileName}" has unsaved changes. Are you sure you want to close it?`,
+        )
+        if (!confirmClose) return
       }
-    }
-  }, [])
+
+      const nextOpenNames = openFileNamesRef.current.filter((name) => name !== fileName)
+      setOpenFileNames(nextOpenNames)
+
+      if (fileName === activeFileNameRef.current) {
+        if (nextOpenNames.length === 0) {
+          setActiveFileName(null)
+        } else {
+          const nextActive = nextOpenNames[index - 1] ?? nextOpenNames[index] ?? nextOpenNames[0]
+          setActiveFileName(nextActive)
+        }
+      }
+    },
+    [flushAutoSave],
+  )
 
   const handleCloseActiveTab = useCallback(() => {
     const currentActiveName = activeFileNameRef.current
@@ -263,33 +302,59 @@ function App() {
   }, [handleCloseTab])
 
   const handleNextTab = useCallback(() => {
+    flushAutoSave()
     const openNames = openFileNamesRef.current
     if (openNames.length <= 1) return
     const currentIndex = openNames.indexOf(activeFileNameRef.current)
     const nextIndex = (currentIndex + 1) % openNames.length
     setActiveFileName(openNames[nextIndex])
-  }, [])
+  }, [flushAutoSave])
 
   const handlePrevTab = useCallback(() => {
+    flushAutoSave()
     const openNames = openFileNamesRef.current
     if (openNames.length <= 1) return
     const currentIndex = openNames.indexOf(activeFileNameRef.current)
     const prevIndex = (currentIndex - 1 + openNames.length) % openNames.length
     setActiveFileName(openNames[prevIndex])
-  }, [])
+  }, [flushAutoSave])
 
-  const handleDeleteFile = (fileName) => {
-    const fileIndex = files.findIndex((file) => file.name === fileName)
+  const handleDeleteFile = useCallback((fileName) => {
+    if (pendingChangeRef.current?.fileName === fileName) {
+      pendingChangeRef.current = null
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+        autoSaveTimerRef.current = null
+      }
+    }
+
+    if (typeof window !== 'undefined' && window.monaco) {
+      try {
+        const models = window.monaco.editor.getModels()
+        const targetModel = models.find(
+          (m) => m.uri.path === `/${fileName}` || m.uri.path === fileName,
+        )
+        targetModel?.dispose()
+      } catch (e) {
+        // Ignore error
+      }
+    }
+
+    const currentFiles = filesRef.current
+    const currentOpenNames = openFileNamesRef.current
+    const currentActiveName = activeFileNameRef.current
+
+    const fileIndex = currentFiles.findIndex((file) => file.name === fileName)
     if (fileIndex === -1) return
 
-    const nextFiles = files.filter((file) => file.name !== fileName)
+    const nextFiles = currentFiles.filter((file) => file.name !== fileName)
     setFiles(nextFiles)
 
-    const openIndex = openFileNames.indexOf(fileName)
-    const nextOpenNames = openFileNames.filter((name) => name !== fileName)
+    const openIndex = currentOpenNames.indexOf(fileName)
+    const nextOpenNames = currentOpenNames.filter((name) => name !== fileName)
     setOpenFileNames(nextOpenNames)
 
-    if (fileName === activeFileName) {
+    if (fileName === currentActiveName) {
       if (nextOpenNames.length > 0) {
         const nextActive = nextOpenNames[Math.max(0, openIndex - 1)] ?? nextOpenNames[0]
         setActiveFileName(nextActive)
@@ -301,94 +366,111 @@ function App() {
         setActiveFileName(null)
       }
     }
-  }
+  }, [])
 
-  const handleRenameFile = (oldFileName, newFileName) => {
-    let trimmedNewName = newFileName.trim()
+  const handleRenameFile = useCallback(
+    (oldFileName, newFileName) => {
+      flushAutoSave()
+      let trimmedNewName = newFileName.trim()
 
-    if (!trimmedNewName) {
-      return { success: false, message: 'File name cannot be empty.' }
-    }
-
-    const oldExt = getExtension(oldFileName)
-    const newExt = getExtension(trimmedNewName)
-
-    if (!newExt && oldExt) {
-      trimmedNewName = `${trimmedNewName}.${oldExt}`
-    }
-
-    if (!isValidFileName(trimmedNewName)) {
-      return { success: false, message: 'Enter a valid file name.' }
-    }
-
-    if (trimmedNewName.toLowerCase() === oldFileName.toLowerCase()) {
-      if (trimmedNewName === oldFileName) {
-        return { success: true, message: 'No changes made.' }
+      if (!trimmedNewName) {
+        return { success: false, message: 'File name cannot be empty.' }
       }
-    } else {
-      const isDuplicate = files.some(
-        (file) => file.name.toLowerCase() === trimmedNewName.toLowerCase(),
+
+      const oldExt = getExtension(oldFileName)
+      const newExt = getExtension(trimmedNewName)
+
+      if (!newExt && oldExt) {
+        trimmedNewName = `${trimmedNewName}.${oldExt}`
+      }
+
+      if (!isValidFileName(trimmedNewName)) {
+        return { success: false, message: 'Enter a valid file name.' }
+      }
+
+      const currentFiles = filesRef.current
+      if (trimmedNewName.toLowerCase() === oldFileName.toLowerCase()) {
+        if (trimmedNewName === oldFileName) {
+          return { success: true, message: 'No changes made.' }
+        }
+      } else {
+        const isDuplicate = currentFiles.some(
+          (file) => file.name.toLowerCase() === trimmedNewName.toLowerCase(),
+        )
+
+        if (isDuplicate) {
+          return { success: false, message: 'A file with this name already exists.' }
+        }
+      }
+
+      const monacoLanguage = getMonacoLanguageFromFileName(trimmedNewName)
+      const label = getLanguageLabelFromFileName(trimmedNewName)
+
+      setFiles((prevFiles) =>
+        prevFiles.map((file) => {
+          if (file.name === oldFileName) {
+            return {
+              ...file,
+              id: trimmedNewName,
+              name: trimmedNewName,
+              label,
+              language: monacoLanguage,
+              monacoLanguage,
+            }
+          }
+          return file
+        }),
       )
 
-      if (isDuplicate) {
-        return { success: false, message: 'A file with this name already exists.' }
+      setOpenFileNames((prevOpen) =>
+        prevOpen.map((name) => (name === oldFileName ? trimmedNewName : name)),
+      )
+
+      if (oldFileName === activeFileNameRef.current) {
+        setActiveFileName(trimmedNewName)
       }
-    }
 
-    const monacoLanguage = getMonacoLanguageFromFileName(trimmedNewName)
-    const label = getLanguageLabelFromFileName(trimmedNewName)
+      return { success: true, message: 'File renamed.' }
+    },
+    [flushAutoSave],
+  )
 
-    setFiles((currentFiles) =>
-      currentFiles.map((file) => {
-        if (file.name === oldFileName) {
-          return {
-            ...file,
-            id: trimmedNewName,
-            name: trimmedNewName,
-            label,
-            language: monacoLanguage,
-            monacoLanguage,
+  const handleEditorChange = useCallback(
+    (value) => {
+      const currentActiveName = activeFileNameRef.current
+      if (!currentActiveName) return
+
+      const newContent = value ?? ''
+
+      pendingChangeRef.current = { fileName: currentActiveName, value: newContent }
+      setSaveMessage('Saving...')
+
+      setFiles((currentFiles) =>
+        currentFiles.map((file) => {
+          if (file.name === currentActiveName) {
+            const currentContent = file.code ?? file.content ?? ''
+            if (currentContent === newContent) return file
+            return {
+              ...file,
+              code: newContent,
+              content: newContent,
+              isDirty: true,
+            }
           }
-        }
-        return file
-      }),
-    )
+          return file
+        }),
+      )
 
-    setOpenFileNames((prevOpen) =>
-      prevOpen.map((name) => (name === oldFileName ? trimmedNewName : name)),
-    )
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
+      }
 
-    if (oldFileName === activeFileName) {
-      setActiveFileName(trimmedNewName)
-    }
-
-    return { success: true, message: 'File renamed.' }
-  }
-
-  const handleEditorChange = useCallback((value) => {
-    const currentActiveName = activeFileNameRef.current
-    if (!currentActiveName) return
-
-    const newContent = value ?? ''
-
-    setFiles((currentFiles) =>
-      currentFiles.map((file) => {
-        if (file.name === currentActiveName) {
-          const currentContent = file.code ?? file.content ?? ''
-          if (currentContent === newContent) {
-            return file
-          }
-          return {
-            ...file,
-            code: newContent,
-            content: newContent,
-            isDirty: true,
-          }
-        }
-        return file
-      }),
-    )
-  }, [])
+      autoSaveTimerRef.current = setTimeout(() => {
+        flushAutoSave()
+      }, 400)
+    },
+    [flushAutoSave],
+  )
 
   const handleRunClick = useCallback(() => {
     if (isRunning) {
@@ -410,6 +492,7 @@ function App() {
   }, [isRunning])
 
   const handleSave = useCallback(() => {
+    flushAutoSave()
     const currentActiveName = activeFileNameRef.current
     if (!currentActiveName) return
 
@@ -427,7 +510,7 @@ function App() {
       setSaveMessage('')
       saveTimerRef.current = null
     }, 2500)
-  }, [])
+  }, [flushAutoSave])
 
   useEffect(
     () => () => {
@@ -436,6 +519,9 @@ function App() {
       }
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
+      }
+      if (autoSaveTimerRef.current) {
+        clearTimeout(autoSaveTimerRef.current)
       }
     },
     [],
