@@ -13,10 +13,19 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.Set;
 public class SandboxedExecutor {
 	private static final long TIMEOUT_SECONDS = 10;
+	private static final Set<String> ALLOWED_LANGUAGES = Set.of("python", "js");
     public static String execute(String lang, String code)
     {
+    	 if (lang == null || !ALLOWED_LANGUAGES.contains(lang)) {
+    	        return "ERROR: Unsupported language: " + lang;
+    	    }
+
+    	    if (code == null || code.isBlank()) {
+    	        return "ERROR: Code cannot be empty.";
+    	    }
     	    ExecutorService executor = Executors.newSingleThreadExecutor();
     	    try {
     	    	    Future<String> future = executor.submit(()->{
@@ -91,14 +100,6 @@ public class SandboxedExecutor {
         System.out.println(execute("python", "print('Sandboxed Python running')"));
         System.out.println(execute("js", "console.log('Sandboxed JS running')"));
         System.out.println(execute("python", "open('C:/test.txt', 'w')"));
-//      System.out.println(execute("python", "while True: pass"));
-//      System.out.println(execute("python", "import urllib.request; urllib.request.urlopen('https://example.com')"));
-//      System.out.println(execute("python", "import socket; socket.create_connection(('example.com', 443), 3)"));
-//      System.out.println(execute("python", "while True: pass"));
         testJavaToPython();
-//      System.out.println(execute("python", "x = [0] * 10000000")	);
-//      System.out.println(execute("python", "x = [0] * 10000000; print(len(x))"));
-//      System.out.println(execute("python", "raise Exception('Malicious code test')"));
-        System.out.println(execute("js", "throw new Error('JavaScript error test')"));
     }
 }
