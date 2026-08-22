@@ -13,6 +13,11 @@ const baseEditorOptions = {
   smoothScrolling: true,
   tabSize: 2,
   renderWhitespace: 'selection',
+  find: {
+    addExtraSpaceOnTop: false,
+    autoFindInSelection: 'multiline',
+    seedSearchStringFromSelection: 'always',
+  },
 }
 
 function defineMonacoThemes(monaco) {
@@ -45,6 +50,15 @@ function defineMonacoThemes(monaco) {
         'editorLineNumber.activeForeground': '#c4c4bf',
         'editorIndentGuide.background': '#464741',
         'editorIndentGuide.activeBackground': '#767771',
+        'editorWidget.background': '#272822',
+        'editorWidget.foreground': '#f8f8f2',
+        'editorWidget.border': '#75715e',
+        'input.background': '#3e3d32',
+        'input.foreground': '#f8f8f2',
+        'input.border': '#75715e',
+        'inputOption.activeBorder': '#a6e22e',
+        'editor.findMatchBackground': '#e6db7444',
+        'editor.findMatchHighlightBackground': '#49483e88',
       },
     })
 
@@ -74,6 +88,15 @@ function defineMonacoThemes(monaco) {
         'editorLineNumber.activeForeground': '#f8f8f2',
         'editorIndentGuide.background': '#3b3d4f',
         'editorIndentGuide.activeBackground': '#6272a4',
+        'editorWidget.background': '#282a36',
+        'editorWidget.foreground': '#f8f8f2',
+        'editorWidget.border': '#6272a4',
+        'input.background': '#343746',
+        'input.foreground': '#f8f8f2',
+        'input.border': '#6272a4',
+        'inputOption.activeBorder': '#ff79c6',
+        'editor.findMatchBackground': '#ffb86c44',
+        'editor.findMatchHighlightBackground': '#44475a88',
       },
     })
 
@@ -103,6 +126,15 @@ function defineMonacoThemes(monaco) {
         'editorLineNumber.activeForeground': '#93a1a1',
         'editorIndentGuide.background': '#073642',
         'editorIndentGuide.activeBackground': '#586e75',
+        'editorWidget.background': '#002b36',
+        'editorWidget.foreground': '#839496',
+        'editorWidget.border': '#586e75',
+        'input.background': '#073642',
+        'input.foreground': '#93a1a1',
+        'input.border': '#586e75',
+        'inputOption.activeBorder': '#268bd2',
+        'editor.findMatchBackground': '#b5890044',
+        'editor.findMatchHighlightBackground': '#07364288',
       },
     })
   } catch (e) {

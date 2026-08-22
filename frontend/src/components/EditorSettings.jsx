@@ -285,6 +285,14 @@ function EditorSettings({ settings, onChange }) {
               <kbd className="editor-settings__kbd">Ctrl+Tab / Ctrl+Alt+→</kbd>
             </div>
             <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Find Text</span>
+              <kbd className="editor-settings__kbd">Ctrl+F / Cmd+F</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Find & Replace</span>
+              <kbd className="editor-settings__kbd">Ctrl+H / Cmd+Alt+F</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Command Palette</span>
               <kbd className="editor-settings__kbd">Ctrl+Shift+P / Cmd+Shift+P</kbd>
             </div>

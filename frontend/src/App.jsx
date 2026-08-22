@@ -613,6 +613,37 @@ function App() {
         handleRunClick()
         return
       }
+
+      // 9. Ctrl+F / Cmd+F -> Open Monaco Find Widget
+      if (modifier && key === 'f' && !event.shiftKey && !event.altKey) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            activeEditor.getAction('actions.find')?.run()
+          }
+        }
+        return
+      }
+
+      // 10. Ctrl+H / Cmd+Option+F -> Open Monaco Replace Widget
+      if (
+        (modifier && key === 'h' && !event.shiftKey && !event.altKey) ||
+        (modifier && event.altKey && key === 'f' && !event.shiftKey)
+      ) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            activeEditor.getAction('editor.action.startFindReplaceAction')?.run()
+          }
+        }
+        return
+      }
     },
     [
       isCommandPaletteOpen,
