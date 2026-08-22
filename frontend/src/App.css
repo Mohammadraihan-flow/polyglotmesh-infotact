@@ -115,21 +115,28 @@
 
 .sidebar__item {
   appearance: none;
-  border: 1px solid var(--border);
-  background: var(--pill-bg);
+  border: 1px solid var(--button-border);
+  background: var(--button-bg);
   border-radius: 14px;
   padding: 0.85rem 0.95rem;
   display: flex;
   align-items: center;
   gap: 0.75rem;
   text-align: left;
-  color: var(--text-strong);
-  cursor: default;
+  color: var(--button-text);
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.sidebar__item:hover {
+  background: var(--button-hover-bg);
+  color: var(--button-hover-text);
 }
 
 .sidebar__item--active {
-  border-color: var(--accent-border);
-  background: var(--accent-soft);
+  border-color: var(--button-toggle-active-border);
+  background: var(--button-toggle-active-bg);
+  color: var(--button-toggle-active-text);
 }
 
 .sidebar__bullet {
@@ -139,8 +146,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  background: var(--button-toggle-active-bg);
+  color: var(--button-toggle-active-text);
   font-size: 0.8rem;
   font-weight: 700;
   flex: 0 0 auto;
@@ -183,11 +190,11 @@
 
 .editor-tabs__tab {
   appearance: none;
-  border: 1px solid var(--border);
+  border: 1px solid var(--button-border);
   border-bottom: none;
   border-radius: 12px 12px 0 0;
-  background: var(--pill-bg);
-  color: var(--text);
+  background: var(--button-bg);
+  color: var(--button-muted-text);
   padding: 0.72rem 2.35rem 0.72rem 1rem;
   min-width: 7.5rem;
   white-space: nowrap;
@@ -207,14 +214,14 @@
 }
 
 .editor-tabs__tab:hover {
-  color: var(--text-strong);
-  background: var(--surface-hover);
+  color: var(--button-hover-text);
+  background: var(--button-hover-bg);
 }
 
 .editor-tabs__tab--active {
   background: var(--editor-bg);
-  color: var(--text-strong);
-  border-color: var(--border);
+  color: var(--button-text);
+  border-color: var(--button-border);
   font-weight: 700;
   transform: translateY(1px);
 }
@@ -225,21 +232,22 @@
   right: 0.45rem;
   width: 1.3rem;
   height: 1.3rem;
-  border: none;
+  border: 1px solid var(--button-border);
   border-radius: 999px;
-  background: var(--border);
-  color: var(--text);
+  background: var(--button-bg);
+  color: var(--button-muted-text);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   line-height: 1;
-  transition: background-color 0.15s ease, color 0.15s ease;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .editor-tabs__close-button:hover {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
+  background: var(--button-danger-bg);
+  color: var(--button-danger-text);
+  border-color: var(--button-danger-border);
 }
 
 .editor-panel__empty-state {
@@ -285,18 +293,20 @@
   align-self: flex-start;
   width: 2.4rem;
   height: 2.4rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--button-border);
   border-radius: 12px;
-  background: var(--pill-bg);
-  color: var(--text-strong);
+  background: var(--button-bg);
+  color: var(--button-text);
   font-size: 1.15rem;
   font-weight: 700;
   cursor: pointer;
   flex: 0 0 auto;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .editor-tabs__create-button:hover {
-  background: var(--surface-hover);
+  background: var(--button-hover-bg);
+  color: var(--button-hover-text);
 }
 
 .editor-tabs__create-panel {
@@ -335,14 +345,50 @@
   border-color: var(--accent-border);
 }
 
-.editor-tabs__create-submit {
-  border: 1px solid var(--accent-border);
+.editor-tabs__create-submit,
+.editor-tabs__create-confirm {
+  border: 1px solid var(--button-primary-border);
   border-radius: 10px;
   padding: 0.65rem 1rem;
-  background: var(--accent-strong);
-  color: #ffffff;
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
   font-weight: 700;
   cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.editor-tabs__create-submit:hover,
+.editor-tabs__create-confirm:hover {
+  background: var(--button-primary-hover-bg);
+  color: var(--button-primary-hover-text);
+}
+
+.editor-tabs__create-cancel {
+  border: 1px solid var(--button-border);
+  border-radius: 10px;
+  padding: 0.65rem 1rem;
+  background: var(--button-bg);
+  color: var(--button-text);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.editor-tabs__create-cancel:hover {
+  background: var(--button-hover-bg);
+  color: var(--button-hover-text);
+}
+
+.editor-tabs__create-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--button-muted-text);
+}
+
+.editor-tabs__create-error {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--button-danger-text);
 }
 
 .editor-panel {
@@ -371,20 +417,21 @@
   appearance: none;
   width: 2.6rem;
   height: 2.6rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--button-border);
   border-radius: 12px;
-  background: var(--pill-bg);
-  color: var(--text);
+  background: var(--button-bg);
+  color: var(--button-text);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: background-color 0.16s ease, color 0.16s ease;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
 }
 
 .settings-button:hover {
-  color: var(--text-strong);
-  background: var(--surface-hover);
+  color: var(--button-hover-text);
+  background: var(--button-hover-bg);
+  border-color: var(--button-border);
 }
 
 .editor-settings__popover {
@@ -477,8 +524,8 @@
 
 .theme-card {
   appearance: none;
-  background: var(--pill-bg);
-  border: 1px solid var(--border);
+  background: var(--button-bg);
+  border: 1px solid var(--button-border);
   border-radius: 10px;
   padding: 0.5rem;
   display: flex;
@@ -490,14 +537,29 @@
 }
 
 .theme-card:hover {
-  background: var(--surface-hover);
-  border-color: var(--accent-border);
+  background: var(--button-hover-bg);
+  border-color: var(--button-toggle-active-border);
+}
+
+.theme-card .theme-card__name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--button-text);
+}
+
+.theme-card:hover .theme-card__name {
+  color: var(--button-hover-text);
 }
 
 .theme-card--active {
-  border-color: var(--accent-border);
-  background: var(--accent-soft);
-  box-shadow: 0 0 0 1px var(--accent-border);
+  border-color: var(--button-toggle-active-border);
+  background: var(--button-toggle-active-bg);
+  box-shadow: 0 0 0 1px var(--button-toggle-active-border);
+}
+
+.theme-card--active .theme-card__name {
+  color: var(--button-toggle-active-text);
+  font-weight: 700;
 }
 
 .theme-card__swatch {
@@ -528,20 +590,9 @@
   gap: 0.3rem;
 }
 
-.theme-card__name {
-  font-size: 0.8rem;
-  font-weight: 600;
-  color: var(--text);
-}
-
-.theme-card--active .theme-card__name {
-  color: var(--text-strong);
-  font-weight: 700;
-}
-
 .theme-card__check {
   font-size: 0.75rem;
-  color: var(--accent-strong);
+  color: var(--button-toggle-active-text);
   font-weight: 700;
 }
 
@@ -558,16 +609,17 @@
 
 .editor-settings__select {
   width: 100%;
-  border: 1px solid var(--border);
+  border: 1px solid var(--button-border);
   border-radius: 10px;
   padding: 0.68rem 0.85rem;
-  background: var(--input-bg);
-  color: var(--text-strong);
+  background: var(--button-toggle-bg);
+  color: var(--button-toggle-text);
   font-size: 1rem;
   -webkit-appearance: menulist;
   appearance: menulist;
   outline: none;
   box-shadow: none;
+  transition: all 0.15s ease;
 }
 
 .editor-settings__select option {
@@ -577,8 +629,7 @@
 }
 
 .editor-settings__select:focus {
-  border-color: var(--accent-border);
-  box-shadow: 0 0 0 4px rgba(139, 61, 143, 0.06);
+  border-color: var(--button-toggle-active-border);
 }
 
 .editor-settings__toggle-group {
@@ -588,19 +639,25 @@
 
 .editor-settings__toggle {
   flex: 1 1 0;
-  border: 1px solid var(--border);
+  border: 1px solid var(--button-border);
   border-radius: 10px;
   padding: 0.68rem 0.85rem;
-  background: var(--input-bg);
-  color: var(--text);
+  background: var(--button-toggle-bg);
+  color: var(--button-toggle-text);
   cursor: pointer;
   font-weight: 700;
+  transition: all 0.15s ease;
+}
+
+.editor-settings__toggle:hover {
+  background: var(--button-toggle-hover-bg);
+  color: var(--button-toggle-hover-text);
 }
 
 .editor-settings__toggle--active {
-  border-color: var(--accent-border);
-  background: var(--accent-soft);
-  color: var(--text-strong);
+  border-color: var(--button-toggle-active-border);
+  background: var(--button-toggle-active-bg);
+  color: var(--button-toggle-active-text);
 }
 
 .panel-heading__title {
@@ -610,21 +667,28 @@
 }
 
 .run-button {
-  border: 1px solid var(--border);
+  border: 1px solid var(--button-disabled-border);
   border-radius: 12px;
-  padding: 0.7rem 1rem;
-  background: var(--accent-soft);
-  color: var(--text-muted);
+  padding: 0.7rem 1.1rem;
+  background: var(--button-disabled-bg);
+  color: var(--button-disabled-text);
   font-weight: 700;
   cursor: not-allowed;
-  opacity: 0.8;
+  opacity: 1;
+  transition: all 0.16s ease;
 }
 
 .run-button:not(:disabled) {
-  background: var(--accent-strong);
-  color: #ffffff;
+  border-color: var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
   cursor: pointer;
   opacity: 1;
+}
+
+.run-button:not(:disabled):hover {
+  background: var(--button-primary-hover-bg);
+  color: var(--button-primary-hover-text);
 }
 
 .editor-panel__surface {
@@ -965,17 +1029,18 @@
   appearance: none;
   background: transparent;
   border: none;
-  color: var(--text-muted);
+  color: var(--button-muted-text);
   font-size: 0.95rem;
   cursor: pointer;
   padding: 0 0.25rem;
   line-height: 1;
   border-radius: 999px;
-  transition: color 0.15s ease;
+  transition: color 0.15s ease, background-color 0.15s ease;
 }
 
 .file-explorer__search-clear:hover {
-  color: var(--text-strong);
+  color: var(--button-hover-text);
+  background: var(--button-hover-bg);
 }
 
 .file-explorer__tree {
@@ -1016,7 +1081,7 @@
   align-items: center;
   gap: 0.6rem;
   text-align: left;
-  color: var(--text);
+  color: var(--button-text);
   cursor: pointer;
   width: 100%;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
@@ -1024,14 +1089,14 @@
 }
 
 .file-explorer__item:hover {
-  background: var(--surface-hover);
-  color: var(--text-strong);
+  background: var(--button-hover-bg);
+  color: var(--button-hover-text);
 }
 
 .file-explorer__item--active {
-  background: var(--accent-soft);
-  border-color: var(--accent-border);
-  color: var(--text-strong);
+  background: var(--button-toggle-active-bg);
+  border-color: var(--button-toggle-active-border);
+  color: var(--button-toggle-active-text);
   font-weight: 600;
 }
 
@@ -1071,7 +1136,7 @@
 .file-explorer__actions {
   display: flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.25rem;
   opacity: 0;
   transition: opacity 0.15s ease;
   margin-left: auto;
@@ -1084,24 +1149,30 @@
 
 .file-explorer__action-btn {
   appearance: none;
-  background: transparent;
-  border: none;
+  background: var(--button-bg);
+  border: 1px solid var(--button-border);
   font-size: 0.78rem;
   cursor: pointer;
-  padding: 0.15rem 0.35rem;
-  border-radius: 4px;
-  color: var(--text-muted);
-  transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  padding: 0.2rem 0.45rem;
+  border-radius: 6px;
+  color: var(--button-text);
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .file-explorer__action-btn:hover {
-  background: var(--surface-hover);
-  color: var(--text-strong);
+  background: var(--button-hover-bg);
+  color: var(--button-hover-text);
+}
+
+.file-explorer__action-btn--delete {
+  background: var(--button-danger-bg);
+  color: var(--button-danger-text);
+  border-color: var(--button-danger-border);
 }
 
 .file-explorer__action-btn--delete:hover {
-  background: rgba(239, 68, 68, 0.25);
-  color: #fca5a5;
+  background: var(--button-danger-hover-bg);
+  color: var(--button-danger-hover-text);
 }
 
 .file-explorer__rename-form {
@@ -1138,7 +1209,7 @@
 
 .file-explorer__rename-error {
   margin: 0;
-  color: #ff9da6;
+  color: var(--button-danger-text);
   font-size: 0.78rem;
   padding-left: 0.2rem;
 }

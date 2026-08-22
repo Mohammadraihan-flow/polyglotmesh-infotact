@@ -122,6 +122,7 @@ function EditorPanel({
   editorSettings,
   onEditorSettingsChange,
   isSettingsOpen,
+  onToggleSettings,
   onCloseSettings,
   saveMessage,
 }) {
@@ -227,6 +228,16 @@ function EditorPanel({
               <EditorSettings settings={editorSettings} onChange={onEditorSettingsChange} />
             </div>
           ) : null}
+
+          <button
+            type="button"
+            className="settings-button"
+            aria-label="Settings"
+            title="Settings"
+            onClick={onToggleSettings}
+          >
+            ⚙️
+          </button>
 
           <button type="button" className="run-button" disabled={isRunning || !activeFile} onClick={onRunClick}>
             {isRunning ? 'Running...' : 'Run'}
