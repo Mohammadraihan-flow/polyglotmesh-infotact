@@ -369,12 +369,24 @@ function App() {
     const currentActiveName = activeFileNameRef.current
     if (!currentActiveName) return
 
+    const newContent = value ?? ''
+
     setFiles((currentFiles) =>
-      currentFiles.map((file) =>
-        file.name === currentActiveName
-          ? { ...file, code: value ?? '', content: value ?? '', isDirty: true }
-          : file,
-      ),
+      currentFiles.map((file) => {
+        if (file.name === currentActiveName) {
+          const currentContent = file.code ?? file.content ?? ''
+          if (currentContent === newContent) {
+            return file
+          }
+          return {
+            ...file,
+            code: newContent,
+            content: newContent,
+            isDirty: true,
+          }
+        }
+        return file
+      }),
     )
   }, [])
 
