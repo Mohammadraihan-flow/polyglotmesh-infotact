@@ -1,9 +1,20 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, onCreateFile }) {
   const [isCreatingFile, setIsCreatingFile] = useState(false)
   const [fileName, setFileName] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
+  const activeTabRef = useRef(null)
+
+  useEffect(() => {
+    if (activeTabRef.current) {
+      activeTabRef.current.scrollIntoView({
+        behavior: 'smooth',
+        block: 'nearest',
+        inline: 'nearest',
+      })
+    }
+  }, [activeFileName])
 
   const handleOpenCreate = () => {
     setIsCreatingFile(true)
@@ -34,53 +45,62 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
 
   return (
     <div className="editor-tabs__shell">
-      <div className="editor-tabs" role="tablist" aria-label="Editor file tabs">
-        {openFiles.map((file) => {
-          const isActive = file.name === activeFileName
+      <div className="editor-tabs__header">
+        <div className="editor-tabs" role="tablist" aria-label="Editor file tabs">
+          {openFiles.map((file) => {
+            const isActive = file.name === activeFileName
 
-          return (
-            <div key={file.name} className={`editor-tabs__tab-shell${isActive ? ' editor-tabs__tab-shell--active' : ''}`}>
-              <button
-                type="button"
-                role="tab"
-                aria-selected={isActive}
-                className={`editor-tabs__tab${isActive ? ' editor-tabs__tab--active' : ''}`}
-                onClick={() => onSelectFile(file.name)}
-                title={file.name}
+            return (
+              <div
+                key={file.name}
+                ref={isActive ? activeTabRef : null}
+                className={`editor-tabs__tab-shell${
+                  isActive ? ' editor-tabs__tab-shell--active' : ''
+                }`}
               >
-                <span className="editor-tabs__tab-name">{file.name}</span>
-                {file.isDirty ? (
-                  <span className="editor-tabs__dirty-dot" title="Unsaved changes">
-                    ●
-                  </span>
-                ) : null}
-              </button>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  className={`editor-tabs__tab${isActive ? ' editor-tabs__tab--active' : ''}`}
+                  onClick={() => onSelectFile(file.name)}
+                  title={file.name}
+                >
+                  <span className="editor-tabs__tab-name">{file.name}</span>
+                  {file.isDirty ? (
+                    <span className="editor-tabs__dirty-dot" title="Unsaved changes">
+                      ●
+                    </span>
+                  ) : null}
+                </button>
 
-              <button
-                type="button"
-                className="editor-tabs__close-button"
-                aria-label={`Close ${file.name} tab`}
-                title="Close tab"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onCloseTab?.(file.name)
-                }}
-              >
-                ×
-              </button>
-            </div>
-          )
-        })}
+                <button
+                  type="button"
+                  className="editor-tabs__close-button"
+                  aria-label={`Close ${file.name} tab`}
+                  title="Close tab"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCloseTab?.(file.name)
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+            )
+          })}
+        </div>
+
+        <button
+          type="button"
+          className="editor-tabs__create-button"
+          aria-label="Create new file"
+          title="Create new file"
+          onClick={handleOpenCreate}
+        >
+          +
+        </button>
       </div>
-
-      <button
-        type="button"
-        className="editor-tabs__create-button"
-        aria-label="Create new file"
-        onClick={handleOpenCreate}
-      >
-        +
-      </button>
 
       {isCreatingFile ? (
         <form className="editor-tabs__create-panel" onSubmit={handleCreateSubmit}>
@@ -107,12 +127,18 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
             <button type="submit" className="editor-tabs__create-confirm">
               Create
             </button>
-            <button type="button" className="editor-tabs__create-cancel" onClick={handleCancelCreate}>
+            <button
+              type="button"
+              className="editor-tabs__create-cancel"
+              onClick={handleCancelCreate}
+            >
               Cancel
             </button>
           </div>
 
-          <p className="editor-tabs__create-hint">Use a filename like `program.py` or `main.cpp`.</p>
+          <p className="editor-tabs__create-hint">
+            Use a filename like `program.py` or `main.cpp`.
+          </p>
           {errorMessage ? <p className="editor-tabs__create-error">{errorMessage}</p> : null}
         </form>
       ) : null}
