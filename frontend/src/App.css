@@ -756,11 +756,83 @@
   border: 1px solid var(--border);
   border-radius: 18px;
   background: var(--editor-bg);
+  display: flex;
+  flex-direction: column;
 }
 
 .editor-panel__editor {
-  min-height: 28rem;
+  flex: 1;
+  min-height: 24rem;
   height: 100%;
+}
+
+.editor-status-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.35rem 0.85rem;
+  font-size: 0.78rem;
+  font-family: inherit;
+  background: var(--surface);
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  border-bottom-left-radius: 18px;
+  border-bottom-right-radius: 18px;
+  user-select: none;
+  overflow: hidden;
+  flex-wrap: nowrap;
+  flex: 0 0 auto;
+}
+
+.editor-status-bar__left,
+.editor-status-bar__right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.editor-status-bar__item {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.editor-status-bar__item--language {
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.editor-status-bar__item--status {
+  color: var(--text-strong);
+  font-weight: 600;
+}
+
+.editor-status-bar__item--saving {
+  color: var(--button-muted-text);
+  font-style: italic;
+}
+
+.editor-status-bar__divider {
+  color: var(--border);
+  opacity: 0.7;
+}
+
+@media (max-width: 640px) {
+  .editor-status-bar__item--chars,
+  .editor-status-bar__item--lines {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .editor-status-bar__divider:nth-of-type(n+2) {
+    display: none;
+  }
+  .editor-status-bar__item--tabsize {
+    display: none;
+  }
 }
 
 .editor-panel__surface .monaco-editor,

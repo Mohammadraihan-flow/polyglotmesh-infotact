@@ -1,7 +1,8 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import Editor, { useMonaco } from '@monaco-editor/react'
 import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
+import EditorStatusBar from './EditorStatusBar.jsx'
 import { getMonacoLanguageFromFileName } from '../utils/languageUtils.js'
 
 const baseEditorOptions = {
@@ -135,6 +136,7 @@ function EditorPanel({
   const settingsContainerRef = useRef(null)
   const editorRef = useRef(null)
   const monacoRef = useRef(null)
+  const [editorInstance, setEditorInstance] = useState(null)
   const globalMonaco = useMonaco()
 
   const validTabSizes = [2, 4, 8]
@@ -263,28 +265,37 @@ function EditorPanel({
 
       <div className="editor-panel__surface">
         {activeFile ? (
-          <Editor
-            path={activeFile.name}
-            className="editor-panel__editor"
-            defaultLanguage="plaintext"
-            language={monacoLanguage}
-            theme={selectedTheme}
-            value={activeFile.code ?? activeFile.content ?? ''}
-            onChange={onChange}
-            onMount={(editor, monaco) => {
-              editorRef.current = editor
-              monacoRef.current = monaco
-              if (typeof window !== 'undefined') {
-                window.monaco = monaco
-              }
-              defineMonacoThemes(monaco)
-              monaco.editor.setTheme(selectedTheme)
-            }}
-            beforeMount={(monaco) => {
-              defineMonacoThemes(monaco)
-            }}
-            options={editorOptions}
-          />
+          <>
+            <Editor
+              path={activeFile.name}
+              className="editor-panel__editor"
+              defaultLanguage="plaintext"
+              language={monacoLanguage}
+              theme={selectedTheme}
+              value={activeFile.code ?? activeFile.content ?? ''}
+              onChange={onChange}
+              onMount={(editor, monaco) => {
+                editorRef.current = editor
+                monacoRef.current = monaco
+                setEditorInstance(editor)
+                if (typeof window !== 'undefined') {
+                  window.monaco = monaco
+                }
+                defineMonacoThemes(monaco)
+                monaco.editor.setTheme(selectedTheme)
+              }}
+              beforeMount={(monaco) => {
+                defineMonacoThemes(monaco)
+              }}
+              options={editorOptions}
+            />
+            <EditorStatusBar
+              editor={editorInstance || editorRef.current}
+              activeFile={activeFile}
+              editorSettings={editorSettings}
+              saveMessage={saveMessage}
+            />
+          </>
         ) : (
           <div className="editor-panel__empty-state">
             <div className="editor-panel__empty-content">
