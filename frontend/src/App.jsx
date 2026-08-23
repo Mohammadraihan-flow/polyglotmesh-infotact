@@ -52,6 +52,113 @@ function makeUniqueFileName(desiredName, existingFiles) {
   return candidateName
 }
 
+const WORKSPACE_STORAGE_KEY = 'polyglotmesh-workspace'
+const SETTINGS_STORAGE_KEY = 'polyglotmesh-editor-settings'
+const LEGACY_SETTINGS_STORAGE_KEY = 'polyglotmesh_editor_settings'
+
+function saveWorkspaceToLocalStorage(files, openFileNames, activeFileName, recentFileNames) {
+  try {
+    const payload = {
+      files: files.map((file) => ({
+        id: file.id ?? file.name,
+        name: file.name,
+        label: file.label,
+        language: file.language ?? file.monacoLanguage,
+        monacoLanguage: file.monacoLanguage ?? file.language,
+        code: file.code ?? file.content ?? '',
+        content: file.content ?? file.code ?? '',
+      })),
+      openFileNames: openFileNames ?? [],
+      activeFileName: activeFileName ?? null,
+      recentFileNames: recentFileNames ?? [],
+    }
+    localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(payload))
+  } catch (e) {
+    console.warn('PolyglotMesh: Unable to save workspace to localStorage.', e)
+  }
+}
+
+function getInitialWorkspace() {
+  const emptyWorkspace = {
+    files: [],
+    openFileNames: [],
+    activeFileName: null,
+    recentFileNames: [],
+  }
+
+  try {
+    const rawData = localStorage.getItem(WORKSPACE_STORAGE_KEY)
+    if (!rawData) {
+      return emptyWorkspace
+    }
+
+    const parsed = JSON.parse(rawData)
+    if (!parsed || typeof parsed !== 'object') {
+      return emptyWorkspace
+    }
+
+    if (!Array.isArray(parsed.files)) {
+      return emptyWorkspace
+    }
+
+    const validFiles = parsed.files
+      .filter((file) => file && typeof file.name === 'string' && file.name.trim().length > 0)
+      .map((file) => {
+        const monacoLanguage = file.monacoLanguage ?? getMonacoLanguageFromFileName(file.name)
+        const label = file.label ?? getLanguageLabelFromFileName(file.name)
+        const content =
+          typeof file.code === 'string'
+            ? file.code
+            : typeof file.content === 'string'
+            ? file.content
+            : ''
+        return {
+          id: file.id ?? file.name,
+          name: file.name,
+          label,
+          language: monacoLanguage,
+          monacoLanguage,
+          code: content,
+          content,
+          isDirty: false,
+        }
+      })
+
+    const validNamesSet = new Set(validFiles.map((f) => f.name))
+
+    const validOpenNames = Array.isArray(parsed.openFileNames)
+      ? parsed.openFileNames.filter((name) => validNamesSet.has(name))
+      : []
+
+    let validActiveName = null
+    if (typeof parsed.activeFileName === 'string' && validNamesSet.has(parsed.activeFileName)) {
+      validActiveName = parsed.activeFileName
+    } else if (validOpenNames.length > 0) {
+      validActiveName = validOpenNames[0]
+    } else if (validFiles.length > 0) {
+      validActiveName = validFiles[0].name
+    }
+
+    if (validActiveName && !validOpenNames.includes(validActiveName)) {
+      validOpenNames.push(validActiveName)
+    }
+
+    const validRecentNames = Array.isArray(parsed.recentFileNames)
+      ? parsed.recentFileNames.filter((name) => validNamesSet.has(name)).slice(0, 5)
+      : []
+
+    return {
+      files: validFiles,
+      openFileNames: validOpenNames,
+      activeFileName: validActiveName,
+      recentFileNames: validRecentNames,
+    }
+  } catch (e) {
+    console.warn('PolyglotMesh: Unable to parse saved workspace from localStorage.', e)
+    return emptyWorkspace
+  }
+}
+
 const defaultSettings = {
   fontSize: 14,
   wordWrap: 'on',
@@ -66,7 +173,9 @@ const defaultSettings = {
 const getInitialSettings = () => {
   let settings = defaultSettings
   try {
-    const stored = localStorage.getItem('polyglotmesh_editor_settings')
+    const stored =
+      localStorage.getItem(SETTINGS_STORAGE_KEY) ||
+      localStorage.getItem(LEGACY_SETTINGS_STORAGE_KEY)
     const storedWordWrap = localStorage.getItem('polyglotmesh-word-wrap')
 
     let wordWrapVal = undefined
@@ -101,10 +210,11 @@ const getInitialSettings = () => {
 }
 
 function App() {
-  const [files, setFiles] = useState([])
-  const [openFileNames, setOpenFileNames] = useState([])
-  const [activeFileName, setActiveFileName] = useState(null)
-  const [recentFileNames, setRecentFileNames] = useState([])
+  const [initialWorkspaceState] = useState(getInitialWorkspace)
+  const [files, setFiles] = useState(initialWorkspaceState.files)
+  const [openFileNames, setOpenFileNames] = useState(initialWorkspaceState.openFileNames)
+  const [activeFileName, setActiveFileName] = useState(initialWorkspaceState.activeFileName)
+  const [recentFileNames, setRecentFileNames] = useState(initialWorkspaceState.recentFileNames)
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
   const [editorSettings, setEditorSettings] = useState(getInitialSettings)
@@ -118,7 +228,8 @@ function App() {
 
   useEffect(() => {
     try {
-      localStorage.setItem('polyglotmesh_editor_settings', JSON.stringify(editorSettings))
+      localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(editorSettings))
+      localStorage.setItem(LEGACY_SETTINGS_STORAGE_KEY, JSON.stringify(editorSettings))
       if (editorSettings.wordWrap && ['on', 'off', 'wordWrapColumn'].includes(editorSettings.wordWrap)) {
         localStorage.setItem('polyglotmesh-word-wrap', editorSettings.wordWrap)
       }
@@ -151,7 +262,7 @@ function App() {
   const filesRef = useRef(files)
   const openFileNamesRef = useRef(openFileNames)
   const activeFileNameRef = useRef(activeFileName)
-
+  const recentFileNamesRef = useRef(recentFileNames)
 
   useEffect(() => {
     filesRef.current = files
@@ -165,6 +276,19 @@ function App() {
     activeFileNameRef.current = activeFileName
   }, [activeFileName])
 
+  useEffect(() => {
+    recentFileNamesRef.current = recentFileNames
+  }, [recentFileNames])
+
+  useEffect(() => {
+    saveWorkspaceToLocalStorage(
+      filesRef.current,
+      openFileNames,
+      activeFileName,
+      recentFileNames,
+    )
+  }, [openFileNames, activeFileName, recentFileNames])
+
   const flushAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) {
       clearTimeout(autoSaveTimerRef.current)
@@ -175,15 +299,21 @@ function App() {
       const { fileName, value } = pendingChangeRef.current
       pendingChangeRef.current = null
 
-      setFiles((currentFiles) =>
-        currentFiles.map((file) =>
-          file.name === fileName
-            ? { ...file, code: value, content: value, isDirty: false }
-            : file,
-        ),
+      const updatedFiles = filesRef.current.map((file) =>
+        file.name === fileName
+          ? { ...file, code: value, content: value, isDirty: false }
+          : file,
       )
 
-      setSaveMessage('Saved')
+      setFiles(updatedFiles)
+      saveWorkspaceToLocalStorage(
+        updatedFiles,
+        openFileNamesRef.current,
+        activeFileNameRef.current,
+        recentFileNamesRef.current,
+      )
+
+      setSaveMessage('Workspace saved')
       if (saveTimerRef.current) {
         clearTimeout(saveTimerRef.current)
       }
@@ -193,6 +323,16 @@ function App() {
       }, 2000)
     }
   }, [])
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      flushAutoSave()
+    }
+    window.addEventListener('beforeunload', handleBeforeUnload)
+    return () => {
+      window.removeEventListener('beforeunload', handleBeforeUnload)
+    }
+  }, [flushAutoSave])
 
   const activeFile = files.find((file) => file.name === activeFileName) ?? null
   const activeLanguage = activeFile
@@ -242,11 +382,21 @@ function App() {
       isDirty: false,
     }
 
-    setFiles((prevFiles) => [...prevFiles, newFile])
-    setOpenFileNames((prevOpen) =>
-      prevOpen.includes(uniqueName) ? prevOpen : [...prevOpen, uniqueName],
-    )
+    const nextFiles = [...currentFiles, newFile]
+    const nextOpen = currentOpenNames.includes(uniqueName)
+      ? currentOpenNames
+      : [...currentOpenNames, uniqueName]
+
+    setFiles(nextFiles)
+    setOpenFileNames(nextOpen)
     setActiveFileName(uniqueName)
+
+    saveWorkspaceToLocalStorage(
+      nextFiles,
+      nextOpen,
+      uniqueName,
+      recentFileNamesRef.current,
+    )
 
     return {
       success: true,
@@ -374,20 +524,28 @@ function App() {
     const openIndex = currentOpenNames.indexOf(fileName)
     const nextOpenNames = currentOpenNames.filter((name) => name !== fileName)
     setOpenFileNames(nextOpenNames)
-    setRecentFileNames((prev) => prev.filter((name) => name !== fileName))
+    const nextRecent = recentFileNamesRef.current.filter((name) => name !== fileName)
+    setRecentFileNames(nextRecent)
 
+    let nextActive = null
     if (fileName === currentActiveName) {
       if (nextOpenNames.length > 0) {
-        const nextActive = nextOpenNames[Math.max(0, openIndex - 1)] ?? nextOpenNames[0]
+        nextActive = nextOpenNames[Math.max(0, openIndex - 1)] ?? nextOpenNames[0]
         setActiveFileName(nextActive)
       } else if (nextFiles.length > 0) {
         const fallbackFile = nextFiles[Math.max(0, fileIndex - 1)] ?? nextFiles[0]
+        nextOpenNames.push(fallbackFile.name)
         setOpenFileNames([fallbackFile.name])
+        nextActive = fallbackFile.name
         setActiveFileName(fallbackFile.name)
       } else {
         setActiveFileName(null)
       }
+    } else {
+      nextActive = currentActiveName
     }
+
+    saveWorkspaceToLocalStorage(nextFiles, nextOpenNames, nextActive, nextRecent)
   }, [])
 
   const handleRenameFile = useCallback(
@@ -425,35 +583,55 @@ function App() {
         }
       }
 
+      if (typeof window !== 'undefined' && window.monaco) {
+        try {
+          const models = window.monaco.editor.getModels()
+          const oldModel = models.find(
+            (m) => m.uri.path === `/${oldFileName}` || m.uri.path === oldFileName,
+          )
+          oldModel?.dispose()
+        } catch (e) {
+          // Ignore error
+        }
+      }
+
       const monacoLanguage = getMonacoLanguageFromFileName(trimmedNewName)
       const label = getLanguageLabelFromFileName(trimmedNewName)
 
-      setFiles((prevFiles) =>
-        prevFiles.map((file) => {
-          if (file.name === oldFileName) {
-            return {
-              ...file,
-              id: trimmedNewName,
-              name: trimmedNewName,
-              label,
-              language: monacoLanguage,
-              monacoLanguage,
-            }
+      const nextFiles = currentFiles.map((file) => {
+        if (file.name === oldFileName) {
+          return {
+            ...file,
+            id: trimmedNewName,
+            name: trimmedNewName,
+            label,
+            language: monacoLanguage,
+            monacoLanguage,
           }
-          return file
-        }),
-      )
+        }
+        return file
+      })
+      setFiles(nextFiles)
 
-      setOpenFileNames((prevOpen) =>
-        prevOpen.map((name) => (name === oldFileName ? trimmedNewName : name)),
+      const nextOpen = openFileNamesRef.current.map((name) =>
+        name === oldFileName ? trimmedNewName : name,
       )
-      setRecentFileNames((prev) =>
-        prev.map((name) => (name === oldFileName ? trimmedNewName : name)),
-      )
+      setOpenFileNames(nextOpen)
 
+      const nextRecent = recentFileNamesRef.current.map((name) =>
+        name === oldFileName ? trimmedNewName : name,
+      )
+      setRecentFileNames(nextRecent)
+
+      const nextActive =
+        oldFileName === activeFileNameRef.current
+          ? trimmedNewName
+          : activeFileNameRef.current
       if (oldFileName === activeFileNameRef.current) {
         setActiveFileName(trimmedNewName)
       }
+
+      saveWorkspaceToLocalStorage(nextFiles, nextOpen, nextActive, nextRecent)
 
       return { success: true, message: 'File renamed.' }
     },
