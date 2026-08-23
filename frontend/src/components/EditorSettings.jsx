@@ -320,6 +320,10 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
               <kbd className="editor-settings__kbd">Ctrl+H / Cmd+Alt+F</kbd>
             </div>
             <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Go to Line</span>
+              <kbd className="editor-settings__kbd">Ctrl+G / Cmd+G</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Command Palette</span>
               <kbd className="editor-settings__kbd">Ctrl+Shift+P / Cmd+Shift+P</kbd>
             </div>

@@ -644,6 +644,23 @@ function App() {
         }
         return
       }
+
+      // 11. Ctrl+G / Cmd+G -> Open Monaco Go to Line Widget
+      if (modifier && key === 'g' && !event.shiftKey && !event.altKey) {
+        event.preventDefault()
+        event.stopPropagation()
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            const gotoAction = activeEditor.getAction('editor.action.gotoLine')
+            if (gotoAction) {
+              gotoAction.run()
+            }
+          }
+        }
+        return
+      }
     },
     [
       isCommandPaletteOpen,

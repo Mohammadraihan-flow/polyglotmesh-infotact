@@ -27,6 +27,21 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       shortcut: 'Settings',
       action: onOpenSettings,
     },
+    {
+      id: 'gotoline',
+      label: 'Go to Line',
+      description: 'Jump to a specific line and column',
+      shortcut: 'Ctrl+G',
+      action: () => {
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            activeEditor.getAction('editor.action.gotoLine')?.run()
+          }
+        }
+      },
+    },
   ]
 
   const filteredCommands = commands.filter((cmd) => {
