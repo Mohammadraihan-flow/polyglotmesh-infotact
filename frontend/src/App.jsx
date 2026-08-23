@@ -104,6 +104,7 @@ function App() {
   const [files, setFiles] = useState([])
   const [openFileNames, setOpenFileNames] = useState([])
   const [activeFileName, setActiveFileName] = useState(null)
+  const [recentFileNames, setRecentFileNames] = useState([])
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
   const [editorSettings, setEditorSettings] = useState(getInitialSettings)
@@ -128,9 +129,29 @@ function App() {
     document.documentElement.setAttribute('data-theme', currentTheme)
   }, [editorSettings])
 
+  useEffect(() => {
+    if (!activeFileName) return
+    const fileExists = files.some((f) => f.name === activeFileName)
+    if (!fileExists) return
+
+    setRecentFileNames((prev) => {
+      const filtered = prev.filter((name) => name !== activeFileName)
+      return [activeFileName, ...filtered].slice(0, 5)
+    })
+  }, [activeFileName, files])
+
+  useEffect(() => {
+    const existingNames = new Set(files.map((f) => f.name))
+    setRecentFileNames((prev) => {
+      const filtered = prev.filter((name) => existingNames.has(name))
+      return filtered.length === prev.length ? prev : filtered
+    })
+  }, [files])
+
   const filesRef = useRef(files)
   const openFileNamesRef = useRef(openFileNames)
   const activeFileNameRef = useRef(activeFileName)
+
 
   useEffect(() => {
     filesRef.current = files
@@ -353,6 +374,7 @@ function App() {
     const openIndex = currentOpenNames.indexOf(fileName)
     const nextOpenNames = currentOpenNames.filter((name) => name !== fileName)
     setOpenFileNames(nextOpenNames)
+    setRecentFileNames((prev) => prev.filter((name) => name !== fileName))
 
     if (fileName === currentActiveName) {
       if (nextOpenNames.length > 0) {
@@ -424,6 +446,9 @@ function App() {
 
       setOpenFileNames((prevOpen) =>
         prevOpen.map((name) => (name === oldFileName ? trimmedNewName : name)),
+      )
+      setRecentFileNames((prev) =>
+        prev.map((name) => (name === oldFileName ? trimmedNewName : name)),
       )
 
       if (oldFileName === activeFileNameRef.current) {
@@ -723,6 +748,7 @@ function App() {
         <Sidebar
           files={files}
           activeFileName={activeFile?.name}
+          recentFileNames={recentFileNames}
           onSelectFile={handleSelectFile}
           onRenameFile={handleRenameFile}
           onDeleteFile={handleDeleteFile}

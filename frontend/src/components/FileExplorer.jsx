@@ -1,9 +1,15 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { getExtension } from '../utils/languageUtils.js'
+import { getExtension, getLanguageLabelFromFileName } from '../utils/languageUtils.js'
 import FileIcon from './FileIcon.jsx'
 
-
-function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, onDeleteFile }) {
+function FileExplorer({
+  files = [],
+  activeFileName,
+  recentFileNames = [],
+  onSelectFile,
+  onRenameFile,
+  onDeleteFile,
+}) {
   const [searchQuery, setSearchQuery] = useState('')
   const [renamingFileName, setRenamingFileName] = useState(null)
   const [renameInput, setRenameInput] = useState('')
@@ -48,6 +54,10 @@ function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, 
   const filteredFiles = trimmedQuery
     ? files.filter((file) => file.name.toLowerCase().includes(trimmedQuery))
     : files
+
+  const validRecentFiles = (recentFileNames || [])
+    .map((name) => files.find((file) => file.name === name))
+    .filter(Boolean)
 
   return (
     <div className="file-explorer" aria-label="Project File Explorer">
@@ -197,8 +207,47 @@ function FileExplorer({ files = [], activeFileName, onSelectFile, onRenameFile, 
           })
         )}
       </div>
+
+      <div className="file-explorer__recent-section" aria-label="Recent files">
+        <h4 className="file-explorer__recent-title">Recent Files</h4>
+        {validRecentFiles.length === 0 ? (
+          <p className="file-explorer__recent-empty">No recent files</p>
+        ) : (
+          <div className="file-explorer__recent-list">
+            {validRecentFiles.map((file) => {
+              const isActive = file.name === activeFileName
+              const lang = getLanguageLabelFromFileName(file.name)
+              return (
+                <div
+                  key={`recent-${file.name}`}
+                  role="button"
+                  tabIndex={0}
+                  className={`file-explorer__item file-explorer__recent-item${
+                    isActive ? ' file-explorer__item--active' : ''
+                  }`}
+                  onClick={() => onSelectFile?.(file.name)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      onSelectFile?.(file.name)
+                    }
+                  }}
+                  title={`Open ${file.name}`}
+                >
+                  <span className="file-explorer__icon" aria-hidden="true">
+                    <FileIcon fileName={file.name} size={15} />
+                  </span>
+                  <span className="file-explorer__name">{file.name}</span>
+                  <span className="file-explorer__recent-lang">{lang}</span>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
     </div>
   )
 }
 
 export default FileExplorer
+
