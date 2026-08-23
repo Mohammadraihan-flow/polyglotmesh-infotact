@@ -1,10 +1,57 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import Editor, { useMonaco } from '@monaco-editor/react'
 import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
 import EditorStatusBar from './EditorStatusBar.jsx'
 import EditorBreadcrumb from './EditorBreadcrumb.jsx'
 import { getMonacoLanguageFromFileName } from '../utils/languageUtils.js'
+
+class EditorErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props)
+    this.state = { hasError: false }
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true }
+  }
+
+  componentDidCatch(error, errorInfo) {
+    console.error('Monaco Editor Error Boundary:', error, errorInfo)
+  }
+
+  handleRetry = () => {
+    this.setState({ hasError: false })
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="editor-panel__error-state" role="alert" aria-live="assertive">
+          <div className="editor-panel__error-content">
+            <span className="editor-panel__error-icon" aria-hidden="true">
+              ⚠️
+            </span>
+            <h3 className="editor-panel__error-title">Failed to load Editor</h3>
+            <p className="editor-panel__error-description">
+              Monaco Editor could not be initialized. Please check your connection or try again.
+            </p>
+            <button
+              type="button"
+              className="editor-panel__error-retry-btn"
+              onClick={this.handleRetry}
+              aria-label="Try loading Monaco Editor again"
+            >
+              Try Again
+            </button>
+          </div>
+        </div>
+      )
+    }
+
+    return this.props.children
+  }
+}
 
 const baseEditorOptions = {
   fontSize: 14,
@@ -427,7 +474,7 @@ function EditorPanel({
 
       <div className="editor-panel__surface">
         {activeFile ? (
-          <>
+          <EditorErrorBoundary key={activeFile.name}>
             <EditorBreadcrumb activeFile={activeFile} />
             <Editor
               path={activeFile.name}
@@ -437,6 +484,13 @@ function EditorPanel({
               theme={selectedTheme}
               value={activeFile.code ?? activeFile.content ?? ''}
               onChange={onChange}
+              loading={
+                <div className="editor-panel__loading-state" role="status" aria-live="polite">
+                  <div className="editor-panel__loading-spinner" aria-hidden="true" />
+                  <p className="editor-panel__loading-title">Loading Editor...</p>
+                  <p className="editor-panel__loading-subtext">Initializing Monaco Editor workspace</p>
+                </div>
+              }
               onMount={(editor, monaco) => {
                 editorRef.current = editor
                 monacoRef.current = monaco
@@ -458,15 +512,25 @@ function EditorPanel({
               editorSettings={editorSettings}
               saveMessage={saveMessage}
             />
-          </>
+          </EditorErrorBoundary>
         ) : (
-          <div className="editor-panel__empty-state">
+          <div className="editor-panel__empty-state" role="region" aria-label="No file selected">
             <div className="editor-panel__empty-content">
-              <span className="editor-panel__empty-icon">📂</span>
-              <h3 className="editor-panel__empty-title">Select a file to start editing</h3>
+              <span className="editor-panel__empty-icon" aria-hidden="true">📂</span>
+              <h3 className="editor-panel__empty-title">No file selected</h3>
               <p className="editor-panel__empty-description">
-                Open a file from the File Explorer sidebar or click + to create a new file.
+                Create or select a file to start editing
               </p>
+              {onCreateFile ? (
+                <button
+                  type="button"
+                  className="editor-panel__empty-create-btn"
+                  onClick={() => onCreateFile('untitled.js')}
+                  aria-label="Create new file"
+                >
+                  + Create File
+                </button>
+              ) : null}
             </div>
           </div>
         )}

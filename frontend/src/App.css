@@ -339,6 +339,126 @@
   max-width: 24rem;
 }
 
+.editor-panel__empty-create-btn {
+  margin-top: 0.5rem;
+  padding: 0.65rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--button-primary-border);
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.editor-panel__empty-create-btn:hover {
+  background: var(--button-primary-hover-bg);
+  color: var(--button-primary-hover-text);
+}
+
+.editor-panel__loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 24rem;
+  background: var(--editor-bg);
+  color: var(--text-strong);
+  gap: 0.75rem;
+  padding: 2rem;
+  border-radius: 14px;
+}
+
+.editor-panel__loading-spinner {
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent-strong);
+  border-radius: 50%;
+  animation: editorSpinner 0.8s linear infinite;
+}
+
+@keyframes editorSpinner {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.editor-panel__loading-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-strong);
+}
+
+.editor-panel__loading-subtext {
+  margin: 0;
+  font-size: 0.88rem;
+  color: var(--text-muted);
+}
+
+.editor-panel__error-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  min-height: 24rem;
+  background: var(--editor-bg);
+  border-radius: 14px;
+  border: 1px dashed var(--button-danger-border);
+  padding: 2rem;
+}
+
+.editor-panel__error-content {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.75rem;
+  max-width: 24rem;
+}
+
+.editor-panel__error-icon {
+  font-size: 2.8rem;
+  line-height: 1;
+}
+
+.editor-panel__error-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--button-danger-text);
+}
+
+.editor-panel__error-description {
+  margin: 0;
+  font-size: 0.92rem;
+  color: var(--text-muted);
+}
+
+.editor-panel__error-retry-btn {
+  margin-top: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  border: 1px solid var(--button-danger-border);
+  background: var(--button-danger-bg);
+  color: var(--button-danger-text);
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.16s ease, color 0.16s ease, border-color 0.16s ease;
+}
+
+.editor-panel__error-retry-btn:hover {
+  background: var(--button-danger-hover-bg);
+  color: var(--button-danger-hover-text);
+}
+
 .editor-tabs__create-button {
   align-self: flex-start;
   width: 2.4rem;
