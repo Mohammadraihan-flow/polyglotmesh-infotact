@@ -3,6 +3,7 @@ import Editor, { useMonaco } from '@monaco-editor/react'
 import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
 import EditorStatusBar from './EditorStatusBar.jsx'
+import EditorBreadcrumb from './EditorBreadcrumb.jsx'
 import { getMonacoLanguageFromFileName } from '../utils/languageUtils.js'
 
 const baseEditorOptions = {
@@ -298,6 +299,7 @@ function EditorPanel({
       <div className="editor-panel__surface">
         {activeFile ? (
           <>
+            <EditorBreadcrumb activeFile={activeFile} />
             <Editor
               path={activeFile.name}
               className="editor-panel__editor"
