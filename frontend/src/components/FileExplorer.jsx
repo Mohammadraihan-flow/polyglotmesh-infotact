@@ -15,6 +15,8 @@ function FileExplorer({
   const [renameInput, setRenameInput] = useState('')
   const [renameError, setRenameError] = useState('')
   const inputRef = useRef(null)
+  const treeRef = useRef(null)
+  const itemRefs = useRef(new Map())
 
   useEffect(() => {
     if (renamingFileName) {
@@ -22,6 +24,22 @@ function FileExplorer({
       inputRef.current?.select()
     }
   }, [renamingFileName])
+
+  useEffect(() => {
+    if (!activeFileName || !treeRef.current) return
+    const activeEl = itemRefs.current.get(activeFileName)
+    if (!activeEl) return
+
+    const tree = treeRef.current
+    const treeRect = tree.getBoundingClientRect()
+    const activeRect = activeEl.getBoundingClientRect()
+
+    if (activeRect.top < treeRect.top) {
+      tree.scrollTop += activeRect.top - treeRect.top
+    } else if (activeRect.bottom > treeRect.bottom) {
+      tree.scrollTop += activeRect.bottom - treeRect.bottom
+    }
+  }, [activeFileName, files, searchQuery])
 
   const handleStartRename = (fileName) => {
     setRenamingFileName(fileName)
@@ -92,7 +110,7 @@ function FileExplorer({
         </div>
       </div>
 
-      <div className="file-explorer__tree" role="tree" aria-label="Project files list">
+      <div ref={treeRef} className="file-explorer__tree" role="tree" aria-label="Project files list">
         {files.length === 0 ? (
           <p className="file-explorer__empty">No files created</p>
         ) : filteredFiles.length === 0 ? (
@@ -107,6 +125,13 @@ function FileExplorer({
               return (
                 <form
                   key={file.name}
+                  ref={(el) => {
+                    if (el) {
+                      itemRefs.current.set(file.name, el)
+                    } else {
+                      itemRefs.current.delete(file.name)
+                    }
+                  }}
                   className="file-explorer__rename-form"
                   onSubmit={(e) => {
                     e.preventDefault()
@@ -156,6 +181,13 @@ function FileExplorer({
             return (
               <div
                 key={file.name}
+                ref={(el) => {
+                  if (el) {
+                    itemRefs.current.set(file.name, el)
+                  } else {
+                    itemRefs.current.delete(file.name)
+                  }
+                }}
                 role="treeitem"
                 aria-selected={isActive}
                 className={`file-explorer__item${isActive ? ' file-explorer__item--active' : ''}`}
