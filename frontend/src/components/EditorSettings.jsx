@@ -45,7 +45,7 @@ const THEMES = [
   },
 ]
 
-function EditorSettings({ settings, onChange }) {
+function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
   const handleSettingChange = (key, value) => {
     onChange((currentSettings) => ({
       ...currentSettings,
@@ -264,6 +264,33 @@ function EditorSettings({ settings, onChange }) {
           </div>
         </div>
 
+        {/* Code Folding Section */}
+        <div className="editor-settings__group">
+          <h5 className="editor-settings__group-title">Code Folding</h5>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Actions</span>
+            <div className="editor-settings__toggle-group" role="group" aria-label="Code Folding Actions">
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onFoldAll}
+                title="Fold all code blocks in active file"
+              >
+                Fold All
+              </button>
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onUnfoldAll}
+                title="Unfold all code blocks in active file"
+              >
+                Unfold All
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Keyboard Shortcuts Section */}
         <div className="editor-settings__group">
           <h5 className="editor-settings__group-title">Keyboard Shortcuts</h5>
@@ -299,6 +326,14 @@ function EditorSettings({ settings, onChange }) {
             <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Run Program</span>
               <kbd className="editor-settings__kbd">Ctrl+Enter / Cmd+Enter</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Fold Block</span>
+              <kbd className="editor-settings__kbd">Ctrl+Shift+[ / Cmd+Alt+[</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Unfold Block</span>
+              <kbd className="editor-settings__kbd">Ctrl+Shift+] / Cmd+Alt+]</kbd>
             </div>
           </div>
         </div>

@@ -14,6 +14,10 @@ const baseEditorOptions = {
   smoothScrolling: true,
   tabSize: 2,
   renderWhitespace: 'selection',
+  folding: true,
+  foldingStrategy: 'auto',
+  showFoldingControls: 'always',
+  foldingHighlight: true,
   find: {
     addExtraSpaceOnTop: false,
     autoFindInSelection: 'multiline',
@@ -51,6 +55,7 @@ function defineMonacoThemes(monaco) {
         'editorLineNumber.activeForeground': '#c4c4bf',
         'editorIndentGuide.background': '#464741',
         'editorIndentGuide.activeBackground': '#767771',
+        'editorGutter.foldingControlForeground': '#a6e22e',
         'editorWidget.background': '#272822',
         'editorWidget.foreground': '#f8f8f2',
         'editorWidget.border': '#75715e',
@@ -89,6 +94,7 @@ function defineMonacoThemes(monaco) {
         'editorLineNumber.activeForeground': '#f8f8f2',
         'editorIndentGuide.background': '#3b3d4f',
         'editorIndentGuide.activeBackground': '#6272a4',
+        'editorGutter.foldingControlForeground': '#ff79c6',
         'editorWidget.background': '#282a36',
         'editorWidget.foreground': '#f8f8f2',
         'editorWidget.border': '#6272a4',
@@ -127,6 +133,7 @@ function defineMonacoThemes(monaco) {
         'editorLineNumber.activeForeground': '#93a1a1',
         'editorIndentGuide.background': '#073642',
         'editorIndentGuide.activeBackground': '#586e75',
+        'editorGutter.foldingControlForeground': '#268bd2',
         'editorWidget.background': '#002b36',
         'editorWidget.foreground': '#839496',
         'editorWidget.border': '#586e75',
@@ -204,6 +211,73 @@ function EditorPanel({
     automaticLayout: editorSettings.automaticLayout,
   }
 
+  const viewStatesRef = useRef({})
+  const prevFileNameRef = useRef(activeFile?.name)
+
+  const handleFoldAll = () => {
+    const editor = editorInstance || editorRef.current
+    if (editor) {
+      editor.focus()
+      const foldAction = editor.getAction('editor.foldAll')
+      if (foldAction) {
+        foldAction.run()
+      } else {
+        editor.trigger('fold', 'editor.foldAll')
+      }
+    }
+  }
+
+  const handleUnfoldAll = () => {
+    const editor = editorInstance || editorRef.current
+    if (editor) {
+      editor.focus()
+      const unfoldAction = editor.getAction('editor.unfoldAll')
+      if (unfoldAction) {
+        unfoldAction.run()
+      } else {
+        editor.trigger('unfold', 'editor.unfoldAll')
+      }
+    }
+  }
+
+  useEffect(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor) return
+
+    const currentName = activeFile?.name
+    const prevName = prevFileNameRef.current
+
+    if (prevName && prevName !== currentName) {
+      try {
+        const state = editor.saveViewState()
+        if (state) {
+          viewStatesRef.current[prevName] = state
+        }
+      } catch (e) {
+        // Ignore
+      }
+    }
+
+    prevFileNameRef.current = currentName
+
+    if (currentName && viewStatesRef.current[currentName]) {
+      try {
+        editor.restoreViewState(viewStatesRef.current[currentName])
+      } catch (e) {
+        // Ignore
+      }
+    }
+  }, [activeFile?.name, editorInstance])
+
+  useEffect(() => {
+    const openNamesSet = new Set(openFiles.map((f) => f.name))
+    Object.keys(viewStatesRef.current).forEach((name) => {
+      if (!openNamesSet.has(name)) {
+        delete viewStatesRef.current[name]
+      }
+    })
+  }, [openFiles])
+
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.updateOptions(editorOptions)
@@ -268,7 +342,12 @@ function EditorPanel({
         <div className="editor-panel__actions" ref={settingsContainerRef}>
           {isSettingsOpen ? (
             <div className="editor-settings__popover">
-              <EditorSettings settings={editorSettings} onChange={onEditorSettingsChange} />
+              <EditorSettings
+                settings={editorSettings}
+                onChange={onEditorSettingsChange}
+                onFoldAll={handleFoldAll}
+                onUnfoldAll={handleUnfoldAll}
+              />
             </div>
           ) : null}
 
