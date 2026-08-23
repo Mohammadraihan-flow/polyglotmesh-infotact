@@ -661,6 +661,40 @@ function App() {
         }
         return
       }
+
+      // 12. Ctrl+= / Ctrl++ / Cmd+= -> Zoom In
+      if (modifier && (key === '=' || key === '+' || event.key === '=' || event.key === '+') && !event.shiftKey && !event.altKey) {
+        event.preventDefault()
+        event.stopPropagation()
+        setEditorSettings((prev) => ({
+          ...prev,
+          fontSize: Math.min(32, (prev.fontSize ?? 14) + 1),
+        }))
+        return
+      }
+
+      // 13. Ctrl+- / Cmd+- -> Zoom Out
+      if (modifier && (key === '-' || event.key === '-') && !event.shiftKey && !event.altKey) {
+        event.preventDefault()
+        event.stopPropagation()
+        setEditorSettings((prev) => ({
+          ...prev,
+          fontSize: Math.max(10, (prev.fontSize ?? 14) - 1),
+        }))
+        return
+      }
+
+      // 14. Ctrl+0 / Cmd+0 -> Reset Zoom
+      if (modifier && key === '0' && !event.shiftKey && !event.altKey) {
+        event.preventDefault()
+        event.stopPropagation()
+        setEditorSettings((prev) => ({
+          ...prev,
+          fontSize: 14,
+        }))
+        return
+      }
+
     },
     [
       isCommandPaletteOpen,

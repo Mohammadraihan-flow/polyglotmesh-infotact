@@ -240,6 +240,22 @@ function EditorPanel({
     }
   }
 
+  const currentFontSize = editorSettings?.fontSize ?? 14
+
+  const handleZoomIn = () => {
+    const nextSize = Math.min(32, currentFontSize + 1)
+    onEditorSettingsChange?.({ ...editorSettings, fontSize: nextSize })
+  }
+
+  const handleZoomOut = () => {
+    const nextSize = Math.max(10, currentFontSize - 1)
+    onEditorSettingsChange?.({ ...editorSettings, fontSize: nextSize })
+  }
+
+  const handleResetZoom = () => {
+    onEditorSettingsChange?.({ ...editorSettings, fontSize: 14 })
+  }
+
   useEffect(() => {
     const editor = editorInstance || editorRef.current
     if (!editor) return
@@ -351,6 +367,39 @@ function EditorPanel({
             </div>
           ) : null}
 
+          <div className="editor-panel__zoom-controls" role="group" aria-label="Editor Zoom Controls">
+            <button
+              type="button"
+              className="editor-panel__zoom-btn"
+              onClick={handleZoomOut}
+              disabled={currentFontSize <= 10}
+              title="Zoom Out (Ctrl+-)"
+              aria-label="Zoom Out"
+            >
+              −
+            </button>
+            <button
+              type="button"
+              className={`editor-panel__zoom-reset-btn${currentFontSize === 14 ? ' editor-panel__zoom-reset-btn--disabled' : ''}`}
+              onClick={handleResetZoom}
+              disabled={currentFontSize === 14}
+              title={`Reset Zoom (${currentFontSize}px)`}
+              aria-label="Reset Zoom"
+            >
+              {currentFontSize}px
+            </button>
+            <button
+              type="button"
+              className="editor-panel__zoom-btn"
+              onClick={handleZoomIn}
+              disabled={currentFontSize >= 32}
+              title="Zoom In (Ctrl+=)"
+              aria-label="Zoom In"
+            >
+              +
+            </button>
+          </div>
+
           <button
             type="button"
             className="settings-button"
@@ -366,6 +415,7 @@ function EditorPanel({
           </button>
         </div>
       </div>
+
 
       <EditorTabs
         openFiles={openFiles}

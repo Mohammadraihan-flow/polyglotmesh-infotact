@@ -113,12 +113,15 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
               value={settings.fontSize}
               onChange={(event) => handleSettingChange('fontSize', Number(event.target.value))}
             >
-              {[12, 14, 16, 18, 20].map((fontSize) => (
-                <option key={fontSize} value={fontSize}>
-                  {fontSize}px
-                </option>
-              ))}
+              {Array.from(new Set([10, 12, 14, 16, 18, 20, 24, 28, 32, settings.fontSize]))
+                .sort((a, b) => a - b)
+                .map((fontSize) => (
+                  <option key={fontSize} value={fontSize}>
+                    {fontSize}px
+                  </option>
+                ))}
             </select>
+
           </div>
 
           <div className="editor-settings__section">
@@ -339,6 +342,15 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
               <span className="editor-settings__shortcut-label">Unfold Block</span>
               <kbd className="editor-settings__kbd">Ctrl+Shift+] / Cmd+Alt+]</kbd>
             </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Zoom In / Out</span>
+              <kbd className="editor-settings__kbd">Ctrl+= / Ctrl+-</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Reset Zoom</span>
+              <kbd className="editor-settings__kbd">Ctrl+0</kbd>
+            </div>
+
           </div>
         </div>
       </div>
