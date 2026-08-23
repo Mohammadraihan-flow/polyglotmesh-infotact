@@ -237,6 +237,13 @@
     transform 0.16s ease;
 }
 
+.editor-tabs__tab-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
 .editor-tabs__tab-name {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -245,6 +252,7 @@
   display: inline-block;
   vertical-align: middle;
 }
+
 
 .editor-tabs__dirty-dot {
   display: inline-block;

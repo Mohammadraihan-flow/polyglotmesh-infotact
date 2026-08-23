@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import FileIcon from './FileIcon.jsx'
 
 function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, onCreateFile }) {
   const [isCreatingFile, setIsCreatingFile] = useState(false)
@@ -66,6 +67,9 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
                   onClick={() => onSelectFile(file.name)}
                   title={file.name}
                 >
+                  <span className="editor-tabs__tab-icon" aria-hidden="true">
+                    <FileIcon fileName={file.name} size={15} />
+                  </span>
                   <span className="editor-tabs__tab-name">{file.name}</span>
                   {file.isDirty ? (
                     <span className="editor-tabs__dirty-dot" title="Unsaved changes">
@@ -73,6 +77,7 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
                     </span>
                   ) : null}
                 </button>
+
 
                 <button
                   type="button"

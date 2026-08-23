@@ -1,0 +1,86 @@
+import React from 'react'
+import { getExtension } from '../utils/languageUtils.js'
+
+function FileIcon({ fileName, extension, size = 16, className = '' }) {
+  const ext = extension || (fileName ? getExtension(fileName) : '')
+  const width = size
+  const height = size
+
+  switch (ext) {
+    case 'js':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <rect width="24" height="24" rx="4" fill="#F7DF1E" />
+          <path d="M12 11.5v6.2c0 1.9-1.1 2.8-2.6 2.8-1.4 0-2.3-.8-2.7-1.8l1.7-1c.2.5.6.9 1.1.9.7 0 1-.4 1-1.3v-5.8H12zm5.5 0c1.7 0 2.8.9 3.2 1.9l-1.6 1c-.3-.5-.7-.9-1.5-.9-.8 0-1.3.4-1.3 1 0 .6.4.9 1.6 1.4 2.2.9 3.1 1.7 3.1 3.2 0 1.8-1.4 3-3.6 3-2.1 0-3.3-1.1-3.8-2.3l1.7-1c.3.7.9 1.3 2 1.3 1 0 1.6-.5 1.6-1.1 0-.7-.4-1-1.8-1.5-2.1-.8-2.9-1.7-2.9-3.1 0-1.7 1.4-2.9 3.5-2.9z" fill="#000000" />
+        </svg>
+      )
+    case 'py':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <path d="M11.8 2c-5.1 0-4.8 2.2-4.8 2.2l.1 2.3h4.8v.7H5.2S2 6.8 2 12c0 5.1 2.8 4.9 2.8 4.9h1.7v-2.4s-.1-2.9 2.9-2.9h4.9s2.8 0 2.8-2.7V6.1s.4-4.1-5.3-4.1zm-2.6 1.5a.9.9 0 110 1.8.9.9 0 010-1.8z" fill="#3776AB" />
+          <path d="M12.2 22c5.1 0 4.8-2.2 4.8-2.2l-.1-2.3h-4.8v-.7h6.7s3.2.4 3.2-4.8c0-5.1-2.8-4.9-2.8-4.9h-1.7v2.4s.1 2.9-2.9 2.9h-4.9s-2.8 0-2.8 2.7v4.8s-.4 4.1 5.3 4.1zm2.6-1.5a.9.9 0 110-1.8.9.9 0 010 1.8z" fill="#FFD43B" />
+        </svg>
+      )
+    case 'java':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <path d="M4.5 19.5c3.5 1.2 9.5 1.2 13 0M6 21.5c3 1 7.5 1 10.5 0" stroke="#E76F51" strokeWidth="1.5" strokeLinecap="round" />
+          <path d="M12 3c-1.5 2-2 3.5-1 5 1.5 2.2-1 3.8-2.5 5M15 5c-1.5 1.8-1.8 3-1 4.2 1.2 1.8-1 3-2 4.3" stroke="#F4A261" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      )
+    case 'c':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <rect width="24" height="24" rx="4" fill="#A8B9CC" />
+          <path d="M16 8.5c-.8-.7-1.9-1.1-3.2-1.1-2.8 0-4.8 2.1-4.8 4.8s2 4.8 4.8 4.8c1.3 0 2.4-.4 3.2-1.1v-2.1h-3.2v-1.6H16v4.3z" fill="#1E1E1E" />
+        </svg>
+      )
+    case 'cpp':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <rect width="24" height="24" rx="4" fill="#00599C" />
+          <path d="M10 8.5c-.7-.6-1.6-.9-2.6-.9-2.2 0-3.9 1.7-3.9 3.9s1.7 3.9 3.9 3.9c1 0 1.9-.3 2.6-.9" stroke="#FFFFFF" strokeWidth="1.8" strokeLinecap="round" />
+          <path d="M13 11.5h3M14.5 10v3M18 11.5h3M19.5 10v3" stroke="#FFFFFF" strokeWidth="1.5" strokeLinecap="round" />
+        </svg>
+      )
+    case 'h':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <rect width="24" height="24" rx="4" fill="#685987" />
+          <path d="M7 6v12M17 6v12M7 12h10" stroke="#FFFFFF" strokeWidth="2" strokeLinecap="round" />
+        </svg>
+      )
+    case 'json':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <rect width="24" height="24" rx="4" fill="#F59E0B" />
+          <path d="M8 7c-1 0-1.5.5-1.5 1.5v2c0 .8-.5 1.2-1.2 1.5.7.3 1.2.7 1.2 1.5v2c0 1 .5 1.5 1.5 1.5M16 7c1 0 1.5.5 1.5 1.5v2c0 .8.5 1.2 1.2 1.5-.7.3-1.2.7-1.2 1.5v2c0 1-.5 1.5-1.5 1.5" stroke="#1E1E1E" strokeWidth="1.8" strokeLinecap="round" />
+        </svg>
+      )
+    case 'html':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <path d="M4.5 3l1.4 15.6L12 21l6.1-2.4L19.5 3H4.5z" fill="#E44D26" />
+          <path d="M12 4.7v14.6l4.9-1.9L18.1 4.7H12z" fill="#F16529" />
+          <path d="M8 7.5h8l-.3 3H8.3l.3 3h7.1l-.5 5-3.2 1-3.2-1-.2-2.5" stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    case 'css':
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <path d="M4.5 3l1.4 15.6L12 21l6.1-2.4L19.5 3H4.5z" fill="#264DE4" />
+          <path d="M12 4.7v14.6l4.9-1.9L18.1 4.7H12z" fill="#2965F1" />
+          <path d="M15.8 7.5H8.2l.2 2.8h7.2l-.6 6.2-3 1-3-1-.2-2.5" stroke="#FFFFFF" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      )
+    default:
+      return (
+        <svg width={width} height={height} viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className} aria-hidden="true">
+          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" fill="#9CA3AF" />
+          <path d="M14 2v6h6" fill="#6B7280" />
+        </svg>
+      )
+  }
+}
+
+export default FileIcon
