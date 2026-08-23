@@ -5,9 +5,13 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
   const [cursorPos, setCursorPos] = useState({ line: 1, column: 1 })
   const [lineCount, setLineCount] = useState(1)
   const [charCount, setCharCount] = useState(0)
+  const [selectionStats, setSelectionStats] = useState(null)
 
   useEffect(() => {
-    if (!editor || !activeFile) return
+    if (!editor || !activeFile) {
+      setSelectionStats(null)
+      return
+    }
 
     const updateModelStats = () => {
       const model = editor.getModel()
@@ -17,28 +21,58 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
       }
     }
 
-    const updateCursorPos = () => {
+    const updateCursorAndSelection = () => {
       const position = editor.getPosition()
       if (position) {
         setCursorPos({ line: position.lineNumber, column: position.column })
       }
+
+      const selection = editor.getSelection()
+      const model = editor.getModel()
+      if (selection && !selection.isEmpty() && model) {
+        const selectedText = model.getValueInRange(selection)
+        const selectedLineCount = Math.abs(selection.endLineNumber - selection.startLineNumber) + 1
+        const selectedCharCount = selectedText.length
+        setSelectionStats({
+          selectedLineCount,
+          selectedCharCount,
+        })
+      } else {
+        setSelectionStats(null)
+      }
     }
 
     updateModelStats()
-    updateCursorPos()
+    updateCursorAndSelection()
 
-    const cursorListener = editor.onDidChangeCursorPosition((e) => {
-      if (e.position) {
-        setCursorPos({ line: e.position.lineNumber, column: e.position.column })
+    const selectionListener = editor.onDidChangeCursorSelection((e) => {
+      if (e.selection) {
+        const position = editor.getPosition()
+        if (position) {
+          setCursorPos({ line: position.lineNumber, column: position.column })
+        }
+        const model = editor.getModel()
+        if (e.selection && !e.selection.isEmpty() && model) {
+          const selectedText = model.getValueInRange(e.selection)
+          const selectedLineCount = Math.abs(e.selection.endLineNumber - e.selection.startLineNumber) + 1
+          const selectedCharCount = selectedText.length
+          setSelectionStats({
+            selectedLineCount,
+            selectedCharCount,
+          })
+        } else {
+          setSelectionStats(null)
+        }
       }
     })
 
     const contentListener = editor.onDidChangeModelContent(() => {
       updateModelStats()
+      updateCursorAndSelection()
     })
 
     return () => {
-      cursorListener.dispose()
+      selectionListener.dispose()
       contentListener.dispose()
     }
   }, [editor, activeFile])
@@ -70,16 +104,32 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
         <span className="editor-status-bar__item editor-status-bar__item--cursor">
           Ln {cursorPos.line}, Col {cursorPos.column}
         </span>
-        <span className="editor-status-bar__divider" aria-hidden="true">
+        {selectionStats ? (
+          <>
+            <span className="editor-status-bar__divider" aria-hidden="true">
+              |
+            </span>
+            <span className="editor-status-bar__item editor-status-bar__item--selection-lines">
+              {selectionStats.selectedLineCount} {selectionStats.selectedLineCount === 1 ? 'line selected' : 'lines selected'}
+            </span>
+            <span className="editor-status-bar__divider" aria-hidden="true">
+              |
+            </span>
+            <span className="editor-status-bar__item editor-status-bar__item--selection-chars">
+              {selectionStats.selectedCharCount} {selectionStats.selectedCharCount === 1 ? 'character' : 'characters'}
+            </span>
+          </>
+        ) : null}
+        <span className="editor-status-bar__divider editor-status-bar__divider--secondary" aria-hidden="true">
           |
         </span>
-        <span className="editor-status-bar__item editor-status-bar__item--lines">
+        <span className="editor-status-bar__item editor-status-bar__item--lines editor-status-bar__item--secondary">
           {lineCount} {lineCount === 1 ? 'line' : 'lines'}
         </span>
-        <span className="editor-status-bar__divider" aria-hidden="true">
+        <span className="editor-status-bar__divider editor-status-bar__divider--secondary" aria-hidden="true">
           |
         </span>
-        <span className="editor-status-bar__item editor-status-bar__item--chars">
+        <span className="editor-status-bar__item editor-status-bar__item--chars editor-status-bar__item--secondary">
           {charCount} {charCount === 1 ? 'char' : 'chars'}
         </span>
       </div>
@@ -104,3 +154,4 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
 }
 
 export default EditorStatusBar
+

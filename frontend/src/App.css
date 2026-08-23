@@ -938,6 +938,12 @@
   font-weight: 600;
 }
 
+.editor-status-bar__item--selection-lines,
+.editor-status-bar__item--selection-chars {
+  color: var(--accent-strong);
+  font-weight: 500;
+}
+
 .editor-status-bar__item--status {
   color: var(--text-strong);
   font-weight: 600;
@@ -946,6 +952,13 @@
 .editor-status-bar__item--saving {
   color: var(--button-muted-text);
   font-style: italic;
+}
+
+@media (max-width: 768px) {
+  .editor-status-bar__item--secondary,
+  .editor-status-bar__divider--secondary {
+    display: none;
+  }
 }
 
 .editor-status-bar__divider {
