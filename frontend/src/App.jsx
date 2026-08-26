@@ -343,6 +343,7 @@ function App() {
     .filter(Boolean)
 
   const handleCreateFile = useCallback((fileName) => {
+    flushAutoSave()
     const trimmedName = fileName ? fileName.trim() : 'untitled.js'
     if (!isValidFileName(trimmedName)) {
       return { success: false, message: 'Enter a valid file name.' }
@@ -406,9 +407,10 @@ function App() {
           ? 'File created.'
           : `File created as ${uniqueName}.`,
     }
-  }, [])
+  }, [flushAutoSave])
 
   const handleSelectLanguage = (targetLanguage) => {
+    flushAutoSave()
     const defaultFileName = LANGUAGE_DEFAULT_FILENAMES[targetLanguage] ?? 'main.js'
 
     const existingFile = files.find(

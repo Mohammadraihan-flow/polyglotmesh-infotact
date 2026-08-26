@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import Editor, { useMonaco } from '@monaco-editor/react'
 import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
@@ -214,11 +214,13 @@ function EditorPanel({
   onCloseSettings,
   saveMessage,
 }) {
+  const safeEditorSettings = editorSettings || {}
+
   const monacoLanguage = activeFile
     ? getMonacoLanguageFromFileName(activeFile.name)
     : 'plaintext'
 
-  const selectedTheme = editorSettings.theme ?? 'vs-dark'
+  const selectedTheme = safeEditorSettings.theme ?? 'vs-dark'
 
   const settingsContainerRef = useRef(null)
   const editorRef = useRef(null)
@@ -227,39 +229,39 @@ function EditorPanel({
   const globalMonaco = useMonaco()
 
   const validTabSizes = [2, 4, 8]
-  const parsedTabSize = Number(editorSettings.tabSize)
+  const parsedTabSize = Number(safeEditorSettings.tabSize)
   const tabSize = validTabSizes.includes(parsedTabSize) ? parsedTabSize : 4
 
   const autoIndentSetting =
-    editorSettings.autoIndent === false || editorSettings.autoIndent === 'none'
+    safeEditorSettings.autoIndent === false || safeEditorSettings.autoIndent === 'none'
       ? 'none'
       : 'full'
 
   const wordWrapSetting =
-    editorSettings.wordWrap === 'wordWrapColumn'
+    safeEditorSettings.wordWrap === 'wordWrapColumn'
       ? 'wordWrapColumn'
-      : editorSettings.wordWrap === 'off' || editorSettings.wordWrap === false
+      : safeEditorSettings.wordWrap === 'off' || safeEditorSettings.wordWrap === false
       ? 'off'
       : 'on'
 
   const editorOptions = {
     ...baseEditorOptions,
-    fontSize: editorSettings.fontSize,
+    fontSize: safeEditorSettings.fontSize ?? 14,
     wordWrap: wordWrapSetting,
-    minimap: { enabled: editorSettings.minimap },
+    minimap: { enabled: safeEditorSettings.minimap ?? true },
     lineNumbers:
-      typeof editorSettings.lineNumbers === 'boolean'
-        ? editorSettings.lineNumbers
+      typeof safeEditorSettings.lineNumbers === 'boolean'
+        ? safeEditorSettings.lineNumbers
           ? 'on'
           : 'off'
-        : editorSettings.lineNumbers ?? 'on',
+        : safeEditorSettings.lineNumbers ?? 'on',
     tabSize,
     autoIndent: autoIndentSetting,
-    automaticLayout: editorSettings.automaticLayout,
+    automaticLayout: safeEditorSettings.automaticLayout ?? true,
   }
 
   const viewStatesRef = useRef({})
-  const prevFileNameRef = useRef(activeFile?.name)
+  const activeFileNameRef = useRef(activeFile?.name)
 
   const handleFoldAll = () => {
     const editor = editorInstance || editorRef.current
@@ -303,27 +305,32 @@ function EditorPanel({
     onEditorSettingsChange?.({ ...editorSettings, fontSize: 14 })
   }
 
-  useEffect(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor) return
-
-    const currentName = activeFile?.name
-    const prevName = prevFileNameRef.current
-
-    if (prevName && prevName !== currentName) {
+  const saveCurrentViewState = useCallback(() => {
+    const editor = editorRef.current || editorInstance
+    const currentName = activeFileNameRef.current
+    if (editor && currentName) {
       try {
         const state = editor.saveViewState()
         if (state) {
-          viewStatesRef.current[prevName] = state
+          viewStatesRef.current[currentName] = state
         }
       } catch (e) {
         // Ignore
       }
     }
+  }, [editorInstance])
 
-    prevFileNameRef.current = currentName
+  useEffect(() => {
+    saveCurrentViewState()
+    activeFileNameRef.current = activeFile?.name
+  }, [activeFile?.name, saveCurrentViewState])
 
-    if (currentName && viewStatesRef.current[currentName]) {
+  useEffect(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile?.name) return
+
+    const currentName = activeFile.name
+    if (viewStatesRef.current[currentName]) {
       try {
         editor.restoreViewState(viewStatesRef.current[currentName])
       } catch (e) {
@@ -474,7 +481,7 @@ function EditorPanel({
 
       <div className="editor-panel__surface">
         {activeFile ? (
-          <EditorErrorBoundary key={activeFile.name}>
+          <EditorErrorBoundary>
             <EditorBreadcrumb activeFile={activeFile} />
             <Editor
               path={activeFile.name}
@@ -500,6 +507,43 @@ function EditorPanel({
                 }
                 defineMonacoThemes(monaco)
                 monaco.editor.setTheme(selectedTheme)
+
+                editor.onDidChangeCursorPosition(() => {
+                  if (activeFileNameRef.current) {
+                    try {
+                      const state = editor.saveViewState()
+                      if (state) {
+                        viewStatesRef.current[activeFileNameRef.current] = state
+                      }
+                    } catch (e) {
+                      // Ignore
+                    }
+                  }
+                })
+
+                editor.onDidScrollChange(() => {
+                  if (activeFileNameRef.current) {
+                    try {
+                      const state = editor.saveViewState()
+                      if (state) {
+                        viewStatesRef.current[activeFileNameRef.current] = state
+                      }
+                    } catch (e) {
+                      // Ignore
+                    }
+                  }
+                })
+
+                editor.onDidChangeModel(() => {
+                  const currentName = activeFileNameRef.current
+                  if (currentName && viewStatesRef.current[currentName]) {
+                    try {
+                      editor.restoreViewState(viewStatesRef.current[currentName])
+                    } catch (e) {
+                      // Ignore
+                    }
+                  }
+                })
               }}
               beforeMount={(monaco) => {
                 defineMonacoThemes(monaco)
