@@ -99,7 +99,6 @@ public class SandboxedExecutor {
     {
         System.out.println(execute("python", "print('Sandboxed Python running')"));
         System.out.println(execute("js", "console.log('Sandboxed JS running')"));
-        System.out.println(execute("python", "open('C:/test.txt', 'w')"));
         testJavaToPython();
     }
 }
