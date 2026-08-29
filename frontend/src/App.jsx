@@ -174,6 +174,7 @@ const defaultSettings = {
   stickyScroll: true,
   smoothScrolling: true,
   highlightActiveLine: true,
+  renderWhitespace: 'none',
   theme: 'vs-dark',
 }
 
@@ -231,6 +232,10 @@ const getInitialSettings = () => {
           typeof parsed.highlightActiveLine === 'boolean'
             ? parsed.highlightActiveLine
             : true,
+        renderWhitespace:
+          ['none', 'boundary', 'selection', 'all'].includes(parsed.renderWhitespace)
+            ? parsed.renderWhitespace
+            : 'none',
       }
     } else if (wordWrapVal) {
       settings = { ...defaultSettings, wordWrap: wordWrapVal }

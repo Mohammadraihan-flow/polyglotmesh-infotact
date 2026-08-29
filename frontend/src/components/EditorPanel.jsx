@@ -279,6 +279,11 @@ function EditorPanel({
       ? safeEditorSettings.highlightActiveLine
       : true
 
+  const renderWhitespaceSetting =
+    ['none', 'boundary', 'selection', 'all'].includes(safeEditorSettings.renderWhitespace)
+      ? safeEditorSettings.renderWhitespace
+      : 'none'
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -321,6 +326,7 @@ function EditorPanel({
     },
     smoothScrolling: smoothScrollingSetting,
     renderLineHighlight: highlightActiveLineSetting ? 'all' : 'none',
+    renderWhitespace: renderWhitespaceSetting,
     wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
     snippetSuggestions: 'inline',
     acceptSuggestionOnEnter: 'on',
@@ -458,6 +464,7 @@ function EditorPanel({
     stickyScrollSetting,
     smoothScrollingSetting,
     highlightActiveLineSetting,
+    renderWhitespaceSetting,
   ])
 
   useEffect(() => {

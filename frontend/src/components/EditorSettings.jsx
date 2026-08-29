@@ -375,6 +375,31 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
               })}
             </div>
           </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Render Whitespace</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Render Whitespace">
+              {[
+                { label: 'None', value: 'none' },
+                { label: 'Boundary', value: 'boundary' },
+                { label: 'Selection', value: 'selection' },
+                { label: 'All', value: 'all' },
+              ].map((option) => {
+                const isActive = (settings.renderWhitespace ?? 'none') === option.value
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('renderWhitespace', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Behavior Section */}
