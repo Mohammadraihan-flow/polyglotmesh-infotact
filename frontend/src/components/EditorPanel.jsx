@@ -249,6 +249,11 @@ function EditorPanel({
       ? safeEditorSettings.bracketPairColorization
       : true
 
+  const showHoverSetting =
+    typeof safeEditorSettings.showHover === 'boolean'
+      ? safeEditorSettings.showHover
+      : true
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -271,6 +276,11 @@ function EditorPanel({
       bracketPairsHorizontal: bracketPairColorizationSetting,
       highlightActiveBracketPair: bracketPairColorizationSetting,
       indentation: true,
+    },
+    hover: {
+      enabled: showHoverSetting,
+      delay: 300,
+      sticky: true,
     },
   }
 
@@ -366,7 +376,14 @@ function EditorPanel({
     if (editorRef.current) {
       editorRef.current.updateOptions(editorOptions)
     }
-  }, [editorSettings, wordWrapSetting, tabSize, autoIndentSetting, bracketPairColorizationSetting])
+  }, [
+    editorSettings,
+    wordWrapSetting,
+    tabSize,
+    autoIndentSetting,
+    bracketPairColorizationSetting,
+    showHoverSetting,
+  ])
 
   useEffect(() => {
     const handleDocumentMouseDown = (event) => {

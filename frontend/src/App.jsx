@@ -168,6 +168,7 @@ const defaultSettings = {
   autoIndent: 'full',
   automaticLayout: true,
   bracketPairColorization: true,
+  showHover: true,
   theme: 'vs-dark',
 }
 
@@ -200,6 +201,10 @@ const getInitialSettings = () => {
         bracketPairColorization:
           typeof parsed.bracketPairColorization === 'boolean'
             ? parsed.bracketPairColorization
+            : true,
+        showHover:
+          typeof parsed.showHover === 'boolean'
+            ? parsed.showHover
             : true,
       }
     } else if (wordWrapVal) {
