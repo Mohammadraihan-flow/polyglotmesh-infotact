@@ -172,6 +172,7 @@ const defaultSettings = {
   autoSuggestions: true,
   parameterHints: true,
   stickyScroll: true,
+  smoothScrolling: true,
   theme: 'vs-dark',
 }
 
@@ -220,6 +221,10 @@ const getInitialSettings = () => {
         stickyScroll:
           typeof parsed.stickyScroll === 'boolean'
             ? parsed.stickyScroll
+            : true,
+        smoothScrolling:
+          typeof parsed.smoothScrolling === 'boolean'
+            ? parsed.smoothScrolling
             : true,
       }
     } else if (wordWrapVal) {

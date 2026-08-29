@@ -269,6 +269,11 @@ function EditorPanel({
       ? safeEditorSettings.stickyScroll
       : true
 
+  const smoothScrollingSetting =
+    typeof safeEditorSettings.smoothScrolling === 'boolean'
+      ? safeEditorSettings.smoothScrolling
+      : true
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -309,6 +314,7 @@ function EditorPanel({
       enabled: stickyScrollSetting,
       maxLineCount: 5,
     },
+    smoothScrolling: smoothScrollingSetting,
     wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
     snippetSuggestions: 'inline',
     acceptSuggestionOnEnter: 'on',
@@ -444,6 +450,7 @@ function EditorPanel({
     autoSuggestionsSetting,
     parameterHintsSetting,
     stickyScrollSetting,
+    smoothScrollingSetting,
   ])
 
   useEffect(() => {
