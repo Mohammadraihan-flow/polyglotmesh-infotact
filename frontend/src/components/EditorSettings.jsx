@@ -306,6 +306,29 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
               })}
             </div>
           </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Sticky Scroll</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Sticky Scroll">
+              {[
+                { label: 'Enabled', value: true },
+                { label: 'Disabled', value: false },
+              ].map((option) => {
+                const isActive = (settings.stickyScroll ?? true) === option.value
+
+                return (
+                  <button
+                    key={String(option.value)}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('stickyScroll', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Behavior Section */}

@@ -264,6 +264,11 @@ function EditorPanel({
       ? safeEditorSettings.parameterHints
       : true
 
+  const stickyScrollSetting =
+    typeof safeEditorSettings.stickyScroll === 'boolean'
+      ? safeEditorSettings.stickyScroll
+      : true
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -299,6 +304,10 @@ function EditorPanel({
     parameterHints: {
       enabled: parameterHintsSetting,
       cycle: true,
+    },
+    stickyScroll: {
+      enabled: stickyScrollSetting,
+      maxLineCount: 5,
     },
     wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
     snippetSuggestions: 'inline',
@@ -434,6 +443,7 @@ function EditorPanel({
     showHoverSetting,
     autoSuggestionsSetting,
     parameterHintsSetting,
+    stickyScrollSetting,
   ])
 
   useEffect(() => {

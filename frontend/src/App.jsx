@@ -171,6 +171,7 @@ const defaultSettings = {
   showHover: true,
   autoSuggestions: true,
   parameterHints: true,
+  stickyScroll: true,
   theme: 'vs-dark',
 }
 
@@ -215,6 +216,10 @@ const getInitialSettings = () => {
         parameterHints:
           typeof parsed.parameterHints === 'boolean'
             ? parsed.parameterHints
+            : true,
+        stickyScroll:
+          typeof parsed.stickyScroll === 'boolean'
+            ? parsed.stickyScroll
             : true,
       }
     } else if (wordWrapVal) {
