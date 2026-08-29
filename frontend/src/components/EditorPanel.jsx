@@ -259,6 +259,11 @@ function EditorPanel({
       ? safeEditorSettings.autoSuggestions
       : true
 
+  const parameterHintsSetting =
+    typeof safeEditorSettings.parameterHints === 'boolean'
+      ? safeEditorSettings.parameterHints
+      : true
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -292,7 +297,7 @@ function EditorPanel({
       : { other: false, comments: false, strings: false },
     suggestOnTriggerCharacters: autoSuggestionsSetting,
     parameterHints: {
-      enabled: autoSuggestionsSetting,
+      enabled: parameterHintsSetting,
       cycle: true,
     },
     wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
@@ -428,6 +433,7 @@ function EditorPanel({
     bracketPairColorizationSetting,
     showHoverSetting,
     autoSuggestionsSetting,
+    parameterHintsSetting,
   ])
 
   useEffect(() => {

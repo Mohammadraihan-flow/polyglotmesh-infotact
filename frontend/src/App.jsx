@@ -170,6 +170,7 @@ const defaultSettings = {
   bracketPairColorization: true,
   showHover: true,
   autoSuggestions: true,
+  parameterHints: true,
   theme: 'vs-dark',
 }
 
@@ -210,6 +211,10 @@ const getInitialSettings = () => {
         autoSuggestions:
           typeof parsed.autoSuggestions === 'boolean'
             ? parsed.autoSuggestions
+            : true,
+        parameterHints:
+          typeof parsed.parameterHints === 'boolean'
+            ? parsed.parameterHints
             : true,
       }
     } else if (wordWrapVal) {
