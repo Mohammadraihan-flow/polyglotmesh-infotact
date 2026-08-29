@@ -173,6 +173,7 @@ const defaultSettings = {
   parameterHints: true,
   stickyScroll: true,
   smoothScrolling: true,
+  highlightActiveLine: true,
   theme: 'vs-dark',
 }
 
@@ -225,6 +226,10 @@ const getInitialSettings = () => {
         smoothScrolling:
           typeof parsed.smoothScrolling === 'boolean'
             ? parsed.smoothScrolling
+            : true,
+        highlightActiveLine:
+          typeof parsed.highlightActiveLine === 'boolean'
+            ? parsed.highlightActiveLine
             : true,
       }
     } else if (wordWrapVal) {

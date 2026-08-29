@@ -274,6 +274,11 @@ function EditorPanel({
       ? safeEditorSettings.smoothScrolling
       : true
 
+  const highlightActiveLineSetting =
+    typeof safeEditorSettings.highlightActiveLine === 'boolean'
+      ? safeEditorSettings.highlightActiveLine
+      : true
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -315,6 +320,7 @@ function EditorPanel({
       maxLineCount: 5,
     },
     smoothScrolling: smoothScrollingSetting,
+    renderLineHighlight: highlightActiveLineSetting ? 'all' : 'none',
     wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
     snippetSuggestions: 'inline',
     acceptSuggestionOnEnter: 'on',
@@ -451,6 +457,7 @@ function EditorPanel({
     parameterHintsSetting,
     stickyScrollSetting,
     smoothScrollingSetting,
+    highlightActiveLineSetting,
   ])
 
   useEffect(() => {
