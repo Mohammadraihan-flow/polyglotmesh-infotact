@@ -169,6 +169,7 @@ const defaultSettings = {
   automaticLayout: true,
   bracketPairColorization: true,
   showHover: true,
+  autoSuggestions: true,
   theme: 'vs-dark',
 }
 
@@ -205,6 +206,10 @@ const getInitialSettings = () => {
         showHover:
           typeof parsed.showHover === 'boolean'
             ? parsed.showHover
+            : true,
+        autoSuggestions:
+          typeof parsed.autoSuggestions === 'boolean'
+            ? parsed.autoSuggestions
             : true,
       }
     } else if (wordWrapVal) {

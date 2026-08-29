@@ -254,6 +254,11 @@ function EditorPanel({
       ? safeEditorSettings.showHover
       : true
 
+  const autoSuggestionsSetting =
+    typeof safeEditorSettings.autoSuggestions === 'boolean'
+      ? safeEditorSettings.autoSuggestions
+      : true
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -282,6 +287,18 @@ function EditorPanel({
       delay: 300,
       sticky: true,
     },
+    quickSuggestions: autoSuggestionsSetting
+      ? { other: true, comments: false, strings: false }
+      : { other: false, comments: false, strings: false },
+    suggestOnTriggerCharacters: autoSuggestionsSetting,
+    parameterHints: {
+      enabled: autoSuggestionsSetting,
+      cycle: true,
+    },
+    wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
+    snippetSuggestions: 'inline',
+    acceptSuggestionOnEnter: 'on',
+    tabCompletion: 'on',
   }
 
   const viewStatesRef = useRef({})
@@ -410,6 +427,7 @@ function EditorPanel({
     autoIndentSetting,
     bracketPairColorizationSetting,
     showHoverSetting,
+    autoSuggestionsSetting,
   ])
 
   useEffect(() => {
