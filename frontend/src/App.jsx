@@ -167,6 +167,7 @@ const defaultSettings = {
   tabSize: 4,
   autoIndent: 'full',
   automaticLayout: true,
+  bracketPairColorization: true,
   theme: 'vs-dark',
 }
 
@@ -196,6 +197,10 @@ const getInitialSettings = () => {
         ...defaultSettings,
         ...parsed,
         wordWrap: wordWrapVal ?? 'on',
+        bracketPairColorization:
+          typeof parsed.bracketPairColorization === 'boolean'
+            ? parsed.bracketPairColorization
+            : true,
       }
     } else if (wordWrapVal) {
       settings = { ...defaultSettings, wordWrap: wordWrapVal }

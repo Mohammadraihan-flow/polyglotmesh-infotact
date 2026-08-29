@@ -214,6 +214,29 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
               <option value="wordWrapColumn">Word Wrap Column</option>
             </select>
           </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Bracket Pair Colorization</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Bracket Pair Colorization">
+              {[
+                { label: 'On', value: true },
+                { label: 'Off', value: false },
+              ].map((option) => {
+                const isActive = (settings.bracketPairColorization ?? true) === option.value
+
+                return (
+                  <button
+                    key={String(option.value)}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('bracketPairColorization', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
         </div>
 
         {/* Behavior Section */}

@@ -244,6 +244,11 @@ function EditorPanel({
       ? 'off'
       : 'on'
 
+  const bracketPairColorizationSetting =
+    typeof safeEditorSettings.bracketPairColorization === 'boolean'
+      ? safeEditorSettings.bracketPairColorization
+      : true
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -258,6 +263,15 @@ function EditorPanel({
     tabSize,
     autoIndent: autoIndentSetting,
     automaticLayout: safeEditorSettings.automaticLayout ?? true,
+    bracketPairColorization: {
+      enabled: bracketPairColorizationSetting,
+    },
+    guides: {
+      bracketPairs: bracketPairColorizationSetting,
+      bracketPairsHorizontal: bracketPairColorizationSetting,
+      highlightActiveBracketPair: bracketPairColorizationSetting,
+      indentation: true,
+    },
   }
 
   const viewStatesRef = useRef({})
@@ -352,7 +366,7 @@ function EditorPanel({
     if (editorRef.current) {
       editorRef.current.updateOptions(editorOptions)
     }
-  }, [editorSettings, wordWrapSetting, tabSize, autoIndentSetting])
+  }, [editorSettings, wordWrapSetting, tabSize, autoIndentSetting, bracketPairColorizationSetting])
 
   useEffect(() => {
     const handleDocumentMouseDown = (event) => {

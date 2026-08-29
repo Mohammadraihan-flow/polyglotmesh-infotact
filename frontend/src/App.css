@@ -185,11 +185,16 @@
   overflow-y: hidden;
   white-space: nowrap;
   scroll-behavior: smooth;
-  scrollbar-width: thin;
-  scrollbar-color: var(--border) transparent;
   flex: 1 1 auto;
   min-width: 0;
   padding: 0.15rem 0.15rem 0.25rem 0.15rem;
+}
+
+@supports (scrollbar-width: thin) {
+  .editor-tabs {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
 }
 
 .editor-tabs::-webkit-scrollbar {
@@ -610,6 +615,7 @@
   align-items: center;
   justify-content: center;
   transition: background-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
+  -webkit-user-select: none;
   user-select: none;
   height: 100%;
 }
@@ -673,6 +679,7 @@
   border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--popover-bg);
+  -webkit-backdrop-filter: blur(12px);
   backdrop-filter: blur(12px);
   box-shadow: var(--shadow);
   overflow: hidden;
@@ -995,6 +1002,7 @@
   border-bottom: 1px solid var(--border);
   border-top-left-radius: 18px;
   border-top-right-radius: 18px;
+  -webkit-user-select: none;
   user-select: none;
   overflow: hidden;
   min-width: 0;
@@ -1075,6 +1083,7 @@
   opacity: 0.7;
   font-size: 0.85rem;
   line-height: 1;
+  -webkit-user-select: none;
   user-select: none;
   flex-shrink: 0;
 }
@@ -1098,6 +1107,7 @@
   border-top: 1px solid var(--border);
   border-bottom-left-radius: 18px;
   border-bottom-right-radius: 18px;
+  -webkit-user-select: none;
   user-select: none;
   overflow: hidden;
   flex-wrap: nowrap;
@@ -1294,6 +1304,7 @@
   inset: 0;
   z-index: 100;
   background: rgba(0, 0, 0, 0.65);
+  -webkit-backdrop-filter: blur(8px);
   backdrop-filter: blur(8px);
   display: flex;
   align-items: flex-start;
@@ -1548,6 +1559,7 @@
   cursor: pointer;
   width: 100%;
   transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  -webkit-user-select: none;
   user-select: none;
 }
 
