@@ -372,6 +372,33 @@ function EditorPanel({
     })
   }, [openFiles])
 
+  const handleOpenCommandPalette = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (editor) {
+      editor.focus()
+      const action = editor.getAction('editor.action.quickCommand')
+      if (action) {
+        action.run()
+      } else {
+        editor.trigger('toolbar', 'editor.action.quickCommand')
+      }
+    }
+  }, [editorInstance])
+
+  useEffect(() => {
+    const handleGlobalKeyDown = (e) => {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
+        e.preventDefault()
+        handleOpenCommandPalette()
+      }
+    }
+
+    window.addEventListener('keydown', handleGlobalKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown)
+    }
+  }, [handleOpenCommandPalette])
+
   useEffect(() => {
     if (editorRef.current) {
       editorRef.current.updateOptions(editorOptions)
@@ -451,6 +478,18 @@ function EditorPanel({
               />
             </div>
           ) : null}
+
+          <button
+            type="button"
+            className="command-palette-button"
+            aria-label="Command Palette"
+            title="Command Palette (Ctrl+Shift+P)"
+            onClick={handleOpenCommandPalette}
+            disabled={!activeFile}
+          >
+            <span className="command-palette-button__icon">⌘</span>
+            <span className="command-palette-button__text">Command Palette</span>
+          </button>
 
           <div className="editor-panel__zoom-controls" role="group" aria-label="Editor Zoom Controls">
             <button
@@ -538,6 +577,22 @@ function EditorPanel({
                 }
                 defineMonacoThemes(monaco)
                 monaco.editor.setTheme(selectedTheme)
+
+                try {
+                  editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyP,
+                    () => {
+                      const action = editor.getAction('editor.action.quickCommand')
+                      if (action) {
+                        action.run()
+                      } else {
+                        editor.trigger('keyboard', 'editor.action.quickCommand')
+                      }
+                    }
+                  )
+                } catch (e) {
+                  // Ignore if shortcut binding exists
+                }
 
                 editor.onDidChangeCursorPosition(() => {
                   if (activeFileNameRef.current) {
