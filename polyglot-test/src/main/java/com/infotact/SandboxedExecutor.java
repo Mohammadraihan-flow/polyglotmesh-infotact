@@ -6,7 +6,6 @@ import org.graalvm.polyglot.ResourceLimits;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.proxy.ProxyObject;
 import java.io.OutputStream;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -83,8 +82,7 @@ public class SandboxedExecutor {
 	        executor.shutdownNow();
 	    }
 	}
-    public static void testJavaToPython()
-	{
+    public static void testMockMongoToPython() {
         try (Context ctx = Context.newBuilder("python")
                 .allowAllAccess(false)
                 .allowHostAccess(HostAccess.NONE)
@@ -93,13 +91,11 @@ public class SandboxedExecutor {
                 .allowNativeAccess(false)
                 .build())
         {
-            Map<String, Object> data = new HashMap<>();
-            data.put("price", 50000);
-            data.put("quantity", 2);
+            Map<String, Object> data = MockMongoData.getProductData();
             ProxyObject proxyData = ProxyObject.fromMap(data);
             ctx.getBindings("python").putMember("data", proxyData);
             var result = ctx.eval("python","data.price * data.quantity");
-            System.out.println("Python calculated total: " + result);
+            System.out.println("Python processed mock MongoDB data: " + result);
         }
         catch (Exception e)
         {
@@ -110,6 +106,6 @@ public class SandboxedExecutor {
     {
         System.out.println(execute("python", "print('Sandboxed Python running')"));
         System.out.println(execute("js", "console.log('Sandboxed JS running')"));
-        testJavaToPython();
+        testMockMongoToPython();
     }
 }
