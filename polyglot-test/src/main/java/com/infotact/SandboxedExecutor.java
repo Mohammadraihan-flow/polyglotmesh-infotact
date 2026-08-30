@@ -19,40 +19,33 @@ public class SandboxedExecutor {
 	private static final Set<String> ALLOWED_LANGUAGES = Set.of("python", "js");
 	public static String execute(String lang, String code)
 	{
-	    if (lang == null || lang.isBlank()) {
+	    if (lang == null || lang.isBlank())
+		{
 	        return "ERROR: Language cannot be empty.";
 	    }
-
 	    String normalizedLang = lang.trim().toLowerCase();
-
-	    if (!ALLOWED_LANGUAGES.contains(normalizedLang)) {
+	    if (!ALLOWED_LANGUAGES.contains(normalizedLang))
+		{
 	        return "ERROR: Unsupported language: " + normalizedLang;
 	    }
-
-	    if (code == null || code.isBlank()) {
+	    if (code == null || code.isBlank())
+		{
 	        return "ERROR: Code cannot be empty.";
 	    }
-	    if (code.length() > 10000) {
+	    if (code.length() > 10000)
+		{
 	        return "ERROR: Code is too large.";
 	    }
 	    ExecutorService executor = Executors.newSingleThreadExecutor();
-
 	    try {
 	        Future<String> future = executor.submit(() -> {
-
-	            ResourceLimits limits =
-	                    ResourceLimits.newBuilder()
-	                            .statementLimit(10000, null)
-	                            .build();
-
+	            ResourceLimits limits = ResourceLimits.newBuilder().statementLimit(10000, null).build();
 	            StringBuilder sb = new StringBuilder();
-
 	            OutputStream capture = new OutputStream() {
 	                public void write(int b) {
 	                    sb.append((char) b);
 	                }
 	            };
-
 	            try (Context ctx = Context.newBuilder(normalizedLang)
 	                    .allowAllAccess(false)
 	                    .allowHostAccess(HostAccess.NONE)
@@ -62,34 +55,36 @@ public class SandboxedExecutor {
 	                    .resourceLimits(limits)
 	                    .out(capture)
 	                    .build()) {
-
 	                ctx.eval(Source.create(normalizedLang, code));
-
-	            } catch (PolyglotException e) {
-	                sb.append("ERROR: ").append(e.getMessage());
 	            }
-
-	            return sb.toString();
+					catch (PolyglotException e)
+				    {
+	                   sb.append("ERROR: ").append(e.getMessage());
+	                }
+				return sb.toString();
 	        });
-
 	        return future.get(TIMEOUT_SECONDS, TimeUnit.SECONDS);
-
-	    } catch (TimeoutException e) {
+	    }
+		catch (TimeoutException e)
+		{
 	        return "ERROR: Execution timed out after " + TIMEOUT_SECONDS + " seconds.";
-
-	    } catch (InterruptedException e) {
+	    }
+		catch (InterruptedException e)
+		{
 	        Thread.currentThread().interrupt();
 	        return "ERROR: Execution interrupted.";
-
-	    } catch (Exception e) {
+	    }
+		catch (Exception e)
+		{
 	        return "ERROR: " + e.getMessage();
-
-	    } finally {
+	    }
+		finally
+		{
 	        executor.shutdownNow();
 	    }
 	}
-    public static void testJavaToPython() {
-
+    public static void testJavaToPython()
+	{
         try (Context ctx = Context.newBuilder("python")
                 .allowAllAccess(false)
                 .allowHostAccess(HostAccess.NONE)
@@ -98,7 +93,6 @@ public class SandboxedExecutor {
                 .allowNativeAccess(false)
                 .build())
         {
-
             Map<String, Object> data = new HashMap<>();
             data.put("price", 50000);
             data.put("quantity", 2);
