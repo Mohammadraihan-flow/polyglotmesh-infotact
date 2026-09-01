@@ -6,6 +6,7 @@ import org.graalvm.polyglot.ResourceLimits;
 import org.graalvm.polyglot.Source;
 import org.graalvm.polyglot.proxy.ProxyObject;
 import java.io.OutputStream;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -91,11 +92,20 @@ public class SandboxedExecutor {
                 .allowNativeAccess(false)
                 .build())
         {
-            Map<String, Object> data = MockMongoData.getProductData();
-            ProxyObject proxyData = ProxyObject.fromMap(data);
-            ctx.getBindings("python").putMember("data", proxyData);
-            var result = ctx.eval("python","data.price * data.quantity");
-            System.out.println("Python processed mock MongoDB data: " + result);
+        	List<Map<String, Object>> products = MockMongoData.getProductData();
+        	Map<String, Object> laptop = products.get(0);
+        	Map<String, Object> phone = products.get(1);
+            ProxyObject laptopData = ProxyObject.fromMap(laptop);
+            ProxyObject phoneData = ProxyObject.fromMap(phone);
+            ctx.getBindings("python").putMember("laptop", laptopData);
+            ctx.getBindings("python").putMember("phone", phoneData);
+            var result = ctx.eval("python", "laptop_total = laptop.price * laptop.quantity\n"
+                    + "phone_total = phone.price * phone.quantity\n"
+                    + "total = laptop_total + phone_total\n"
+                    + "discount = total * 0.10\n"
+                    + "total - discount"
+            );
+            System.out.println("Python calculated discounted total: " + result);
         }
         catch (Exception e)
         {
