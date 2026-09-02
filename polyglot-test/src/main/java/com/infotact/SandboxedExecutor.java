@@ -83,7 +83,8 @@ public class SandboxedExecutor {
 	        executor.shutdownNow();
 	    }
 	}
-    public static void testMockMongoToPython() {
+    public static void testMockMongoQueryToPython()
+    {
         try (Context ctx = Context.newBuilder("python")
                 .allowAllAccess(false)
                 .allowHostAccess(HostAccess.NONE)
@@ -92,23 +93,30 @@ public class SandboxedExecutor {
                 .allowNativeAccess(false)
                 .build())
         {
-        	List<Map<String, Object>> products = MockMongoData.getProductData();
-        	Map<String, Object> laptop = products.get(0);
-        	Map<String, Object> phone = products.get(1);
-            ProxyObject laptopData = ProxyObject.fromMap(laptop);
-            ProxyObject phoneData = ProxyObject.fromMap(phone);
-            ctx.getBindings("python").putMember("laptop", laptopData);
-            ctx.getBindings("python").putMember("phone", phoneData);
-            var result = ctx.eval("python", "laptop_total = laptop.price * laptop.quantity\n"
-                    + "phone_total = phone.price * phone.quantity\n"
-                    + "total = laptop_total + phone_total\n"
-                    + "discount = total * 0.10\n"
-                    + "total - discount"
+        	Map<String, Object> product =
+                    MockMongoData.findProductByName("Tablet");
+
+            if (product == null) {
+                System.out.println("Product not found.");
+                return;
+            }
+
+            // Bind query result to Python
+            ProxyObject proxyData = ProxyObject.fromMap(product);
+
+            ctx.getBindings("python").putMember("data", proxyData);
+
+            // Python processes the queried data
+            var result = ctx.eval(
+                    "python",
+                    "data.price * data.quantity"
             );
-            System.out.println("Python calculated discounted total: " + result);
-        }
-        catch (Exception e)
-        {
+
+            System.out.println(
+                    "Python processed queried product: " + result
+            );
+
+        } catch (Exception e) {
             System.out.println("ERROR: " + e.getMessage());
         }
     }
@@ -116,6 +124,6 @@ public class SandboxedExecutor {
     {
         System.out.println(execute("python", "print('Sandboxed Python running')"));
         System.out.println(execute("js", "console.log('Sandboxed JS running')"));
-        testMockMongoToPython();
+        testMockMongoQueryToPython();
     }
 }

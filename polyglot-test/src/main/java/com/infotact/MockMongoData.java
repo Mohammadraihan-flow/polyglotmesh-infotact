@@ -20,4 +20,15 @@ public class MockMongoData
        products.add(phone);
        return products;
    }
+   public static Map<String, Object> findProductByName(String productName)
+   {
+	    for (Map<String, Object> product : getProductData())
+	    {
+	        if (product.get("product").toString().equalsIgnoreCase(productName))
+	        {
+	            return product;
+	        }
+	    }
+	    return null;
+	}
 }
