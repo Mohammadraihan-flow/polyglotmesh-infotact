@@ -5,7 +5,9 @@
 
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Spring Boot -->
+    <!-- ========================= -->
+    <!-- Spring Boot Configuration -->
+    <!-- ========================= -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
@@ -13,20 +15,27 @@
         <relativePath/>
     </parent>
 
+    <!-- ========================= -->
     <!-- Project Information -->
+    <!-- ========================= -->
     <groupId>com.infotact</groupId>
     <artifactId>backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+
     <name>backend</name>
     <description>PolyglotMesh Spring Boot GraalVM Backend</description>
 
+    <!-- ========================= -->
     <!-- Project Properties -->
+    <!-- ========================= -->
     <properties>
         <java.version>21</java.version>
         <graalvm.version>24.2.1</graalvm.version>
     </properties>
 
+    <!-- ========================= -->
     <!-- Dependencies -->
+    <!-- ========================= -->
     <dependencies>
 
         <!-- Spring WebFlux -->
@@ -50,14 +59,18 @@
             <scope>test</scope>
         </dependency>
 
+        <!-- ========================= -->
         <!-- GraalVM Polyglot API -->
+        <!-- ========================= -->
         <dependency>
             <groupId>org.graalvm.polyglot</groupId>
             <artifactId>polyglot</artifactId>
             <version>${graalvm.version}</version>
         </dependency>
 
+        <!-- ========================= -->
         <!-- GraalVM JavaScript -->
+        <!-- ========================= -->
         <dependency>
             <groupId>org.graalvm.polyglot</groupId>
             <artifactId>js</artifactId>
@@ -65,7 +78,9 @@
             <type>pom</type>
         </dependency>
 
+        <!-- ========================= -->
         <!-- GraalVM Python -->
+        <!-- ========================= -->
         <dependency>
             <groupId>org.graalvm.polyglot</groupId>
             <artifactId>python</artifactId>
@@ -75,7 +90,9 @@
 
     </dependencies>
 
+    <!-- ========================= -->
     <!-- Build Configuration -->
+    <!-- ========================= -->
     <build>
         <plugins>
 
@@ -83,6 +100,22 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+
+            <!-- ========================= -->
+            <!-- GraalVM Native Image -->
+            <!-- ========================= -->
+            <plugin>
+                <groupId>org.graalvm.buildtools</groupId>
+                <artifactId>native-maven-plugin</artifactId>
+
+                <configuration>
+                    <buildArgs>
+                        <!-- Limit Native Image build parallelism -->
+                        <buildArg>--parallelism=2</buildArg>
+                    </buildArgs>
+                </configuration>
+
             </plugin>
 
         </plugins>

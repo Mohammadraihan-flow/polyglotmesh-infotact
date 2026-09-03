@@ -1,0 +1,36 @@
+name: Native Image Build
+
+on:
+  push:
+    branches:
+      - Mohammadraihan
+      - develop
+  pull_request:
+    branches:
+      - develop
+
+jobs:
+  native-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up GraalVM JDK 21
+        uses: graalvm/setup-graalvm@v1
+        with:
+          java-version: '21'
+          distribution: 'graalvm'
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify Java and Native Image
+        run: |
+          java -version
+          native-image --version
+
+      - name: Run tests
+        run: ./mvnw clean test
+
+      - name: Build Native Image
+        run: ./mvnw -Pnative native:compile
