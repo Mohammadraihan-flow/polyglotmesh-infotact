@@ -31,4 +31,30 @@ public class MockMongoData
 	    }
 	    return null;
 	}
+   public static List<Map<String, Object>> findProductsByMaxPrice(double maxPrice)
+   {
+	    List<Map<String, Object>> result = new ArrayList<>();
+	    for (Map<String, Object> product : getProductData()) {
+	        double price = ((Number) product.get("price")).doubleValue();
+	        if (price <= maxPrice)
+	        {
+	            result.add(product);
+	        }
+	    }
+	    return result;
+	}
+   public static List<Map<String, Object>> findProductsByPriceAndQuantity(double maxPrice, int minQuantity)
+   {
+	    List<Map<String, Object>> result = new ArrayList<>();
+	    for (Map<String, Object> product : getProductData())
+	    {
+	        double price = ((Number) product.get("price")).doubleValue();
+	        int quantity = ((Number) product.get("quantity")).intValue();
+	        if (price <= maxPrice && quantity >= minQuantity)
+	        {
+	            result.add(product);
+	        }
+	    }
+	    return result;
+	}
 }

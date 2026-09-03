@@ -93,37 +93,84 @@ public class SandboxedExecutor {
                 .allowNativeAccess(false)
                 .build())
         {
-        	Map<String, Object> product =
-                    MockMongoData.findProductByName("Tablet");
-
-            if (product == null) {
-                System.out.println("Product not found.");
-                return;
-            }
-
-            // Bind query result to Python
-            ProxyObject proxyData = ProxyObject.fromMap(product);
-
-            ctx.getBindings("python").putMember("data", proxyData);
-
-            // Python processes the queried data
-            var result = ctx.eval(
-                    "python",
-                    "data.price * data.quantity"
-            );
-
-            System.out.println(
-                    "Python processed queried product: " + result
-            );
-
-        } catch (Exception e) {
+        	Map<String, Object> product =MockMongoData.findProductByName("laptop");
+        if (product == null)
+        {
+        	   System.out.println("Product not found.");
+           return;
+        }
+        ProxyObject proxyData = ProxyObject.fromMap(product);
+        ctx.getBindings("python").putMember("data", proxyData);
+        var result = ctx.eval("python","data.price * data.quantity");
+        System.out.println("Python processed queried product: " + result);
+        }
+        catch (Exception e)
+        {
             System.out.println("ERROR: " + e.getMessage());
         }
+    }
+    public static void testMockMongoMultipleResultsToPython() {
+        try (Context ctx = Context.newBuilder("python")
+                .allowAllAccess(false)
+                .allowHostAccess(HostAccess.NONE)
+                .allowIO(false)
+                .allowCreateThread(false)
+                .allowNativeAccess(false)
+                .build())
+        {
+            List<Map<String, Object>> products = MockMongoData.findProductsByMaxPrice(50000);
+            System.out.println("Products found by price query: " + products.size());
+            int total = 0;
+            for (Map<String, Object> product : products)
+            {
+                ProxyObject proxyData = ProxyObject.fromMap(product);
+                ctx.getBindings("python").putMember("data", proxyData);
+                var result = ctx.eval("python", "data.price * data.quantity");
+                total += result.asInt();
+                System.out.println("Python processed: "+ dataName(product)+ " = " + result);
+            }
+            System.out.println("Total processed value: " + total);
+        }
+        catch (Exception e)
+        {
+            System.out.println("ERROR: " + e.getMessage());
+        }
+    }
+    public static void testMockMongoCombinedQueryToPython()
+    {
+        try (Context ctx = Context.newBuilder("python")
+                .allowAllAccess(false)
+                .allowHostAccess(HostAccess.NONE)
+                .allowIO(false)
+                .allowCreateThread(false)
+                .allowNativeAccess(false)
+                .build())
+        {
+            List<Map<String, Object>> products = MockMongoData.findProductsByPriceAndQuantity(50000, 3);
+            System.out.println("Products found by combined query: " + products.size());
+            for (Map<String, Object> product : products)
+            {
+                ProxyObject proxyData = ProxyObject.fromMap(product);
+                ctx.getBindings("python").putMember("data", proxyData);
+                var result = ctx.eval("python","data.price * data.quantity");
+                System.out.println("Python processed: " + dataName(product)+ " = " + result);
+            }
+        }
+        catch (Exception e)
+        {
+            System.out.println("ERROR: " + e.getMessage());
+        }
+    }
+    private static String dataName(Map<String, Object> product)
+    {
+        return product.get("product").toString();
     }
     public static void main(String[] args)
     {
         System.out.println(execute("python", "print('Sandboxed Python running')"));
         System.out.println(execute("js", "console.log('Sandboxed JS running')"));
         testMockMongoQueryToPython();
+        testMockMongoMultipleResultsToPython();
+        testMockMongoCombinedQueryToPython();
     }
 }
