@@ -5,6 +5,7 @@ on:
     branches:
       - Mohammadraihan
       - develop
+
   pull_request:
     branches:
       - develop
@@ -25,12 +26,15 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Verify Java and Native Image
+        working-directory: backend
         run: |
           java -version
           native-image --version
 
       - name: Run tests
+        working-directory: backend
         run: ./mvnw clean test
 
       - name: Build Native Image
+        working-directory: backend
         run: ./mvnw -Pnative native:compile
