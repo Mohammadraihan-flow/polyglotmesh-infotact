@@ -161,6 +161,59 @@ public class SandboxedExecutor {
             System.out.println("ERROR: " + e.getMessage());
         }
     }
+    public static void testMockMongoSortedQueryToPython()
+    {
+        try (Context ctx = Context.newBuilder("python")
+                .allowAllAccess(false)
+                .allowHostAccess(HostAccess.NONE)
+                .allowIO(false)
+                .allowCreateThread(false)
+                .allowNativeAccess(false)
+                .build())
+        {
+            List<Map<String, Object>> products = MockMongoData.findProductsSortedByPrice();
+            System.out.println("Products sorted by price:");
+            for (Map<String, Object> product : products)
+            {
+                ProxyObject proxyData = ProxyObject.fromMap(product);
+                ctx.getBindings("python").putMember("data", proxyData);
+                var result = ctx.eval("python","data.price * data.quantity");
+                System.out.println(dataName(product) + " - Price: " + product.get("price") + " - Python total: " + result);
+            }
+        }
+        catch (Exception e)
+        {
+            System.out.println("ERROR: " + e.getMessage());
+        }
+    }
+    public static void testMockMongoPythonAggregation()
+    {
+        try (Context ctx = Context.newBuilder("python")
+                .allowAllAccess(false)
+                .allowHostAccess(HostAccess.NONE)
+                .allowIO(false)
+                .allowCreateThread(false)
+                .allowNativeAccess(false)
+                .build()) {
+            List<Map<String, Object>> products = MockMongoData.findProductsByMaxPrice(50000);
+            int total = 0;
+            for (Map<String, Object> product : products)
+            {
+                ProxyObject proxyData = ProxyObject.fromMap(product);
+                ctx.getBindings("python").putMember("data", proxyData);
+                var result = ctx.eval("python","data.price * data.quantity");
+                total += result.asInt();
+            }
+            ctx.getBindings("python").putMember("total", total);
+            var pythonResult = ctx.eval("python","total * 0.9");
+            System.out.println("Python aggregated total: " + total);
+            System.out.println("Python calculated 10% discounted total: "+ pythonResult);
+        }
+        catch (Exception e)
+        {
+            System.out.println("ERROR: " + e.getMessage());
+        }
+    }
     private static String dataName(Map<String, Object> product)
     {
         return product.get("product").toString();
@@ -172,5 +225,7 @@ public class SandboxedExecutor {
         testMockMongoQueryToPython();
         testMockMongoMultipleResultsToPython();
         testMockMongoCombinedQueryToPython();
+        testMockMongoSortedQueryToPython();
+        testMockMongoPythonAggregation();
     }
 }

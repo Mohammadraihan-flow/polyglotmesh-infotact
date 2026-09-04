@@ -3,6 +3,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Comparator;
 public class MockMongoData
 {
    public static List<Map<String, Object>> getProductData()
@@ -34,7 +35,8 @@ public class MockMongoData
    public static List<Map<String, Object>> findProductsByMaxPrice(double maxPrice)
    {
 	    List<Map<String, Object>> result = new ArrayList<>();
-	    for (Map<String, Object> product : getProductData()) {
+	    for (Map<String, Object> product : getProductData())
+	    {
 	        double price = ((Number) product.get("price")).doubleValue();
 	        if (price <= maxPrice)
 	        {
@@ -56,5 +58,11 @@ public class MockMongoData
 	        }
 	    }
 	    return result;
+	}
+   public static List<Map<String, Object>> findProductsSortedByPrice()
+   {
+	    List<Map<String, Object>> products = new ArrayList<>(getProductData());
+	    products.sort(Comparator.comparingDouble(product -> ((Number) product.get("price")).doubleValue()));
+	    return products;
 	}
 }
