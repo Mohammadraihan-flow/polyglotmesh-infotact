@@ -175,6 +175,71 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         }
       },
     },
+    {
+      id: 'select-all',
+      label: 'Select All',
+      description: 'Select all content in the active editor',
+      shortcut: 'Ctrl+A',
+      action: () => {
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            const act = activeEditor.getAction('editor.action.selectAll')
+            if (act) {
+              act.run()
+            } else {
+              activeEditor.trigger('commandPalette', 'selectAll')
+            }
+          }
+        }
+      },
+    },
+    {
+      id: 'cut',
+      label: 'Cut',
+      description: 'Cut selection to clipboard',
+      shortcut: 'Ctrl+X',
+      action: () => {
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            activeEditor.trigger('commandPalette', 'editor.action.clipboardCutAction')
+          }
+        }
+      },
+    },
+    {
+      id: 'copy',
+      label: 'Copy',
+      description: 'Copy selection to clipboard',
+      shortcut: 'Ctrl+C',
+      action: () => {
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            activeEditor.trigger('commandPalette', 'editor.action.clipboardCopyAction')
+          }
+        }
+      },
+    },
+    {
+      id: 'paste',
+      label: 'Paste',
+      description: 'Paste clipboard content into editor',
+      shortcut: 'Ctrl+V',
+      action: () => {
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            activeEditor.trigger('commandPalette', 'editor.action.clipboardPasteAction')
+          }
+        }
+      },
+    },
   ]
 
   const filteredCommands = commands.filter((cmd) => {

@@ -731,6 +731,23 @@ function EditorPanel({
   handlePeekDefinitionRef.current = handlePeekDefinition
   const handleFindReferencesRef = useRef(handleFindReferences)
   handleFindReferencesRef.current = handleFindReferences
+  const handleQuickFixRef = useRef(handleQuickFix)
+  handleQuickFixRef.current = handleQuickFix
+
+  const customActionDisposablesRef = useRef([])
+
+  useEffect(() => {
+    return () => {
+      customActionDisposablesRef.current.forEach((d) => {
+        try {
+          d?.dispose?.()
+        } catch {
+          // Ignore
+        }
+      })
+      customActionDisposablesRef.current = []
+    }
+  }, [])
 
   useEffect(() => {
     const onGoToDef = () => handleGoToDefinitionRef.current?.()
@@ -1358,8 +1375,35 @@ function EditorPanel({
                   // Ignore if shortcut binding exists
                 }
 
+                // Deduplicate context menu actions to prevent duplicate "Go to Definition"
                 try {
-                  editor.addAction({
+                  const ctxMenuContrib = editor.getContribution('editor.contrib.contextmenu')
+                  if (ctxMenuContrib && !ctxMenuContrib._polyglotmeshWrapped) {
+                    const origGetMenuActions = ctxMenuContrib._getMenuActions.bind(ctxMenuContrib)
+                    ctxMenuContrib._getMenuActions = function (model, contextMenuId) {
+                      const list = origGetMenuActions(model, contextMenuId)
+                      // Filter out built-in editor.action.revealDefinition so polyglotmesh.gotoDefinition
+                      // (with multi-file switching and UI feedback) is the sole definition action in the context menu
+                      return list.filter((item) => item.id !== 'editor.action.revealDefinition')
+                    }
+                    ctxMenuContrib._polyglotmeshWrapped = true
+                  }
+                } catch {
+                  // Ignore context menu wrapping error
+                }
+
+                // Clear any previous custom action disposables
+                customActionDisposablesRef.current.forEach((d) => {
+                  try {
+                    d?.dispose?.()
+                  } catch {
+                    // Ignore
+                  }
+                })
+                customActionDisposablesRef.current = []
+
+                try {
+                  const dGoto = editor.addAction({
                     id: 'polyglotmesh.gotoDefinition',
                     label: 'Go to Definition',
                     keybindings: [monaco.KeyCode.F12],
@@ -1369,7 +1413,9 @@ function EditorPanel({
                       handleGoToDefinitionRef.current?.()
                     },
                   })
-                  editor.addAction({
+                  if (dGoto) customActionDisposablesRef.current.push(dGoto)
+
+                  const dPeek = editor.addAction({
                     id: 'polyglotmesh.peekDefinition',
                     label: 'Peek Definition',
                     keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.F12],
@@ -1379,7 +1425,9 @@ function EditorPanel({
                       handlePeekDefinitionRef.current?.()
                     },
                   })
-                  editor.addAction({
+                  if (dPeek) customActionDisposablesRef.current.push(dPeek)
+
+                  const dRefs = editor.addAction({
                     id: 'polyglotmesh.findReferences',
                     label: 'Find All References',
                     keybindings: [monaco.KeyMod.Shift | monaco.KeyCode.F12],
@@ -1389,6 +1437,37 @@ function EditorPanel({
                       handleFindReferencesRef.current?.()
                     },
                   })
+                  if (dRefs) customActionDisposablesRef.current.push(dRefs)
+
+                  const dQuickFix = editor.addAction({
+                    id: 'polyglotmesh.quickFix',
+                    label: 'Quick Fix / Code Actions',
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Period],
+                    contextMenuGroupId: '1_modification',
+                    contextMenuOrder: 0.5,
+                    run: () => {
+                      handleQuickFixRef.current?.()
+                    },
+                  })
+                  if (dQuickFix) customActionDisposablesRef.current.push(dQuickFix)
+
+                  const dSelectAll = editor.addAction({
+                    id: 'polyglotmesh.selectAll',
+                    label: 'Select All',
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA],
+                    contextMenuGroupId: '9_cutcopypaste',
+                    contextMenuOrder: 4,
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.selectAll')
+                      if (act) {
+                        act.run()
+                      } else {
+                        ed.trigger('contextmenu', 'selectAll')
+                      }
+                    },
+                  })
+                  if (dSelectAll) customActionDisposablesRef.current.push(dSelectAll)
                 } catch {
                   // Ignore action registration error
                 }
