@@ -3861,3 +3861,30 @@
   color: #fbbf24 !important;
   border-color: rgba(245, 158, 11, 0.5) !important;
 }
+
+/* Commit 65: Editor Session Restoration */
+.btn--danger-outline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 4px;
+  background: transparent;
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn--danger-outline:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.6);
+}
+
+.btn--danger-outline:active {
+  transform: scale(0.98);
+}
+

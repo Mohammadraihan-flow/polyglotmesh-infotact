@@ -10,6 +10,12 @@ import {
   getMonacoLanguageFromFileName,
   LANGUAGE_DEFAULT_FILENAMES,
 } from './utils/languageUtils.js'
+import {
+  loadEditorSession,
+  saveEditorSession,
+  clearEditorSession,
+  validateSplitRatio,
+} from './utils/sessionManager.js'
 import { useMonacoMarkers } from './hooks/useMonacoMarkers.js'
 import { useMonacoSymbols } from './hooks/useMonacoSymbols.js'
 import './App.css'
@@ -54,18 +60,8 @@ function makeUniqueFileName(desiredName, existingFiles) {
   return candidateName
 }
 
-const WORKSPACE_STORAGE_KEY = 'polyglotmesh-workspace'
 const SETTINGS_STORAGE_KEY = 'polyglotmesh-editor-settings'
 const LEGACY_SETTINGS_STORAGE_KEY = 'polyglotmesh_editor_settings'
-const SPLIT_RATIO_STORAGE_KEY = 'polyglotmesh-editor-split-ratio'
-
-function validateSplitRatio(val, fallback = 0.5) {
-  const num = typeof val === 'number' ? val : parseFloat(val)
-  if (typeof num === 'number' && !isNaN(num) && isFinite(num) && num >= 0.2 && num <= 0.8) {
-    return Math.round(num * 1000) / 1000
-  }
-  return fallback
-}
 
 function saveWorkspaceToLocalStorage(
   files,
@@ -76,143 +72,19 @@ function saveWorkspaceToLocalStorage(
   secondaryFileName = null,
   splitRatio = 0.5,
   readOnlyFileNames = [],
+  activePane = 'primary',
 ) {
-  try {
-    const validRatio = validateSplitRatio(splitRatio, 0.5)
-    const payload = {
-      files: files.map((file) => ({
-        id: file.id ?? file.name,
-        name: file.name,
-        label: file.label,
-        language: file.language ?? file.monacoLanguage,
-        monacoLanguage: file.monacoLanguage ?? file.language,
-        code: file.code ?? file.content ?? '',
-        content: file.content ?? file.code ?? '',
-      })),
-      openFileNames: openFileNames ?? [],
-      activeFileName: activeFileName ?? null,
-      recentFileNames: recentFileNames ?? [],
-      isSplit: Boolean(isSplit),
-      secondaryFileName: secondaryFileName ?? null,
-      splitRatio: validRatio,
-      readOnlyFileNames: Array.isArray(readOnlyFileNames) ? readOnlyFileNames : [],
-    }
-    localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(payload))
-    localStorage.setItem(SPLIT_RATIO_STORAGE_KEY, String(validRatio))
-  } catch (e) {
-    console.warn('PolyglotMesh: Unable to save workspace to localStorage.', e)
-  }
-}
-
-function getInitialWorkspace() {
-  const emptyWorkspace = {
-    files: [],
-    openFileNames: [],
-    activeFileName: null,
-    recentFileNames: [],
-    isSplit: false,
-    secondaryFileName: null,
-    splitRatio: 0.5,
-    readOnlyFileNames: [],
-  }
-
-  try {
-    const rawData = localStorage.getItem(WORKSPACE_STORAGE_KEY)
-    if (!rawData) {
-      return emptyWorkspace
-    }
-
-    const parsed = JSON.parse(rawData)
-    if (!parsed || typeof parsed !== 'object') {
-      return emptyWorkspace
-    }
-
-    if (!Array.isArray(parsed.files)) {
-      return emptyWorkspace
-    }
-
-    const validFiles = parsed.files
-      .filter((file) => file && typeof file.name === 'string' && file.name.trim().length > 0)
-      .map((file) => {
-        const monacoLanguage = file.monacoLanguage ?? getMonacoLanguageFromFileName(file.name)
-        const label = file.label ?? getLanguageLabelFromFileName(file.name)
-        const content =
-          typeof file.code === 'string'
-            ? file.code
-            : typeof file.content === 'string'
-            ? file.content
-            : ''
-        return {
-          id: file.id ?? file.name,
-          name: file.name,
-          label,
-          language: monacoLanguage,
-          monacoLanguage,
-          code: content,
-          content,
-          isDirty: false,
-        }
-      })
-
-    const validNamesSet = new Set(validFiles.map((f) => f.name))
-
-    const validOpenNames = Array.isArray(parsed.openFileNames)
-      ? parsed.openFileNames.filter((name) => validNamesSet.has(name))
-      : []
-
-    let validActiveName = null
-    if (typeof parsed.activeFileName === 'string' && validNamesSet.has(parsed.activeFileName)) {
-      validActiveName = parsed.activeFileName
-    } else if (validOpenNames.length > 0) {
-      validActiveName = validOpenNames[0]
-    } else if (validFiles.length > 0) {
-      validActiveName = validFiles[0].name
-    }
-
-    if (validActiveName && !validOpenNames.includes(validActiveName)) {
-      validOpenNames.push(validActiveName)
-    }
-
-    const validRecentNames = Array.isArray(parsed.recentFileNames)
-      ? parsed.recentFileNames.filter((name) => validNamesSet.has(name)).slice(0, 5)
-      : []
-
-    const isSplit = Boolean(parsed.isSplit)
-    let validSecondaryName = null
-    if (typeof parsed.secondaryFileName === 'string' && validNamesSet.has(parsed.secondaryFileName)) {
-      validSecondaryName = parsed.secondaryFileName
-    }
-
-    let validSplitRatio = 0.5
-    try {
-      const storedRatio = localStorage.getItem(SPLIT_RATIO_STORAGE_KEY)
-      if (storedRatio) {
-        validSplitRatio = validateSplitRatio(parseFloat(storedRatio), 0.5)
-      } else if (typeof parsed.splitRatio !== 'undefined') {
-        validSplitRatio = validateSplitRatio(parsed.splitRatio, 0.5)
-      }
-    } catch {
-      // Ignore
-    }
-
-    const validReadOnlyNames = Array.isArray(parsed.readOnlyFileNames)
-      ? parsed.readOnlyFileNames.filter((name) => validNamesSet.has(name))
-      : []
-
-    return {
-      files: validFiles,
-      openFileNames: validOpenNames,
-      activeFileName: validActiveName,
-      recentFileNames: validRecentNames,
-      isSplit: isSplit && Boolean(validSecondaryName),
-      secondaryFileName: validSecondaryName,
-      splitRatio: validSplitRatio,
-      readOnlyFileNames: validReadOnlyNames,
-    }
-  } catch (e) {
-    console.warn('PolyglotMesh: Unable to parse saved workspace from localStorage.', e)
-    return emptyWorkspace
-  }
+  saveEditorSession({
+    files,
+    openFileNames,
+    activeFileName,
+    recentFileNames,
+    isSplit,
+    secondaryFileName,
+    splitRatio,
+    readOnlyFileNames,
+    activePane,
+  })
 }
 
 const defaultSettings = {
@@ -331,7 +203,8 @@ const getInitialSettings = () => {
 }
 
 function App() {
-  const [initialWorkspaceState] = useState(getInitialWorkspace)
+  const [initialSessionResult] = useState(loadEditorSession)
+  const initialWorkspaceState = initialSessionResult.session
   const [files, setFiles] = useState(initialWorkspaceState.files)
   const [openFileNames, setOpenFileNames] = useState(initialWorkspaceState.openFileNames)
   const [activeFileName, setActiveFileName] = useState(initialWorkspaceState.activeFileName)
@@ -340,7 +213,7 @@ function App() {
   const [secondaryFileName, setSecondaryFileName] = useState(initialWorkspaceState.secondaryFileName ?? null)
   const [splitRatio, setSplitRatio] = useState(initialWorkspaceState.splitRatio ?? 0.5)
   const [readOnlyFileNames, setReadOnlyFileNames] = useState(initialWorkspaceState.readOnlyFileNames ?? [])
-  const [activePane, setActivePane] = useState('primary')
+  const [activePane, setActivePane] = useState(initialWorkspaceState.activePane || 'primary')
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
   const [editorSettings, setEditorSettings] = useState(getInitialSettings)
@@ -351,6 +224,17 @@ function App() {
   const saveTimerRef = useRef(null)
   const autoSaveTimerRef = useRef(null)
   const pendingChangesRef = useRef({})
+
+  // Non-intrusive status notification when a saved session is restored
+  useEffect(() => {
+    if (initialSessionResult.isRestored && initialWorkspaceState.files.length > 0) {
+      setSaveMessage('Session restored')
+      const timer = setTimeout(() => {
+        setSaveMessage('')
+      }, 2500)
+      return () => clearTimeout(timer)
+    }
+  }, [initialSessionResult.isRestored, initialWorkspaceState.files.length])
 
   useEffect(() => {
     try {
@@ -441,8 +325,9 @@ function App() {
       secondaryFileName,
       splitRatio,
       readOnlyFileNames,
+      activePane,
     )
-  }, [openFileNames, activeFileName, recentFileNames, isSplit, secondaryFileName, splitRatio, readOnlyFileNames])
+  }, [openFileNames, activeFileName, recentFileNames, isSplit, secondaryFileName, splitRatio, readOnlyFileNames, activePane])
 
   const flushAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) {
@@ -474,6 +359,7 @@ function App() {
         secondaryFileNameRef.current,
         splitRatioRef.current,
         readOnlyFileNamesRef.current,
+        activePaneRef.current,
       )
 
       setSaveMessage('Workspace saved')
@@ -607,6 +493,9 @@ function App() {
       recentFileNamesRef.current,
       isSplitRef.current,
       secondaryFileNameRef.current,
+      splitRatioRef.current,
+      readOnlyFileNamesRef.current,
+      activePaneRef.current,
     )
 
     return {
@@ -851,6 +740,7 @@ function App() {
       nextSecondary,
       splitRatioRef.current,
       nextReadOnly,
+      activePaneRef.current,
     )
   }, [])
 
@@ -957,6 +847,7 @@ function App() {
         nextSecondary,
         splitRatioRef.current,
         nextReadOnly,
+        activePaneRef.current,
       )
 
       return { success: true, message: 'File renamed.' }
@@ -1088,6 +979,7 @@ function App() {
           secondaryFileNameRef.current,
           splitRatioRef.current,
           next,
+          activePaneRef.current,
         )
 
         setSaveMessage(
@@ -1164,15 +1056,34 @@ function App() {
 
   const handleResetLayout = useCallback(() => {
     setSplitRatio(0.5)
-    try {
-      localStorage.setItem(SPLIT_RATIO_STORAGE_KEY, '0.5')
-    } catch {
-      // Ignore
-    }
     setSaveMessage('Editor layout reset to 50/50')
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
     }
+    saveTimerRef.current = setTimeout(() => {
+      setSaveMessage('')
+      saveTimerRef.current = null
+    }, 2500)
+  }, [])
+
+  const handleResetSession = useCallback(() => {
+    const confirmed = window.confirm(
+      'Are you sure you want to reset your editor session? This will close all open tabs, split view, and return to a clean editor workspace.',
+    )
+    if (!confirmed) return
+
+    clearEditorSession()
+    setFiles([])
+    setOpenFileNames([])
+    setActiveFileName(null)
+    setRecentFileNames([])
+    setIsSplit(false)
+    setSecondaryFileName(null)
+    setSplitRatio(0.5)
+    setReadOnlyFileNames([])
+    setActivePane('primary')
+    setSaveMessage('Session reset')
+    if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
     saveTimerRef.current = setTimeout(() => {
       setSaveMessage('')
       saveTimerRef.current = null
@@ -1189,6 +1100,7 @@ function App() {
       if (isSplitRef.current) handleCloseSplit()
     }
     const onResetLayoutEvent = () => handleResetLayout()
+    const onResetSessionEvent = () => handleResetSession()
     const onToggleReadOnlyEvent = (e) => {
       const target = e?.detail?.fileName
       handleToggleReadOnly(target)
@@ -1205,6 +1117,7 @@ function App() {
     window.addEventListener('polyglotmesh:open-split', onOpenSplitEvent)
     window.addEventListener('polyglotmesh:close-split', onCloseSplitEvent)
     window.addEventListener('polyglotmesh:reset-editor-layout', onResetLayoutEvent)
+    window.addEventListener('polyglotmesh:reset-session', onResetSessionEvent)
     window.addEventListener('polyglotmesh:toggle-readonly', onToggleReadOnlyEvent)
     window.addEventListener('polyglotmesh:focus-pane', onFocusPaneEvent)
 
@@ -1214,10 +1127,11 @@ function App() {
       window.removeEventListener('polyglotmesh:open-split', onOpenSplitEvent)
       window.removeEventListener('polyglotmesh:close-split', onCloseSplitEvent)
       window.removeEventListener('polyglotmesh:reset-editor-layout', onResetLayoutEvent)
+      window.removeEventListener('polyglotmesh:reset-session', onResetSessionEvent)
       window.removeEventListener('polyglotmesh:toggle-readonly', onToggleReadOnlyEvent)
       window.removeEventListener('polyglotmesh:focus-pane', onFocusPaneEvent)
     }
-  }, [handleSave, handleToggleSplit, handleCloseSplit, handleResetLayout, handleToggleReadOnly])
+  }, [handleSave, handleToggleSplit, handleCloseSplit, handleResetLayout, handleResetSession, handleToggleReadOnly])
 
   useEffect(
     () => () => {
@@ -1542,6 +1456,7 @@ function App() {
             saveMessage={saveMessage}
             problems={problems}
             onReferencesFound={handleReferencesFound}
+            onResetSession={handleResetSession}
           />
 
           <ConsolePanel
@@ -1571,6 +1486,7 @@ function App() {
         onResetLayout={handleResetLayout}
         isReadOnly={Boolean(activeFile?.isReadOnly)}
         onToggleReadOnly={handleToggleReadOnly}
+        onResetSession={handleResetSession}
       />
     </main>
   )

@@ -229,6 +229,7 @@ function EditorPanel({
   onReferencesFound,
   isReadOnly = false,
   onToggleReadOnly,
+  onResetSession,
 }) {
   const safeEditorSettings = editorSettings || {}
   const selectedTheme = safeEditorSettings.theme ?? 'vs-dark'
@@ -1343,6 +1344,7 @@ function EditorPanel({
                 onShrinkSelection={handleShrinkSelection}
                 onToggleColumnSelection={handleToggleColumnSelection}
                 activeFile={currentActiveFile}
+                onResetSession={onResetSession}
               />
             </div>
           ) : null}

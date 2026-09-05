@@ -23,6 +23,7 @@ function CommandPalette({
   onResetLayout,
   isReadOnly = false,
   onToggleReadOnly,
+  onResetSession,
 }) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -99,6 +100,19 @@ function CommandPalette({
           onResetLayout()
         } else if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:reset-editor-layout'))
+        }
+      },
+    },
+    {
+      id: 'session-reset',
+      label: 'Session: Reset Editor Session',
+      description: 'Clear saved tabs, files, and split layout, restoring fresh workspace',
+      shortcut: 'Reset Session',
+      action: () => {
+        if (onResetSession) {
+          onResetSession()
+        } else if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:reset-session'))
         }
       },
     },

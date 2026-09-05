@@ -61,6 +61,7 @@ function EditorSettings({
   onShrinkSelection,
   onToggleColumnSelection,
   activeFile,
+  onResetSession,
 }) {
   const handleSettingChange = (key, value) => {
     onChange((currentSettings) => ({
@@ -835,6 +836,34 @@ function EditorSettings({
               <kbd className="editor-settings__kbd">Ctrl+0</kbd>
             </div>
 
+          </div>
+        </div>
+
+        {/* Session Section */}
+        <div className="editor-settings__group">
+          <h5 className="editor-settings__group-title">Session Storage</h5>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Editor Session</span>
+            <span className="editor-settings__hint">
+              Open files, tabs, split layout, and read-only preview flags are automatically saved to your browser storage.
+            </span>
+            <div className="editor-settings__action-row" style={{ marginTop: '0.6rem' }}>
+              <button
+                type="button"
+                className="btn btn--danger-outline editor-settings__action-btn"
+                onClick={() => {
+                  if (onResetSession) {
+                    onResetSession()
+                  } else if (typeof window !== 'undefined') {
+                    window.dispatchEvent(new CustomEvent('polyglotmesh:reset-session'))
+                  }
+                }}
+                title="Clear saved editor session and return to clean workspace"
+              >
+                🔄 Reset Editor Session
+              </button>
+            </div>
           </div>
         </div>
       </div>
