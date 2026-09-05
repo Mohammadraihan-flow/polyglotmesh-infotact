@@ -99,6 +99,50 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       },
     },
     {
+      id: 'goto-definition',
+      label: 'Go to Definition',
+      description: 'Navigate to definition of symbol at cursor',
+      shortcut: 'F12',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:goto-definition'))
+        }
+      },
+    },
+    {
+      id: 'peek-definition',
+      label: 'Peek Definition',
+      description: 'Inspect definition in an inline preview',
+      shortcut: 'Alt+F12',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:peek-definition'))
+        }
+      },
+    },
+    {
+      id: 'find-references',
+      label: 'Find All References',
+      description: 'Find references for symbol at cursor across files',
+      shortcut: 'Shift+F12',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:find-references'))
+        }
+      },
+    },
+    {
+      id: 'view-references',
+      label: 'View: References Panel',
+      description: 'Open bottom panel references view',
+      shortcut: 'References',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:show-references'))
+        }
+      },
+    },
+    {
       id: 'view-outline',
       label: 'View: Open Outline / Symbol Navigation',
       description: 'Show symbols and outline hierarchy for active file',

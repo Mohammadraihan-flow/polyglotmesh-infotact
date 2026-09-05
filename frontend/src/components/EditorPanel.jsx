@@ -4,7 +4,9 @@ import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
 import EditorStatusBar from './EditorStatusBar.jsx'
 import EditorBreadcrumb from './EditorBreadcrumb.jsx'
+import PeekDefinitionWidget from './PeekDefinitionWidget.jsx'
 import { getMonacoLanguageFromFileName } from '../utils/languageUtils.js'
+import { findDefinition, findReferences } from '../utils/monacoNavigationService.js'
 
 class EditorErrorBoundary extends React.Component {
   constructor(props) {
@@ -247,6 +249,7 @@ function defineMonacoThemes(monaco) {
 function EditorPanel({
   activeFile,
   openFiles = [],
+  files = [],
   onSelectFile,
   onCloseTab,
   onCreateFile,
@@ -260,6 +263,7 @@ function EditorPanel({
   onCloseSettings,
   saveMessage,
   problems = [],
+  onReferencesFound,
 }) {
   const safeEditorSettings = editorSettings || {}
 
@@ -274,7 +278,14 @@ function EditorPanel({
   const monacoRef = useRef(null)
   const [editorInstance, setEditorInstance] = useState(null)
   const [codeActionFeedback, setCodeActionFeedback] = useState(null)
+  const [navigationFeedback, setNavigationFeedback] = useState(null)
+  const [peekDefinitionData, setPeekDefinitionData] = useState(null)
   const feedbackTimeoutRef = useRef(null)
+  const navFeedbackTimerRef = useRef(null)
+  const filesRef = useRef(files)
+  filesRef.current = files
+  const activeFileRef = useRef(activeFile)
+  activeFileRef.current = activeFile
   const globalMonaco = useMonaco()
 
   const validTabSizes = [2, 4, 8]
@@ -590,6 +601,184 @@ function EditorPanel({
       window.removeEventListener('polyglotmesh:quick-fix', handleQuickFixEvent)
     }
   }, [handleQuickFix])
+
+  const showNavigationFeedback = useCallback((msg) => {
+    if (navFeedbackTimerRef.current) {
+      clearTimeout(navFeedbackTimerRef.current)
+    }
+    setNavigationFeedback(msg)
+    navFeedbackTimerRef.current = setTimeout(() => {
+      setNavigationFeedback(null)
+    }, 3000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (navFeedbackTimerRef.current) {
+        clearTimeout(navFeedbackTimerRef.current)
+      }
+    }
+  }, [])
+
+  const handleGoToDefinition = useCallback(async () => {
+    const editor = editorInstance || editorRef.current
+    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+    if (!editor || !monaco || !activeFile) {
+      showNavigationFeedback('No active editor')
+      return
+    }
+
+    try {
+      editor.focus()
+      const result = await findDefinition(monaco, editor, activeFile, filesRef.current)
+      if (result.success && result.definitions?.length > 0) {
+        const def = result.definitions[0]
+        setPeekDefinitionData(null)
+
+        if (!def.isSameFile && def.targetFile) {
+          onSelectFile?.(def.targetFile)
+          const jump = () => {
+            const currentEditors = monaco.editor?.getEditors?.() || [editor]
+            const ed = currentEditors[0] || editor
+            if (ed) {
+              ed.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+              ed.setSelection(def.range)
+              ed.revealPositionInCenterIfOutsideViewport({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+              ed.focus()
+            }
+          }
+          setTimeout(jump, 60)
+          setTimeout(jump, 180)
+          showNavigationFeedback(`Jumped to definition in ${def.targetFileName} (Line ${def.range.startLineNumber})`)
+        } else {
+          editor.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+          editor.setSelection(def.range)
+          editor.revealPositionInCenterIfOutsideViewport({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+          editor.focus()
+          showNavigationFeedback(`Jumped to definition (Line ${def.range.startLineNumber})`)
+        }
+      } else {
+        if (result.reason === 'no-symbol') {
+          showNavigationFeedback('No symbol at cursor')
+        } else {
+          showNavigationFeedback(`Definition not available for "${result.symbolName || 'symbol'}"`)
+        }
+      }
+    } catch {
+      showNavigationFeedback('Definition query failed')
+    }
+  }, [editorInstance, globalMonaco, activeFile, onSelectFile, showNavigationFeedback])
+
+  const handlePeekDefinition = useCallback(async () => {
+    const editor = editorInstance || editorRef.current
+    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+    if (!editor || !monaco || !activeFile) {
+      showNavigationFeedback('No active editor')
+      return
+    }
+
+    try {
+      editor.focus()
+      const result = await findDefinition(monaco, editor, activeFile, filesRef.current)
+      if (result.success && result.definitions?.length > 0) {
+        setPeekDefinitionData(result.definitions[0])
+      } else {
+        if (result.reason === 'no-symbol') {
+          showNavigationFeedback('No symbol at cursor')
+        } else {
+          showNavigationFeedback(`Definition not available for "${result.symbolName || 'symbol'}"`)
+        }
+      }
+    } catch {
+      showNavigationFeedback('Peek definition query failed')
+    }
+  }, [editorInstance, globalMonaco, activeFile, showNavigationFeedback])
+
+  const handleFindReferences = useCallback(async () => {
+    const editor = editorInstance || editorRef.current
+    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+    if (!editor || !monaco || !activeFile) {
+      showNavigationFeedback('No active editor')
+      return
+    }
+
+    try {
+      editor.focus()
+      const result = await findReferences(monaco, editor, activeFile, filesRef.current)
+      if (result.success && result.references?.length > 0) {
+        onReferencesFound?.(result.references, result.symbolName)
+        window.dispatchEvent(new CustomEvent('polyglotmesh:show-references'))
+        showNavigationFeedback(
+          `Found ${result.references.length} ${result.references.length === 1 ? 'reference' : 'references'} for "${result.symbolName}"`
+        )
+      } else {
+        if (result.reason === 'no-symbol') {
+          showNavigationFeedback('No symbol at cursor')
+        } else {
+          onReferencesFound?.([], result.symbolName || '')
+          window.dispatchEvent(new CustomEvent('polyglotmesh:show-references'))
+          showNavigationFeedback(`No references found for "${result.symbolName || 'symbol'}"`)
+        }
+      }
+    } catch {
+      showNavigationFeedback('Find references query failed')
+    }
+  }, [editorInstance, globalMonaco, activeFile, onReferencesFound, showNavigationFeedback])
+
+  const handleGoToDefinitionRef = useRef(handleGoToDefinition)
+  handleGoToDefinitionRef.current = handleGoToDefinition
+  const handlePeekDefinitionRef = useRef(handlePeekDefinition)
+  handlePeekDefinitionRef.current = handlePeekDefinition
+  const handleFindReferencesRef = useRef(handleFindReferences)
+  handleFindReferencesRef.current = handleFindReferences
+
+  useEffect(() => {
+    const onGoToDef = () => handleGoToDefinitionRef.current?.()
+    const onPeekDef = () => handlePeekDefinitionRef.current?.()
+    const onFindRefs = () => handleFindReferencesRef.current?.()
+
+    window.addEventListener('polyglotmesh:goto-definition', onGoToDef)
+    window.addEventListener('polyglotmesh:peek-definition', onPeekDef)
+    window.addEventListener('polyglotmesh:find-references', onFindRefs)
+
+    return () => {
+      window.removeEventListener('polyglotmesh:goto-definition', onGoToDef)
+      window.removeEventListener('polyglotmesh:peek-definition', onPeekDef)
+      window.removeEventListener('polyglotmesh:find-references', onFindRefs)
+    }
+  }, [])
+
+  useEffect(() => {
+    setPeekDefinitionData(null)
+  }, [activeFile?.name])
+
+  useEffect(() => {
+    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+    if (!monaco?.editor || !Array.isArray(files) || files.length === 0) return
+
+    files.forEach((file) => {
+      try {
+        const uri = monaco.Uri.parse(`file:///${file.name}`)
+        let m = monaco.editor.getModel(uri)
+        const lang = getMonacoLanguageFromFileName(file.name)
+        const content = file.code ?? file.content ?? ''
+
+        if (!m) {
+          monaco.editor.createModel(content, lang, uri)
+        } else if (file.name !== activeFile?.name) {
+          const curr = m.getValue()
+          if (curr !== content) {
+            m.setValue(content)
+          }
+          if (m.getLanguageId() !== lang) {
+            monaco.editor.setModelLanguage(m, lang)
+          }
+        }
+      } catch {
+        // Ignore model sync errors
+      }
+    })
+  }, [files, activeFile?.name, globalMonaco])
 
   const decorationsByUriRef = useRef(new Map())
 
@@ -916,6 +1105,11 @@ function EditorPanel({
                 ℹ {codeActionFeedback}
               </span>
             ) : null}
+            {navigationFeedback ? (
+              <span className="navigation-status-badge" role="status">
+                📍 {navigationFeedback}
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -934,6 +1128,18 @@ function EditorPanel({
               />
             </div>
           ) : null}
+
+          <button
+            type="button"
+            className="command-palette-button goto-def-button"
+            aria-label="Go to Definition"
+            title="Go to Definition (F12)"
+            onClick={handleGoToDefinition}
+            disabled={!activeFile}
+          >
+            <span className="command-palette-button__icon">↗</span>
+            <span className="command-palette-button__text">Go to Def</span>
+          </button>
 
           <button
             type="button"
@@ -1033,10 +1239,39 @@ function EditorPanel({
         {activeFile ? (
           <EditorErrorBoundary>
             <EditorBreadcrumb activeFile={activeFile} />
+            {peekDefinitionData ? (
+              <PeekDefinitionWidget
+                definition={peekDefinitionData}
+                onGoToDefinition={(def) => {
+                  setPeekDefinitionData(null)
+                  if (!def.isSameFile && def.targetFile) {
+                    onSelectFile?.(def.targetFile)
+                    setTimeout(() => {
+                      const ed = editorRef.current || editorInstance
+                      if (ed) {
+                        ed.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+                        ed.setSelection(def.range)
+                        ed.revealPositionInCenterIfOutsideViewport({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+                        ed.focus()
+                      }
+                    }, 60)
+                  } else {
+                    const ed = editorRef.current || editorInstance
+                    if (ed) {
+                      ed.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+                      ed.setSelection(def.range)
+                      ed.revealPositionInCenterIfOutsideViewport({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+                      ed.focus()
+                    }
+                  }
+                }}
+                onClose={() => setPeekDefinitionData(null)}
+              />
+            ) : null}
             <Editor
               path={activeFile.name}
               className="editor-panel__editor"
-              defaultLanguage="plaintext"
+              defaultLanguage={monacoLanguage}
               language={monacoLanguage}
               theme={selectedTheme}
               value={activeFile.code ?? activeFile.content ?? ''}
@@ -1057,6 +1292,34 @@ function EditorPanel({
                 }
                 defineMonacoThemes(monaco)
                 monaco.editor.setTheme(selectedTheme)
+
+                try {
+                  monaco.editor.registerEditorOpener({
+                    openCodeEditor(source, resource, selectionOrPosition) {
+                      const rawPath = resource.path || resource.fsPath || resource.toString()
+                      const cleanName = rawPath.replace(/^file:\/\/\//, '').replace(/^\//, '').split('/').pop()
+                      const targetFile = filesRef.current.find(
+                        (f) => f.name === cleanName || resource.toString().endsWith(f.name),
+                      )
+                      if (targetFile) {
+                        onSelectFile?.(targetFile)
+                        if (selectionOrPosition) {
+                          setTimeout(() => {
+                            const line = selectionOrPosition.lineNumber || selectionOrPosition.startLineNumber || 1
+                            const col = selectionOrPosition.column || selectionOrPosition.startColumn || 1
+                            source.setPosition({ lineNumber: line, column: col })
+                            source.revealPositionInCenterIfOutsideViewport({ lineNumber: line, column: col })
+                            source.focus()
+                          }, 60)
+                        }
+                        return true
+                      }
+                      return false
+                    },
+                  })
+                } catch {
+                  // Ignore opener registration error
+                }
 
                 try {
                   editor.addCommand(
@@ -1082,8 +1345,52 @@ function EditorPanel({
                       handleQuickFix()
                     }
                   )
+                  editor.addCommand(monaco.KeyCode.F12, () => {
+                    handleGoToDefinitionRef.current?.()
+                  })
+                  editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.F12, () => {
+                    handlePeekDefinitionRef.current?.()
+                  })
+                  editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F12, () => {
+                    handleFindReferencesRef.current?.()
+                  })
                 } catch {
                   // Ignore if shortcut binding exists
+                }
+
+                try {
+                  editor.addAction({
+                    id: 'polyglotmesh.gotoDefinition',
+                    label: 'Go to Definition',
+                    keybindings: [monaco.KeyCode.F12],
+                    contextMenuGroupId: 'navigation',
+                    contextMenuOrder: 1.1,
+                    run: () => {
+                      handleGoToDefinitionRef.current?.()
+                    },
+                  })
+                  editor.addAction({
+                    id: 'polyglotmesh.peekDefinition',
+                    label: 'Peek Definition',
+                    keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.F12],
+                    contextMenuGroupId: 'navigation',
+                    contextMenuOrder: 1.2,
+                    run: () => {
+                      handlePeekDefinitionRef.current?.()
+                    },
+                  })
+                  editor.addAction({
+                    id: 'polyglotmesh.findReferences',
+                    label: 'Find All References',
+                    keybindings: [monaco.KeyMod.Shift | monaco.KeyCode.F12],
+                    contextMenuGroupId: 'navigation',
+                    contextMenuOrder: 1.3,
+                    run: () => {
+                      handleFindReferencesRef.current?.()
+                    },
+                  })
+                } catch {
+                  // Ignore action registration error
                 }
 
                 editor.onDidChangeCursorPosition(() => {

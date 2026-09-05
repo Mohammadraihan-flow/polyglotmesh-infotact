@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import ProblemsPanel from './ProblemsPanel.jsx'
+import ReferencesPanel from './ReferencesPanel.jsx'
 
 function ConsolePanel({
   message,
@@ -8,9 +9,14 @@ function ConsolePanel({
   files = [],
   onSelectFile,
   problems = [],
+  references = [],
+  referenceSymbol = '',
+  isLoadingReferences = false,
+  onClearReferences,
   activeTab: controlledTab,
   onTabChange,
   onNavigateToProblem: customNavigate,
+  onNavigateToReference: customNavigateReference,
 }) {
   const [internalTab, setInternalTab] = useState('console')
   const currentTab = controlledTab !== undefined ? controlledTab : internalTab
@@ -26,24 +32,33 @@ function ConsolePanel({
   useEffect(() => {
     const handleShowProblems = () => handleTabChange('problems')
     const handleShowConsole = () => handleTabChange('console')
+    const handleShowReferences = () => handleTabChange('references')
     const handleToggleProblems = () => {
       handleTabChange(currentTab === 'problems' ? 'console' : 'problems')
+    }
+    const handleToggleReferences = () => {
+      handleTabChange(currentTab === 'references' ? 'console' : 'references')
     }
 
     window.addEventListener('polyglotmesh:show-problems', handleShowProblems)
     window.addEventListener('polyglotmesh:show-console', handleShowConsole)
+    window.addEventListener('polyglotmesh:show-references', handleShowReferences)
     window.addEventListener('polyglotmesh:toggle-problems', handleToggleProblems)
+    window.addEventListener('polyglotmesh:toggle-references', handleToggleReferences)
 
     return () => {
       window.removeEventListener('polyglotmesh:show-problems', handleShowProblems)
       window.removeEventListener('polyglotmesh:show-console', handleShowConsole)
+      window.removeEventListener('polyglotmesh:show-references', handleShowReferences)
       window.removeEventListener('polyglotmesh:toggle-problems', handleToggleProblems)
+      window.removeEventListener('polyglotmesh:toggle-references', handleToggleReferences)
     }
   }, [currentTab])
 
   const errorCount = problems.filter((p) => p.severityCode === 8).length
   const warningCount = problems.filter((p) => p.severityCode === 4).length
   const totalProblems = problems.length
+  const totalReferences = references.length
 
   const handleNavigateToProblem = (problem) => {
     if (customNavigate) {
@@ -71,6 +86,51 @@ function ConsolePanel({
           const col = Number(problem.columnNumber) || 1
           activeEditor.setPosition({ lineNumber: line, column: col })
           activeEditor.revealPositionInCenterIfOutsideViewport({ lineNumber: line, column: col })
+          activeEditor.focus()
+        }
+      }
+    }
+
+    jumpToLocation()
+    setTimeout(jumpToLocation, 60)
+    setTimeout(jumpToLocation, 180)
+  }
+
+  const handleNavigateToReference = (ref) => {
+    if (customNavigateReference) {
+      customNavigateReference(ref)
+      return
+    }
+
+    if (!ref) return
+
+    // 1. Switch file if reference belongs to another file
+    if (ref.targetFileName && (!activeFile || activeFile.name !== ref.targetFileName)) {
+      const targetFile = files.find((f) => f.name === ref.targetFileName)
+      if (targetFile && onSelectFile) {
+        onSelectFile(targetFile)
+      }
+    }
+
+    // 2. Position cursor and highlight reference range in Monaco
+    const jumpToLocation = () => {
+      if (typeof window !== 'undefined' && window.monaco) {
+        const editors = window.monaco.editor.getEditors()
+        const activeEditor = editors && editors[0]
+        if (activeEditor) {
+          const startLine = Number(ref.lineNumber) || 1
+          const startCol = Number(ref.columnNumber) || 1
+          const endLine = Number(ref.endLineNumber) || startLine
+          const endCol = Number(ref.endColumnNumber) || startCol + (referenceSymbol ? referenceSymbol.length : 1)
+
+          activeEditor.setPosition({ lineNumber: startLine, column: startCol })
+          activeEditor.setSelection({
+            startLineNumber: startLine,
+            startColumn: startCol,
+            endLineNumber: endLine,
+            endColumn: endCol,
+          })
+          activeEditor.revealPositionInCenterIfOutsideViewport({ lineNumber: startLine, column: startCol })
           activeEditor.focus()
         }
       }
@@ -136,6 +196,27 @@ function ConsolePanel({
               <span className="panel-tab__count-chip panel-tab__count-chip--zero">0</span>
             )}
           </button>
+
+          <button
+            type="button"
+            role="tab"
+            id="tab-references"
+            aria-controls="panel-references-content"
+            aria-selected={currentTab === 'references'}
+            className={`panel-tab${currentTab === 'references' ? ' panel-tab--active' : ''}`}
+            onClick={() => handleTabChange('references')}
+            title="Find All References (Shift+F12)"
+          >
+            <span className="panel-tab__icon" aria-hidden="true">
+              🔍
+            </span>
+            <span className="panel-tab__title">References</span>
+            {totalReferences > 0 ? (
+              <span className="panel-tab__count-chip panel-tab__count-chip--info" title={`${totalReferences} references`}>
+                {totalReferences}
+              </span>
+            ) : null}
+          </button>
         </div>
 
         {currentTab === 'console' ? (
@@ -143,7 +224,7 @@ function ConsolePanel({
             <span className={`status-dot${isRunning ? '' : ' status-dot--ready'}`} aria-hidden="true" />
             {isRunning ? 'Running' : 'Ready'}
           </div>
-        ) : (
+        ) : currentTab === 'problems' ? (
           <div className="problems-panel__summary-chip" aria-label="Problem summary status">
             {totalProblems === 0 ? (
               <span className="problems-summary--clean">✓ No problems</span>
@@ -154,6 +235,16 @@ function ConsolePanel({
                 {warningCount > 0 ? `${warningCount} ${warningCount === 1 ? 'warning' : 'warnings'}` : ''}
                 {errorCount === 0 && warningCount === 0 ? `${totalProblems} items` : ''}
               </span>
+            )}
+          </div>
+        ) : (
+          <div className="references-panel__summary-chip" aria-label="References status">
+            {totalReferences > 0 ? (
+              <span className="references-summary--active">
+                {referenceSymbol ? `Symbol: ${referenceSymbol}` : `${totalReferences} references`}
+              </span>
+            ) : (
+              <span className="references-summary--clean">No active search</span>
             )}
           </div>
         )}
@@ -170,7 +261,7 @@ function ConsolePanel({
           <p className="console-panel__message">{message}</p>
           <p className="console-panel__hint">The current run state is simulated in the frontend only.</p>
         </div>
-      ) : (
+      ) : currentTab === 'problems' ? (
         <div
           id="panel-problems-content"
           role="tabpanel"
@@ -181,6 +272,22 @@ function ConsolePanel({
             problems={problems}
             activeFile={activeFile}
             onNavigateToProblem={handleNavigateToProblem}
+          />
+        </div>
+      ) : (
+        <div
+          id="panel-references-content"
+          role="tabpanel"
+          aria-labelledby="tab-references"
+          className="console-panel__references-wrapper"
+        >
+          <ReferencesPanel
+            references={references}
+            symbolName={referenceSymbol}
+            isLoading={isLoadingReferences}
+            onNavigateToReference={handleNavigateToReference}
+            onClear={onClearReferences}
+            activeFile={activeFile}
           />
         </div>
       )}

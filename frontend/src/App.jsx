@@ -417,6 +417,28 @@ function App() {
     refresh: handleRefreshSymbols,
   } = useMonacoSymbols(activeFile)
 
+  const [references, setReferences] = useState([])
+  const [referenceSymbol, setReferenceSymbol] = useState('')
+  const [isLoadingReferences, setIsLoadingReferences] = useState(false)
+
+  // Clear references when active file changes to prevent stale results
+  useEffect(() => {
+    setReferences([])
+    setReferenceSymbol('')
+    setIsLoadingReferences(false)
+  }, [activeFileName])
+
+  const handleReferencesFound = useCallback((refs, symbol) => {
+    setReferences(refs)
+    setReferenceSymbol(symbol)
+    setIsLoadingReferences(false)
+  }, [])
+
+  const handleClearReferences = useCallback(() => {
+    setReferences([])
+    setReferenceSymbol('')
+  }, [])
+
   const handleCreateFile = useCallback((fileName) => {
     flushAutoSave()
     const trimmedName = fileName ? fileName.trim() : 'untitled.js'
@@ -991,6 +1013,30 @@ function App() {
         return
       }
 
+      // 17. F12 -> Go to Definition
+      if (event.key === 'F12' && !event.shiftKey && !event.altKey && !modifier) {
+        event.preventDefault()
+        event.stopPropagation()
+        window.dispatchEvent(new CustomEvent('polyglotmesh:goto-definition'))
+        return
+      }
+
+      // 18. Alt+F12 -> Peek Definition
+      if (event.key === 'F12' && event.altKey && !event.shiftKey && !modifier) {
+        event.preventDefault()
+        event.stopPropagation()
+        window.dispatchEvent(new CustomEvent('polyglotmesh:peek-definition'))
+        return
+      }
+
+      // 19. Shift+F12 -> Find All References
+      if (event.key === 'F12' && event.shiftKey && !event.altKey && !modifier) {
+        event.preventDefault()
+        event.stopPropagation()
+        window.dispatchEvent(new CustomEvent('polyglotmesh:find-references'))
+        return
+      }
+
     },
     [
       isCommandPaletteOpen,
@@ -1051,6 +1097,7 @@ function App() {
             onCloseSettings={() => setIsEditorSettingsOpen(false)}
             saveMessage={saveMessage}
             problems={problems}
+            onReferencesFound={handleReferencesFound}
           />
 
           <ConsolePanel
@@ -1061,6 +1108,10 @@ function App() {
             files={files}
             onSelectFile={handleSelectFile}
             problems={problems}
+            references={references}
+            referenceSymbol={referenceSymbol}
+            isLoadingReferences={isLoadingReferences}
+            onClearReferences={handleClearReferences}
           />
         </section>
       </div>
