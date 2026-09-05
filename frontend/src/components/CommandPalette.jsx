@@ -240,6 +240,150 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         }
       },
     },
+    {
+      id: 'selection-add-next-occurrence',
+      label: 'Selection: Add Next Occurrence',
+      description: 'Add next occurrence of current selection to multi-selection',
+      shortcut: 'Ctrl+D',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:add-next-occurrence'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.addSelectionToNextFindMatch')?.run()
+            }
+          }
+        }
+      },
+    },
+    {
+      id: 'selection-select-all-occurrences',
+      label: 'Selection: Select All Occurrences',
+      description: 'Select all occurrences of current find match or selection',
+      shortcut: 'Ctrl+Shift+L',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:select-all-occurrences'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.selectHighlights')?.run()
+            }
+          }
+        }
+      },
+    },
+    {
+      id: 'selection-add-cursor-above',
+      label: 'Selection: Add Cursor Above',
+      description: 'Insert cursor directly above current line',
+      shortcut: 'Ctrl+Alt+Up',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:add-cursor-above'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.insertCursorAbove')?.run()
+            }
+          }
+        }
+      },
+    },
+    {
+      id: 'selection-add-cursor-below',
+      label: 'Selection: Add Cursor Below',
+      description: 'Insert cursor directly below current line',
+      shortcut: 'Ctrl+Alt+Down',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:add-cursor-below'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.insertCursorBelow')?.run()
+            }
+          }
+        }
+      },
+    },
+    {
+      id: 'selection-add-cursors-to-line-ends',
+      label: 'Selection: Add Cursors to Line Ends',
+      description: 'Add a cursor at the end of each selected line',
+      shortcut: 'Shift+Alt+I',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:add-cursors-to-line-ends'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.insertCursorAtEndOfEachLineSelected')?.run()
+            }
+          }
+        }
+      },
+    },
+    {
+      id: 'selection-expand',
+      label: 'Selection: Expand Selection',
+      description: 'Smart expand selection to enclosing scope or block',
+      shortcut: 'Shift+Alt+Right',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:expand-selection'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.smartSelect.expand')?.run()
+            }
+          }
+        }
+      },
+    },
+    {
+      id: 'selection-shrink',
+      label: 'Selection: Shrink Selection',
+      description: 'Smart shrink selection to inner scope',
+      shortcut: 'Shift+Alt+Left',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:shrink-selection'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.smartSelect.shrink')?.run()
+            }
+          }
+        }
+      },
+    },
+    {
+      id: 'selection-toggle-column',
+      label: 'Selection: Toggle Column Selection Mode',
+      description: 'Toggle column / box selection mode in editor',
+      shortcut: 'Alt+Click',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-column-selection'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.toggleColumnSelection')?.run()
+            }
+          }
+        }
+      },
+    },
   ]
 
   const filteredCommands = commands.filter((cmd) => {

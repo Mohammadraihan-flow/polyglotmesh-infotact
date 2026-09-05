@@ -369,6 +369,16 @@ function EditorPanel({
       ? safeEditorSettings.formatOnType
       : false
 
+  const columnSelectionSetting =
+    typeof safeEditorSettings.columnSelection === 'boolean'
+      ? safeEditorSettings.columnSelection
+      : false
+
+  const multiCursorModifierSetting =
+    safeEditorSettings.multiCursorModifier === 'ctrlCmd'
+      ? 'ctrlCmd'
+      : 'alt'
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -421,7 +431,8 @@ function EditorPanel({
     roundedSelection: true,
     selectionHighlight: selectionHighlightSetting,
     occurrencesHighlight: 'singleFile',
-    multiCursorModifier: 'alt',
+    columnSelection: columnSelectionSetting,
+    multiCursorModifier: multiCursorModifierSetting,
     multiCursorPaste: 'spread',
     matchBrackets: 'always',
     formatOnType: formatOnTypeSetting,
@@ -498,6 +509,78 @@ function EditorPanel({
     } catch {
       // Ignore if formatting provider is unavailable
     }
+  }, [editorInstance, activeFile])
+
+  const handleAddCursorAbove = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    editor.focus()
+    const act = editor.getAction('editor.action.insertCursorAbove')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.insertCursorAbove')
+  }, [editorInstance, activeFile])
+
+  const handleAddCursorBelow = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    editor.focus()
+    const act = editor.getAction('editor.action.insertCursorBelow')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.insertCursorBelow')
+  }, [editorInstance, activeFile])
+
+  const handleAddCursorsToLineEnds = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    editor.focus()
+    const act = editor.getAction('editor.action.insertCursorAtEndOfEachLineSelected')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.insertCursorAtEndOfEachLineSelected')
+  }, [editorInstance, activeFile])
+
+  const handleAddNextOccurrence = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    editor.focus()
+    const act = editor.getAction('editor.action.addSelectionToNextFindMatch')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.addSelectionToNextFindMatch')
+  }, [editorInstance, activeFile])
+
+  const handleSelectAllOccurrences = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    editor.focus()
+    const act = editor.getAction('editor.action.selectHighlights')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.selectHighlights')
+  }, [editorInstance, activeFile])
+
+  const handleExpandSelection = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    editor.focus()
+    const act = editor.getAction('editor.action.smartSelect.expand')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.smartSelect.expand')
+  }, [editorInstance, activeFile])
+
+  const handleShrinkSelection = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    editor.focus()
+    const act = editor.getAction('editor.action.smartSelect.shrink')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.smartSelect.shrink')
+  }, [editorInstance, activeFile])
+
+  const handleToggleColumnSelection = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    editor.focus()
+    const act = editor.getAction('editor.action.toggleColumnSelection')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.toggleColumnSelection')
   }, [editorInstance, activeFile])
 
   const showCodeActionFeedback = useCallback((msg) => {
@@ -753,17 +836,50 @@ function EditorPanel({
     const onGoToDef = () => handleGoToDefinitionRef.current?.()
     const onPeekDef = () => handlePeekDefinitionRef.current?.()
     const onFindRefs = () => handleFindReferencesRef.current?.()
+    const onCursorAbove = () => handleAddCursorAbove()
+    const onCursorBelow = () => handleAddCursorBelow()
+    const onLineEnds = () => handleAddCursorsToLineEnds()
+    const onNextOccur = () => handleAddNextOccurrence()
+    const onSelectAllOccur = () => handleSelectAllOccurrences()
+    const onExpandSel = () => handleExpandSelection()
+    const onShrinkSel = () => handleShrinkSelection()
+    const onToggleCol = () => handleToggleColumnSelection()
 
     window.addEventListener('polyglotmesh:goto-definition', onGoToDef)
     window.addEventListener('polyglotmesh:peek-definition', onPeekDef)
     window.addEventListener('polyglotmesh:find-references', onFindRefs)
+    window.addEventListener('polyglotmesh:add-cursor-above', onCursorAbove)
+    window.addEventListener('polyglotmesh:add-cursor-below', onCursorBelow)
+    window.addEventListener('polyglotmesh:add-cursors-to-line-ends', onLineEnds)
+    window.addEventListener('polyglotmesh:add-next-occurrence', onNextOccur)
+    window.addEventListener('polyglotmesh:select-all-occurrences', onSelectAllOccur)
+    window.addEventListener('polyglotmesh:expand-selection', onExpandSel)
+    window.addEventListener('polyglotmesh:shrink-selection', onShrinkSel)
+    window.addEventListener('polyglotmesh:toggle-column-selection', onToggleCol)
 
     return () => {
       window.removeEventListener('polyglotmesh:goto-definition', onGoToDef)
       window.removeEventListener('polyglotmesh:peek-definition', onPeekDef)
       window.removeEventListener('polyglotmesh:find-references', onFindRefs)
+      window.removeEventListener('polyglotmesh:add-cursor-above', onCursorAbove)
+      window.removeEventListener('polyglotmesh:add-cursor-below', onCursorBelow)
+      window.removeEventListener('polyglotmesh:add-cursors-to-line-ends', onLineEnds)
+      window.removeEventListener('polyglotmesh:add-next-occurrence', onNextOccur)
+      window.removeEventListener('polyglotmesh:select-all-occurrences', onSelectAllOccur)
+      window.removeEventListener('polyglotmesh:expand-selection', onExpandSel)
+      window.removeEventListener('polyglotmesh:shrink-selection', onShrinkSel)
+      window.removeEventListener('polyglotmesh:toggle-column-selection', onToggleCol)
     }
-  }, [])
+  }, [
+    handleAddCursorAbove,
+    handleAddCursorBelow,
+    handleAddCursorsToLineEnds,
+    handleAddNextOccurrence,
+    handleSelectAllOccurrences,
+    handleExpandSelection,
+    handleShrinkSelection,
+    handleToggleColumnSelection,
+  ])
 
   useEffect(() => {
     setPeekDefinitionData(null)
@@ -1063,6 +1179,8 @@ function EditorPanel({
     cursorSmoothCaretAnimationSetting,
     selectionHighlightSetting,
     formatOnTypeSetting,
+    columnSelectionSetting,
+    multiCursorModifierSetting,
   ])
 
   useEffect(() => {
@@ -1141,6 +1259,13 @@ function EditorPanel({
                 onFormatDocument={handleFormatDocument}
                 onFormatSelection={handleFormatSelection}
                 onQuickFix={handleQuickFix}
+                onAddCursorAbove={handleAddCursorAbove}
+                onAddCursorBelow={handleAddCursorBelow}
+                onAddNextOccurrence={handleAddNextOccurrence}
+                onSelectAllOccurrences={handleSelectAllOccurrences}
+                onExpandSelection={handleExpandSelection}
+                onShrinkSelection={handleShrinkSelection}
+                onToggleColumnSelection={handleToggleColumnSelection}
                 activeFile={activeFile}
               />
             </div>
@@ -1371,6 +1496,62 @@ function EditorPanel({
                   editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F12, () => {
                     handleFindReferencesRef.current?.()
                   })
+                  editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD,
+                    () => {
+                      const act = editor.getAction('editor.action.addSelectionToNextFindMatch')
+                      if (act) act.run()
+                      else editor.trigger('keyboard', 'editor.action.addSelectionToNextFindMatch')
+                    }
+                  )
+                  editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyL,
+                    () => {
+                      const act = editor.getAction('editor.action.selectHighlights')
+                      if (act) act.run()
+                      else editor.trigger('keyboard', 'editor.action.selectHighlights')
+                    }
+                  )
+                  editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.UpArrow,
+                    () => {
+                      const act = editor.getAction('editor.action.insertCursorAbove')
+                      if (act) act.run()
+                      else editor.trigger('keyboard', 'editor.action.insertCursorAbove')
+                    }
+                  )
+                  editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.DownArrow,
+                    () => {
+                      const act = editor.getAction('editor.action.insertCursorBelow')
+                      if (act) act.run()
+                      else editor.trigger('keyboard', 'editor.action.insertCursorBelow')
+                    }
+                  )
+                  editor.addCommand(
+                    monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyI,
+                    () => {
+                      const act = editor.getAction('editor.action.insertCursorAtEndOfEachLineSelected')
+                      if (act) act.run()
+                      else editor.trigger('keyboard', 'editor.action.insertCursorAtEndOfEachLineSelected')
+                    }
+                  )
+                  editor.addCommand(
+                    monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.RightArrow,
+                    () => {
+                      const act = editor.getAction('editor.action.smartSelect.expand')
+                      if (act) act.run()
+                      else editor.trigger('keyboard', 'editor.action.smartSelect.expand')
+                    }
+                  )
+                  editor.addCommand(
+                    monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.LeftArrow,
+                    () => {
+                      const act = editor.getAction('editor.action.smartSelect.shrink')
+                      if (act) act.run()
+                      else editor.trigger('keyboard', 'editor.action.smartSelect.shrink')
+                    }
+                  )
                 } catch {
                   // Ignore if shortcut binding exists
                 }
@@ -1468,6 +1649,117 @@ function EditorPanel({
                     },
                   })
                   if (dSelectAll) customActionDisposablesRef.current.push(dSelectAll)
+
+                  const dNextOccur = editor.addAction({
+                    id: 'polyglotmesh.addNextOccurrence',
+                    label: 'Add Next Occurrence',
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD],
+                    contextMenuGroupId: '2_selection',
+                    contextMenuOrder: 1,
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.addSelectionToNextFindMatch')
+                      if (act) act.run()
+                      else ed.trigger('contextmenu', 'editor.action.addSelectionToNextFindMatch')
+                    },
+                  })
+                  if (dNextOccur) customActionDisposablesRef.current.push(dNextOccur)
+
+                  const dSelectAllOccur = editor.addAction({
+                    id: 'polyglotmesh.selectAllOccurrences',
+                    label: 'Select All Occurrences',
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyL],
+                    contextMenuGroupId: '2_selection',
+                    contextMenuOrder: 2,
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.selectHighlights')
+                      if (act) act.run()
+                      else ed.trigger('contextmenu', 'editor.action.selectHighlights')
+                    },
+                  })
+                  if (dSelectAllOccur) customActionDisposablesRef.current.push(dSelectAllOccur)
+
+                  const dExpandSel = editor.addAction({
+                    id: 'polyglotmesh.expandSelection',
+                    label: 'Expand Selection',
+                    keybindings: [monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.RightArrow],
+                    contextMenuGroupId: '2_selection',
+                    contextMenuOrder: 3,
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.smartSelect.expand')
+                      if (act) act.run()
+                      else ed.trigger('contextmenu', 'editor.action.smartSelect.expand')
+                    },
+                  })
+                  if (dExpandSel) customActionDisposablesRef.current.push(dExpandSel)
+
+                  const dShrinkSel = editor.addAction({
+                    id: 'polyglotmesh.shrinkSelection',
+                    label: 'Shrink Selection',
+                    keybindings: [monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.LeftArrow],
+                    contextMenuGroupId: '2_selection',
+                    contextMenuOrder: 4,
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.smartSelect.shrink')
+                      if (act) act.run()
+                      else ed.trigger('contextmenu', 'editor.action.smartSelect.shrink')
+                    },
+                  })
+                  if (dShrinkSel) customActionDisposablesRef.current.push(dShrinkSel)
+
+                  const dCursorAbove = editor.addAction({
+                    id: 'polyglotmesh.addCursorAbove',
+                    label: 'Add Cursor Above',
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.UpArrow],
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.insertCursorAbove')
+                      if (act) act.run()
+                      else ed.trigger('keyboard', 'editor.action.insertCursorAbove')
+                    },
+                  })
+                  if (dCursorAbove) customActionDisposablesRef.current.push(dCursorAbove)
+
+                  const dCursorBelow = editor.addAction({
+                    id: 'polyglotmesh.addCursorBelow',
+                    label: 'Add Cursor Below',
+                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.DownArrow],
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.insertCursorBelow')
+                      if (act) act.run()
+                      else ed.trigger('keyboard', 'editor.action.insertCursorBelow')
+                    },
+                  })
+                  if (dCursorBelow) customActionDisposablesRef.current.push(dCursorBelow)
+
+                  const dCursorsToLineEnds = editor.addAction({
+                    id: 'polyglotmesh.addCursorsToLineEnds',
+                    label: 'Add Cursors to Line Ends',
+                    keybindings: [monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyI],
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.insertCursorAtEndOfEachLineSelected')
+                      if (act) act.run()
+                      else ed.trigger('keyboard', 'editor.action.insertCursorAtEndOfEachLineSelected')
+                    },
+                  })
+                  if (dCursorsToLineEnds) customActionDisposablesRef.current.push(dCursorsToLineEnds)
+
+                  const dColSel = editor.addAction({
+                    id: 'polyglotmesh.toggleColumnSelection',
+                    label: 'Toggle Column Selection Mode',
+                    run: (ed) => {
+                      ed.focus()
+                      const act = ed.getAction('editor.action.toggleColumnSelection')
+                      if (act) act.run()
+                      else ed.trigger('keyboard', 'editor.action.toggleColumnSelection')
+                    },
+                  })
+                  if (dColSel) customActionDisposablesRef.current.push(dColSel)
                 } catch {
                   // Ignore action registration error
                 }

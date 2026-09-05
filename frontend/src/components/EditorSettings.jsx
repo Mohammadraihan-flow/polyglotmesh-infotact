@@ -52,6 +52,14 @@ function EditorSettings({
   onFormatDocument,
   onFormatSelection,
   onQuickFix,
+  onAddCursorAbove,
+  onAddCursorBelow,
+  onAddCursorsToLineEnds,
+  onAddNextOccurrence,
+  onSelectAllOccurrences,
+  onExpandSelection,
+  onShrinkSelection,
+  onToggleColumnSelection,
   activeFile,
 }) {
   const handleSettingChange = (key, value) => {
@@ -633,6 +641,99 @@ function EditorSettings({
           </div>
         </div>
 
+        {/* Multi-Cursor & Selection Section */}
+        <div className="editor-settings__group">
+          <h5 className="editor-settings__group-title">Multi-Cursor & Selection</h5>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Multi-Cursor Modifier</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Multi-Cursor Modifier">
+              {[
+                { label: 'Alt (Default)', value: 'alt' },
+                { label: 'Ctrl / Cmd', value: 'ctrlCmd' },
+              ].map((option) => {
+                const isActive = (settings.multiCursorModifier ?? 'alt') === option.value
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('multiCursorModifier', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Column Selection Mode</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Column Selection Mode">
+              {[
+                { label: 'On', value: true },
+                { label: 'Off', value: false },
+              ].map((option) => {
+                const isActive = (settings.columnSelection ?? false) === option.value
+
+                return (
+                  <button
+                    key={String(option.value)}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('columnSelection', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Actions</span>
+            <div className="editor-settings__toggle-group" role="group" aria-label="Selection Actions">
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onAddNextOccurrence}
+                disabled={!activeFile}
+                title="Add Next Occurrence (Ctrl+D)"
+              >
+                Next Match
+              </button>
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onSelectAllOccurrences}
+                disabled={!activeFile}
+                title="Select All Occurrences (Ctrl+Shift+L)"
+              >
+                All Matches
+              </button>
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onExpandSelection}
+                disabled={!activeFile}
+                title="Expand Selection (Shift+Alt+Right)"
+              >
+                Expand
+              </button>
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onShrinkSelection}
+                disabled={!activeFile}
+                title="Shrink Selection (Shift+Alt+Left)"
+              >
+                Shrink
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Keyboard Shortcuts Section */}
         <div className="editor-settings__group">
           <h5 className="editor-settings__group-title">Keyboard Shortcuts</h5>
@@ -672,6 +773,34 @@ function EditorSettings({
             <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Run Program</span>
               <kbd className="editor-settings__kbd">Ctrl+Enter / Cmd+Enter</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Add Next Occurrence</span>
+              <kbd className="editor-settings__kbd">Ctrl+D / Cmd+D</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Select All Occurrences</span>
+              <kbd className="editor-settings__kbd">Ctrl+Shift+L / Cmd+Shift+L</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Add Cursor Above</span>
+              <kbd className="editor-settings__kbd">Ctrl+Alt+Up / Cmd+Alt+Up</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Add Cursor Below</span>
+              <kbd className="editor-settings__kbd">Ctrl+Alt+Down / Cmd+Alt+Down</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Add Cursors to Line Ends</span>
+              <kbd className="editor-settings__kbd">Shift+Alt+I</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Expand Selection</span>
+              <kbd className="editor-settings__kbd">Shift+Alt+Right</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Shrink Selection</span>
+              <kbd className="editor-settings__kbd">Shift+Alt+Left</kbd>
             </div>
             <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Fold Block</span>

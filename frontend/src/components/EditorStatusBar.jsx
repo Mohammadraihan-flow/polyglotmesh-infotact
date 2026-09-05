@@ -143,19 +143,38 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage, prob
                 <span className="editor-status-bar__item editor-status-bar__item--multicursor">
                   {selectionStats.multiCursorCount} cursors
                 </span>
+                {selectionStats.selectedCharCount > 0 ? (
+                  <span className="editor-status-bar__divider" aria-hidden="true">
+                    |
+                  </span>
+                ) : null}
+              </>
+            ) : null}
+            {selectionStats.selectedCharCount > 0 ? (
+              <>
+                <span className="editor-status-bar__item editor-status-bar__item--selection-lines">
+                  {selectionStats.selectedLineCount} {selectionStats.selectedLineCount === 1 ? 'line selected' : 'lines selected'}
+                </span>
                 <span className="editor-status-bar__divider" aria-hidden="true">
                   |
                 </span>
+                <span className="editor-status-bar__item editor-status-bar__item--selection-chars">
+                  {selectionStats.selectedCharCount} {selectionStats.selectedCharCount === 1 ? 'character' : 'characters'}
+                </span>
               </>
             ) : null}
-            <span className="editor-status-bar__item editor-status-bar__item--selection-lines">
-              {selectionStats.selectedLineCount} {selectionStats.selectedLineCount === 1 ? 'line selected' : 'lines selected'}
-            </span>
+          </>
+        ) : null}
+        {editorSettings?.columnSelection ? (
+          <>
             <span className="editor-status-bar__divider" aria-hidden="true">
               |
             </span>
-            <span className="editor-status-bar__item editor-status-bar__item--selection-chars">
-              {selectionStats.selectedCharCount} {selectionStats.selectedCharCount === 1 ? 'character' : 'characters'}
+            <span
+              className="editor-status-bar__item editor-status-bar__item--column-selection"
+              title="Column Selection (Box Selection) Mode is active"
+            >
+              Column Mode
             </span>
           </>
         ) : null}
