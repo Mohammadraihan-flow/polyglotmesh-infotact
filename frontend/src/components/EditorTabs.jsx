@@ -112,7 +112,12 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
           className="editor-tabs__create-button"
           aria-label="Create new file"
           title="Create new file"
-          onClick={handleOpenCreate}
+          onClick={() => {
+            const result = onCreateFile?.('untitled.js', true)
+            if (!result?.success) {
+              handleOpenCreate()
+            }
+          }}
         >
           +
         </button>

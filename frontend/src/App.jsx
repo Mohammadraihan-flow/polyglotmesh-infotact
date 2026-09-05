@@ -437,7 +437,7 @@ function App() {
     setReferenceSymbol('')
   }, [])
 
-  const handleCreateFile = useCallback((fileName) => {
+  const handleCreateFile = useCallback((fileName, forceNew = false) => {
     flushAutoSave()
     const trimmedName = fileName ? fileName.trim() : 'untitled.js'
 
@@ -455,7 +455,7 @@ function App() {
       (file) => file.name.toLowerCase() === trimmedName.toLowerCase(),
     )
 
-    if (existingFile) {
+    if (existingFile && !forceNew) {
       if (!currentOpenNames.includes(existingFile.name)) {
         setOpenFileNames((prevOpen) => [...prevOpen, existingFile.name])
       }
