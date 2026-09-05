@@ -191,7 +191,7 @@ function EditorToolbar({
               ? 'Preview Mode: Read-Only (Click or Alt+P to switch to Edit Mode)'
               : 'Edit Mode (Click or Alt+P to switch to Preview Mode)'
           }
-          onClick={onToggleReadOnly}
+          onClick={() => onToggleReadOnly?.()}
           disabled={!activeFile}
         >
           <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
