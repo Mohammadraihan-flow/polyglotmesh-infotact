@@ -80,6 +80,7 @@ function EditorPane({
   onSelectPeekDefinition,
 }) {
   const editorRef = useRef(null)
+  const editorContainerRef = useRef(null)
   const monacoRef = useRef(null)
   const fileRef = useRef(file)
   const customActionDisposablesRef = useRef([])
@@ -110,6 +111,17 @@ function EditorPane({
       })
       customActionDisposablesRef.current = []
     }
+  }, [])
+
+  useEffect(() => {
+    const container = editorContainerRef.current
+    if (!container || typeof ResizeObserver === 'undefined') return undefined
+
+    const observer = new ResizeObserver(() => {
+      editorRef.current?.layout()
+    })
+    observer.observe(container)
+    return () => observer.disconnect()
   }, [])
 
   const monacoLanguage = file
@@ -617,7 +629,7 @@ function EditorPane({
         </div>
       </div>
 
-      <div className="editor-pane__body">
+      <div ref={editorContainerRef} className="editor-pane__body">
         {file ? (
           <EditorErrorBoundary>
             <EditorBreadcrumb activeFile={file} />

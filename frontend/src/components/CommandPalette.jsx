@@ -577,8 +577,11 @@ function CommandPalette({
           </span>
           <input
             ref={inputRef}
+            id="command-palette-input"
             type="text"
             className="command-palette__input"
+            aria-label="Search commands"
+            aria-controls="command-palette-results"
             placeholder="Type a command (Run, Save, Settings)..."
             value={query}
             onChange={(e) => {
@@ -591,7 +594,7 @@ function CommandPalette({
           />
         </div>
 
-        <ul className="command-palette__list" role="menu">
+        <ul id="command-palette-results" className="command-palette__list" role="menu" aria-label="Available commands">
           {filteredCommands.length > 0 ? (
             filteredCommands.map((cmd, index) => {
               const isSelected = index === selectedIndex
@@ -599,8 +602,16 @@ function CommandPalette({
                 <li
                   key={cmd.id}
                   role="menuitem"
+                  tabIndex={0}
+                  aria-label={`${cmd.label}. ${cmd.description}`}
                   className={`command-palette__item${isSelected ? ' command-palette__item--selected' : ''}`}
                   onClick={() => handleSelectCommand(cmd)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault()
+                      handleSelectCommand(cmd)
+                    }
+                  }}
                   onMouseEnter={() => setSelectedIndex(index)}
                 >
                   <div className="command-palette__item-main">

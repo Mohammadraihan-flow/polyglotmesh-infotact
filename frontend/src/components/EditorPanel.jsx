@@ -1504,6 +1504,31 @@ function EditorPanel({
               onPointerUp={handleDividerPointerUp}
               onPointerCancel={handleDividerPointerUp}
               onDoubleClick={handleResetLayout}
+              onKeyDown={(e) => {
+                if (e.key === 'Home') {
+                  e.preventDefault()
+                  setLocalSplitRatio(0.2)
+                  onSplitRatioChange?.(0.2)
+                } else if (e.key === 'End') {
+                  e.preventDefault()
+                  setLocalSplitRatio(0.8)
+                  onSplitRatioChange?.(0.8)
+                } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+                  e.preventDefault()
+                  const nextRatio = Math.max(0.2, Math.round((localSplitRatio - 0.05) * 100) / 100)
+                  setLocalSplitRatio(nextRatio)
+                  onSplitRatioChange?.(nextRatio)
+                } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+                  e.preventDefault()
+                  const nextRatio = Math.min(0.8, Math.round((localSplitRatio + 0.05) * 100) / 100)
+                  setLocalSplitRatio(nextRatio)
+                  onSplitRatioChange?.(nextRatio)
+                } else if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault()
+                  handleResetLayout()
+                }
+              }}
+              tabIndex={0}
             >
               <div className="split-editor__handle" aria-hidden="true">
                 <span className="split-editor__handle-bar" />

@@ -165,7 +165,7 @@ function FileExplorer({
                       autoComplete="off"
                       spellCheck="false"
                     />
-                    <button type="submit" className="file-explorer__action-btn" title="Confirm rename">
+                    <button type="submit" className="file-explorer__action-btn" title="Confirm rename" aria-label="Confirm rename">
                       ✓
                     </button>
                     <button
@@ -173,6 +173,7 @@ function FileExplorer({
                       className="file-explorer__action-btn"
                       onClick={handleCancelRename}
                       title="Cancel rename"
+                      aria-label="Cancel rename"
                     >
                       ✕
                     </button>
@@ -194,8 +195,16 @@ function FileExplorer({
                 }}
                 role="treeitem"
                 aria-selected={isActive}
+                aria-label={`${file.name}${file.isDirty ? ', unsaved changes' : ''}${file.isReadOnly ? ', read-only preview' : ''}`}
+                tabIndex={0}
                 className={`file-explorer__item${isActive ? ' file-explorer__item--active' : ''}`}
                 onClick={() => onSelectFile?.(file.name)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault()
+                    onSelectFile?.(file.name)
+                  }
+                }}
                 onContextMenu={(e) => {
                   e.preventDefault()
                   handleStartRename(file.name)

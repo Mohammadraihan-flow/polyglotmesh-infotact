@@ -62,7 +62,9 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
                 <button
                   type="button"
                   role="tab"
+                  id={`editor-tab-${file.name.replace(/[^a-zA-Z0-9_-]/g, '-')}`}
                   aria-selected={isActive}
+                  aria-label={`${file.name}${file.isDirty ? ', unsaved changes' : ''}${file.isReadOnly ? ', read-only preview' : ''}`}
                   className={`editor-tabs__tab${isActive ? ' editor-tabs__tab--active' : ''}`}
                   onClick={() => onSelectFile(file.name)}
                   title={file.name}
@@ -138,12 +140,13 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
               }}
             />
 
-            <button type="submit" className="editor-tabs__create-confirm">
+            <button type="submit" className="editor-tabs__create-confirm" aria-label="Create file">
               Create
             </button>
             <button
               type="button"
               className="editor-tabs__create-cancel"
+              aria-label="Cancel creating file"
               onClick={handleCancelCreate}
             >
               Cancel
