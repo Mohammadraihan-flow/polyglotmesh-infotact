@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import FileIcon from './FileIcon.jsx'
 
 function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, onCreateFile }) {
@@ -160,4 +160,4 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
   )
 }
 
-export default EditorTabs
+export default React.memo(EditorTabs)

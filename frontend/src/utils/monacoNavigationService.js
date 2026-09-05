@@ -116,10 +116,10 @@ export async function findDefinition(monaco, editor, activeFile, files = [], tok
                 monaco.editor.getModel(monaco.Uri.parse(def.fileName)) ||
                 (isSameFile ? model : null)
 
-              let startLine = 1
-              let startCol = 1
-              let endLine = 1
-              let endCol = 1
+              let startLine
+              let startCol
+              let endLine
+              let endCol
 
               if (targetModel && !targetModel.isDisposed()) {
                 const sPos = targetModel.getPositionAt(def.textSpan.start)
@@ -299,11 +299,11 @@ export async function findReferences(monaco, editor, activeFile, files = [], tok
                 monaco.editor.getModel(monaco.Uri.parse(ref.fileName)) ||
                 (isSameFile ? model : null)
 
-              let startLine = 1
-              let startCol = 1
-              let endLine = 1
-              let endCol = 1
-              let lineText = ''
+              let startLine
+              let startCol
+              let endLine
+              let endCol
+              let lineText
 
               if (targetModel && !targetModel.isDisposed()) {
                 const sPos = targetModel.getPositionAt(ref.textSpan.start)

@@ -80,11 +80,6 @@ export function useMonacoSymbols(activeFile, monacoInstance, editorInstance) {
       debounceTimerRef.current = null
     }
 
-    // Set loading immediately on file switch if we have an active file
-    if (activeFile) {
-      setIsLoading(true)
-    }
-
     // Small delay to allow Monaco to attach the new model
     const timer = setTimeout(() => {
       loadSymbols(false)

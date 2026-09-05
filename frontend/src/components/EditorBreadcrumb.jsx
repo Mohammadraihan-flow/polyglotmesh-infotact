@@ -61,4 +61,4 @@ function EditorBreadcrumb({ activeFile }) {
   )
 }
 
-export default EditorBreadcrumb
+export default React.memo(EditorBreadcrumb)

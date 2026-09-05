@@ -1,4 +1,6 @@
 
+import React from 'react'
+
 const THEMES = [
   {
     id: 'vs-dark',
@@ -52,14 +54,10 @@ function EditorSettings({
   onFormatDocument,
   onFormatSelection,
   onQuickFix,
-  onAddCursorAbove,
-  onAddCursorBelow,
-  onAddCursorsToLineEnds,
   onAddNextOccurrence,
   onSelectAllOccurrences,
   onExpandSelection,
   onShrinkSelection,
-  onToggleColumnSelection,
   activeFile,
   onResetSession,
 }) {
@@ -871,4 +869,4 @@ function EditorSettings({
   )
 }
 
-export default EditorSettings
+export default React.memo(EditorSettings)

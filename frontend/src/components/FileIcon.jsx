@@ -83,4 +83,4 @@ function FileIcon({ fileName, extension, size = 16, className = '' }) {
   }
 }
 
-export default FileIcon
+export default React.memo(FileIcon)

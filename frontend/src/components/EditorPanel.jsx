@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMonaco } from '@monaco-editor/react'
 import EditorSettings from './EditorSettings.jsx'
 import EditorStatusBar from './EditorStatusBar.jsx'
@@ -227,7 +227,6 @@ function EditorPanel({
   saveMessage,
   problems = [],
   onReferencesFound,
-  isReadOnly = false,
   onToggleReadOnly,
   onResetSession,
 }) {
@@ -245,16 +244,22 @@ function EditorPanel({
     return r >= 0.2 && r <= 0.8 ? r : 0.5
   })
   const splitRatioRef = useRef(localSplitRatio)
-  splitRatioRef.current = localSplitRatio
+
+  useEffect(() => {
+    splitRatioRef.current = localSplitRatio
+  }, [localSplitRatio])
 
   useEffect(() => {
     if (typeof splitRatio === 'number' && splitRatio >= 0.2 && splitRatio <= 0.8) {
-      setLocalSplitRatio(splitRatio)
+      const timer = setTimeout(() => {
+        setLocalSplitRatio(splitRatio)
+      }, 0)
       if (splitContainerRef.current) {
         splitContainerRef.current.style.setProperty('--split-ratio', String(splitRatio))
       }
       primaryEditorRef.current?.layout()
       secondaryEditorRef.current?.layout()
+      return () => clearTimeout(timer)
     }
   }, [splitRatio])
 
@@ -350,7 +355,9 @@ function EditorPanel({
   const feedbackTimeoutRef = useRef(null)
   const navFeedbackTimerRef = useRef(null)
   const filesRef = useRef(files)
-  filesRef.current = files
+  useEffect(() => {
+    filesRef.current = files
+  }, [files])
   const viewStatesRef = useRef({})
   const decorationsByUriRef = useRef(new Map())
   const globalMonaco = useMonaco()
@@ -468,72 +475,98 @@ function EditorPanel({
       ? 'ctrlCmd'
       : 'alt'
 
-  const editorOptions = {
-    ...baseEditorOptions,
-    fontSize: safeEditorSettings.fontSize ?? 14,
-    wordWrap: wordWrapSetting,
-    minimap: { enabled: safeEditorSettings.minimap ?? true },
-    lineNumbers:
-      typeof safeEditorSettings.lineNumbers === 'boolean'
-        ? safeEditorSettings.lineNumbers
-          ? 'on'
-          : 'off'
-        : safeEditorSettings.lineNumbers ?? 'on',
-    tabSize,
-    autoIndent: autoIndentSetting,
-    automaticLayout: safeEditorSettings.automaticLayout ?? true,
-    bracketPairColorization: {
-      enabled: bracketPairColorizationSetting,
-    },
-    guides: {
-      bracketPairs: bracketPairColorizationSetting,
-      bracketPairsHorizontal: bracketPairColorizationSetting,
-      highlightActiveBracketPair: bracketPairColorizationSetting,
-      indentation: true,
-    },
-    hover: {
-      enabled: showHoverSetting,
-      delay: 300,
-      sticky: true,
-    },
-    quickSuggestions: autoSuggestionsSetting
-      ? { other: true, comments: false, strings: false }
-      : { other: false, comments: false, strings: false },
-    suggestOnTriggerCharacters: autoSuggestionsSetting,
-    parameterHints: {
-      enabled: parameterHintsSetting,
-      cycle: true,
-    },
-    stickyScroll: {
-      enabled: stickyScrollSetting,
-      maxLineCount: 5,
-    },
-    smoothScrolling: smoothScrollingSetting,
-    renderLineHighlight: highlightActiveLineSetting ? 'all' : 'none',
-    renderWhitespace: renderWhitespaceSetting,
-    cursorBlinking: cursorBlinkingSetting,
-    cursorStyle: cursorStyleSetting,
-    cursorSmoothCaretAnimation: cursorSmoothCaretAnimationSetting,
-    cursorWidth: 2,
-    cursorSurroundingLines: 1,
-    cursorSurroundingLinesStyle: 'default',
-    roundedSelection: true,
-    selectionHighlight: selectionHighlightSetting,
-    occurrencesHighlight: 'singleFile',
-    columnSelection: columnSelectionSetting,
-    multiCursorModifier: multiCursorModifierSetting,
-    multiCursorPaste: 'spread',
-    matchBrackets: 'always',
-    formatOnType: formatOnTypeSetting,
-    wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
-    snippetSuggestions: 'inline',
-    acceptSuggestionOnEnter: 'on',
-    tabCompletion: 'on',
-    lightbulb: { enabled: true },
-    glyphMargin: true,
-    overviewRulerLanes: 3,
-    overviewRulerBorder: true,
-  }
+  const editorOptions = useMemo(
+    () => ({
+      ...baseEditorOptions,
+      fontSize: safeEditorSettings.fontSize ?? 14,
+      wordWrap: wordWrapSetting,
+      minimap: { enabled: safeEditorSettings.minimap ?? true },
+      lineNumbers:
+        typeof safeEditorSettings.lineNumbers === 'boolean'
+          ? safeEditorSettings.lineNumbers
+            ? 'on'
+            : 'off'
+          : safeEditorSettings.lineNumbers ?? 'on',
+      tabSize,
+      autoIndent: autoIndentSetting,
+      automaticLayout: safeEditorSettings.automaticLayout ?? true,
+      bracketPairColorization: {
+        enabled: bracketPairColorizationSetting,
+      },
+      guides: {
+        bracketPairs: bracketPairColorizationSetting,
+        bracketPairsHorizontal: bracketPairColorizationSetting,
+        highlightActiveBracketPair: bracketPairColorizationSetting,
+        indentation: true,
+      },
+      hover: {
+        enabled: showHoverSetting,
+        delay: 300,
+        sticky: true,
+      },
+      quickSuggestions: autoSuggestionsSetting
+        ? { other: true, comments: false, strings: false }
+        : { other: false, comments: false, strings: false },
+      suggestOnTriggerCharacters: autoSuggestionsSetting,
+      parameterHints: {
+        enabled: parameterHintsSetting,
+        cycle: true,
+      },
+      stickyScroll: {
+        enabled: stickyScrollSetting,
+        maxLineCount: 5,
+      },
+      smoothScrolling: smoothScrollingSetting,
+      renderLineHighlight: highlightActiveLineSetting ? 'all' : 'none',
+      renderWhitespace: renderWhitespaceSetting,
+      cursorBlinking: cursorBlinkingSetting,
+      cursorStyle: cursorStyleSetting,
+      cursorSmoothCaretAnimation: cursorSmoothCaretAnimationSetting,
+      cursorWidth: 2,
+      cursorSurroundingLines: 1,
+      cursorSurroundingLinesStyle: 'default',
+      roundedSelection: true,
+      selectionHighlight: selectionHighlightSetting,
+      occurrencesHighlight: 'singleFile',
+      columnSelection: columnSelectionSetting,
+      multiCursorModifier: multiCursorModifierSetting,
+      multiCursorPaste: 'spread',
+      matchBrackets: 'always',
+      formatOnType: formatOnTypeSetting,
+      wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
+      snippetSuggestions: 'inline',
+      acceptSuggestionOnEnter: 'on',
+      tabCompletion: 'on',
+      lightbulb: { enabled: true },
+      glyphMargin: true,
+      overviewRulerLanes: 3,
+      overviewRulerBorder: true,
+    }),
+    [
+      safeEditorSettings.fontSize,
+      wordWrapSetting,
+      safeEditorSettings.minimap,
+      safeEditorSettings.lineNumbers,
+      tabSize,
+      autoIndentSetting,
+      safeEditorSettings.automaticLayout,
+      bracketPairColorizationSetting,
+      showHoverSetting,
+      autoSuggestionsSetting,
+      parameterHintsSetting,
+      stickyScrollSetting,
+      smoothScrollingSetting,
+      highlightActiveLineSetting,
+      renderWhitespaceSetting,
+      cursorBlinkingSetting,
+      cursorStyleSetting,
+      cursorSmoothCaretAnimationSetting,
+      selectionHighlightSetting,
+      columnSelectionSetting,
+      multiCursorModifierSetting,
+      formatOnTypeSetting,
+    ],
+  )
 
   // Handle pane activation
   const handleActivatePane = useCallback((paneId) => {
@@ -1044,17 +1077,47 @@ function EditorPanel({
 
   // Zoom controls
   const currentFontSize = editorSettings?.fontSize ?? 14
-  const handleZoomIn = () => {
-    const nextSize = Math.min(32, currentFontSize + 1)
-    onEditorSettingsChange?.({ ...editorSettings, fontSize: nextSize })
-  }
-  const handleZoomOut = () => {
-    const nextSize = Math.max(10, currentFontSize - 1)
-    onEditorSettingsChange?.({ ...editorSettings, fontSize: nextSize })
-  }
-  const handleResetZoom = () => {
-    onEditorSettingsChange?.({ ...editorSettings, fontSize: 14 })
-  }
+  const handleZoomIn = useCallback(() => {
+    onEditorSettingsChange?.((prev) => ({
+      ...prev,
+      fontSize: Math.min(32, (prev?.fontSize ?? 14) + 1),
+    }))
+  }, [onEditorSettingsChange])
+
+  const handleZoomOut = useCallback(() => {
+    onEditorSettingsChange?.((prev) => ({
+      ...prev,
+      fontSize: Math.max(10, (prev?.fontSize ?? 14) - 1),
+    }))
+  }, [onEditorSettingsChange])
+
+  const handleResetZoom = useCallback(() => {
+    onEditorSettingsChange?.((prev) => ({
+      ...prev,
+      fontSize: 14,
+    }))
+  }, [onEditorSettingsChange])
+
+  // Stable callbacks for EditorPane instances to prevent re-rendering
+  const handleSelectPrimaryFile = useCallback((fileName) => {
+    onSelectFile?.(fileName, 'primary')
+  }, [onSelectFile])
+
+  const handleSelectSecondaryFile = useCallback((fileName) => {
+    onSelectFile?.(fileName, 'secondary')
+  }, [onSelectFile])
+
+  const handleClosePrimaryTab = useCallback((fileName) => {
+    onCloseTab?.(fileName, 'primary')
+  }, [onCloseTab])
+
+  const handleCloseSecondaryTab = useCallback((fileName) => {
+    onCloseTab?.(fileName, 'secondary')
+  }, [onCloseTab])
+
+  const handleClosePeekDefinition = useCallback(() => {
+    setPeekDefinitionData(null)
+  }, [])
 
   // Diagnostic decorations
   const updateModelDecorations = useCallback(() => {
@@ -1243,23 +1306,26 @@ function EditorPanel({
   ])
 
   // Sync background models
+  const primaryFileName = (primaryFile || activeFile)?.name
+  const secondaryFileName = secondaryFile?.name
+
   useEffect(() => {
     const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
     if (!monaco?.editor || !Array.isArray(files) || files.length === 0) return
 
-    const primaryName = (primaryFile || activeFile)?.name
-    const secondaryName = secondaryFile?.name
-
     files.forEach((file) => {
       try {
-        const uri = monaco.Uri.parse(`file:///${file.name}`)
+        const uri = monaco.Uri.parse(file.name)
         let m = monaco.editor.getModel(uri)
+        if (!m) {
+          m = monaco.editor.getModel(monaco.Uri.parse(`file:///${file.name}`))
+        }
         const lang = getMonacoLanguageFromFileName(file.name)
         const content = file.code ?? file.content ?? ''
 
         if (!m) {
           monaco.editor.createModel(content, lang, uri)
-        } else if (file.name !== primaryName && file.name !== secondaryName) {
+        } else if (file.name !== primaryFileName && file.name !== secondaryFileName) {
           const curr = m.getValue()
           if (curr !== content) {
             m.setValue(content)
@@ -1272,7 +1338,7 @@ function EditorPanel({
         // Ignore
       }
     })
-  }, [files, primaryFile?.name, secondaryFile?.name, activeFile?.name, globalMonaco])
+  }, [files, primaryFileName, secondaryFileName, globalMonaco])
 
   // Close settings popup when clicking outside
   useEffect(() => {
@@ -1401,8 +1467,8 @@ function EditorPanel({
                 files={files}
                 otherActiveFileName={secondaryFile?.name}
                 onActivate={handleActivatePane}
-                onSelectFile={(fileName) => onSelectFile?.(fileName, 'primary')}
-                onCloseTab={(fileName) => onCloseTab?.(fileName, 'primary')}
+                onSelectFile={handleSelectPrimaryFile}
+                onCloseTab={handleClosePrimaryTab}
                 onCreateFile={onCreateFile}
                 onChange={onChange}
                 onMount={handlePaneMount}
@@ -1416,7 +1482,7 @@ function EditorPanel({
                 onFormatDocument={handleFormatDocument}
                 onUpdateModelDecorations={updateModelDecorations}
                 peekDefinitionData={activePane === 'primary' ? peekDefinitionData : null}
-                onClosePeekDefinition={() => setPeekDefinitionData(null)}
+                onClosePeekDefinition={handleClosePeekDefinition}
                 onSelectPeekDefinition={handleSelectPeekDefinition}
                 onToggleReadOnly={onToggleReadOnly}
               />
@@ -1461,8 +1527,8 @@ function EditorPanel({
                 files={files}
                 otherActiveFileName={(primaryFile || activeFile)?.name}
                 onActivate={handleActivatePane}
-                onSelectFile={(fileName) => onSelectFile?.(fileName, 'secondary')}
-                onCloseTab={(fileName) => onCloseTab?.(fileName, 'secondary')}
+                onSelectFile={handleSelectSecondaryFile}
+                onCloseTab={handleCloseSecondaryTab}
                 onCreateFile={onCreateFile}
                 onCloseSplit={onCloseSplit}
                 onChange={onChange}
@@ -1477,7 +1543,7 @@ function EditorPanel({
                 onFormatDocument={handleFormatDocument}
                 onUpdateModelDecorations={updateModelDecorations}
                 peekDefinitionData={activePane === 'secondary' ? peekDefinitionData : null}
-                onClosePeekDefinition={() => setPeekDefinitionData(null)}
+                onClosePeekDefinition={handleClosePeekDefinition}
                 onSelectPeekDefinition={handleSelectPeekDefinition}
                 onToggleReadOnly={onToggleReadOnly}
               />
@@ -1492,8 +1558,8 @@ function EditorPanel({
             openFiles={openFiles}
             files={files}
             onActivate={handleActivatePane}
-            onSelectFile={(fileName) => onSelectFile?.(fileName, 'primary')}
-            onCloseTab={(fileName) => onCloseTab?.(fileName, 'primary')}
+            onSelectFile={handleSelectPrimaryFile}
+            onCloseTab={handleClosePrimaryTab}
             onCreateFile={onCreateFile}
             onChange={onChange}
             onMount={handlePaneMount}
@@ -1507,14 +1573,14 @@ function EditorPanel({
             onFormatDocument={handleFormatDocument}
             onUpdateModelDecorations={updateModelDecorations}
             peekDefinitionData={peekDefinitionData}
-            onClosePeekDefinition={() => setPeekDefinitionData(null)}
+            onClosePeekDefinition={handleClosePeekDefinition}
             onSelectPeekDefinition={handleSelectPeekDefinition}
             onToggleReadOnly={onToggleReadOnly}
           />
         )}
 
         <EditorStatusBar
-          editor={getActiveEditor()}
+          editor={activeEditorInstance}
           activeFile={currentActiveFile}
           isReadOnly={Boolean(currentActiveFile?.isReadOnly)}
           onToggleReadOnly={onToggleReadOnly}
@@ -1528,4 +1594,4 @@ function EditorPanel({
   )
 }
 
-export default EditorPanel
+export default React.memo(EditorPanel)

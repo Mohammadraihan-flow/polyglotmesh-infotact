@@ -15,6 +15,7 @@ export function useMonacoMarkers(openFiles = [], files = []) {
   useEffect(() => {
     let isMounted = true
     let disposable = null
+    let retryTimer = null
 
     const computeProblems = () => {
       if (typeof window === 'undefined' || !window.monaco?.editor) return
@@ -99,7 +100,7 @@ export function useMonacoMarkers(openFiles = [], files = []) {
       }
     }
 
-    // Initial check
+    // Initial compute
     computeProblems()
 
     // Subscribe to Monaco's native markers change event
@@ -107,24 +108,26 @@ export function useMonacoMarkers(openFiles = [], files = []) {
       disposable = window.monaco.editor.onDidChangeMarkers(() => {
         computeProblems()
       })
+    } else {
+      // One-time fallback check in case Monaco initializes right after mount
+      retryTimer = setTimeout(() => {
+        if (!disposable && window.monaco?.editor?.onDidChangeMarkers) {
+          disposable = window.monaco.editor.onDidChangeMarkers(() => {
+            computeProblems()
+          })
+        }
+        computeProblems()
+      }, 500)
     }
-
-    // Fallback interval to ensure markers are captured when Monaco finishes initializing
-    const interval = setInterval(() => {
-      if (!disposable && window.monaco?.editor?.onDidChangeMarkers) {
-        disposable = window.monaco.editor.onDidChangeMarkers(() => {
-          computeProblems()
-        })
-      }
-      computeProblems()
-    }, 600)
 
     return () => {
       isMounted = false
       if (disposable && typeof disposable.dispose === 'function') {
         disposable.dispose()
       }
-      clearInterval(interval)
+      if (retryTimer) {
+        clearTimeout(retryTimer)
+      }
     }
   }, [openFiles, files])
 

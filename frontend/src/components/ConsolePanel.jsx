@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import ProblemsPanel from './ProblemsPanel.jsx'
 import ReferencesPanel from './ReferencesPanel.jsx'
 
@@ -21,13 +21,16 @@ function ConsolePanel({
   const [internalTab, setInternalTab] = useState('console')
   const currentTab = controlledTab !== undefined ? controlledTab : internalTab
 
-  const handleTabChange = (tab) => {
-    if (onTabChange) {
-      onTabChange(tab)
-    } else {
-      setInternalTab(tab)
-    }
-  }
+  const handleTabChange = React.useCallback(
+    (tab) => {
+      if (onTabChange) {
+        onTabChange(tab)
+      } else {
+        setInternalTab(tab)
+      }
+    },
+    [onTabChange],
+  )
 
   useEffect(() => {
     const handleShowProblems = () => handleTabChange('problems')
@@ -53,11 +56,17 @@ function ConsolePanel({
       window.removeEventListener('polyglotmesh:toggle-problems', handleToggleProblems)
       window.removeEventListener('polyglotmesh:toggle-references', handleToggleReferences)
     }
-  }, [currentTab])
+  }, [currentTab, handleTabChange])
 
-  const errorCount = problems.filter((p) => p.severityCode === 8).length
-  const warningCount = problems.filter((p) => p.severityCode === 4).length
-  const totalProblems = problems.length
+  const { errorCount, warningCount, totalProblems } = useMemo(() => {
+    let errs = 0
+    let warns = 0
+    for (let i = 0; i < problems.length; i++) {
+      if (problems[i].severityCode === 8) errs++
+      else if (problems[i].severityCode === 4) warns++
+    }
+    return { errorCount: errs, warningCount: warns, totalProblems: problems.length }
+  }, [problems])
   const totalReferences = references.length
 
   const handleNavigateToProblem = (problem) => {
@@ -295,4 +304,4 @@ function ConsolePanel({
   )
 }
 
-export default ConsolePanel
+export default React.memo(ConsolePanel)

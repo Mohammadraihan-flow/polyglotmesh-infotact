@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef } from 'react'
 import Editor from '@monaco-editor/react'
 import EditorTabs from './EditorTabs.jsx'
 import EditorBreadcrumb from './EditorBreadcrumb.jsx'
@@ -81,11 +81,58 @@ function EditorPane({
 }) {
   const editorRef = useRef(null)
   const monacoRef = useRef(null)
+  const fileRef = useRef(file)
   const customActionDisposablesRef = useRef([])
+  const editorListenersDisposablesRef = useRef([])
+
+  useEffect(() => {
+    fileRef.current = file
+  }, [file])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      editorListenersDisposablesRef.current.forEach((d) => {
+        try {
+          d?.dispose?.()
+        } catch {
+          // Ignore
+        }
+      })
+      editorListenersDisposablesRef.current = []
+
+      customActionDisposablesRef.current.forEach((d) => {
+        try {
+          d?.dispose?.()
+        } catch {
+          // Ignore
+        }
+      })
+      customActionDisposablesRef.current = []
+    }
+  }, [])
 
   const monacoLanguage = file
     ? getMonacoLanguageFromFileName(file.name)
     : 'plaintext'
+
+  const editorOptionsWithReadOnly = useMemo(
+    () => ({
+      ...editorOptions,
+      readOnly: Boolean(file?.isReadOnly),
+      domReadOnly: Boolean(file?.isReadOnly),
+    }),
+    [editorOptions, file?.isReadOnly],
+  )
+
+  const handleEditorChange = useCallback(
+    (value) => {
+      if (!file?.isReadOnly) {
+        onChange?.(value, file?.name)
+      }
+    },
+    [file, onChange],
+  )
 
   // Notify parent of activation on pane click or focus
   const handlePaneClick = useCallback(() => {
@@ -96,17 +143,18 @@ function EditorPane({
 
   // Save view state on cursor or scroll
   const saveViewState = useCallback(() => {
-    if (editorRef.current && file?.name && viewStatesRef?.current) {
+    const currentFileName = fileRef.current?.name
+    if (editorRef.current && currentFileName && viewStatesRef?.current) {
       try {
         const state = editorRef.current.saveViewState()
         if (state) {
-          viewStatesRef.current[file.name] = state
+          viewStatesRef.current[currentFileName] = state
         }
       } catch {
         // Ignore
       }
     }
-  }, [file?.name, viewStatesRef])
+  }, [viewStatesRef])
 
   // Restore view state when file changes
   useEffect(() => {
@@ -159,32 +207,47 @@ function EditorPane({
     // Pass editor instance up to parent
     onMount?.(editor, monaco, paneId)
 
+    // Clean up previous event listener disposables
+    editorListenersDisposablesRef.current.forEach((d) => {
+      try {
+        d?.dispose?.()
+      } catch {
+        // Ignore
+      }
+    })
+    editorListenersDisposablesRef.current = []
+
     // Focus listener to set active pane
-    editor.onDidFocusEditorWidget(() => {
+    const dFocus = editor.onDidFocusEditorWidget(() => {
       onActivate?.(paneId)
       if (typeof window !== 'undefined') {
         window.__polyglotmeshActiveEditor = editor
       }
     })
+    if (dFocus) editorListenersDisposablesRef.current.push(dFocus)
 
-    editor.onDidChangeCursorPosition(() => {
+    const dCursor = editor.onDidChangeCursorPosition(() => {
       saveViewState()
     })
+    if (dCursor) editorListenersDisposablesRef.current.push(dCursor)
 
-    editor.onDidScrollChange(() => {
+    const dScroll = editor.onDidScrollChange(() => {
       saveViewState()
     })
+    if (dScroll) editorListenersDisposablesRef.current.push(dScroll)
 
-    editor.onDidChangeModel(() => {
-      if (file?.name && viewStatesRef?.current?.[file.name]) {
+    const dModel = editor.onDidChangeModel(() => {
+      const currentFile = fileRef.current
+      if (currentFile?.name && viewStatesRef?.current?.[currentFile.name]) {
         try {
-          editor.restoreViewState(viewStatesRef.current[file.name])
+          editor.restoreViewState(viewStatesRef.current[currentFile.name])
         } catch {
           // Ignore
         }
       }
-      onUpdateModelDecorations?.(editor, monaco, file)
+      onUpdateModelDecorations?.(editor, monaco, currentFile)
     })
+    if (dModel) editorListenersDisposablesRef.current.push(dModel)
 
     // Register commands on this specific editor instance
     try {
@@ -209,13 +272,13 @@ function EditorPane({
         }
       )
       editor.addCommand(monaco.KeyCode.F12, () => {
-        onGoToDefinition?.(editor, file)
+        onGoToDefinition?.(editor, fileRef.current)
       })
       editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.F12, () => {
-        onPeekDefinition?.(editor, file)
+        onPeekDefinition?.(editor, fileRef.current)
       })
       editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F12, () => {
-        onFindReferences?.(editor, file)
+        onFindReferences?.(editor, fileRef.current)
       })
       editor.addCommand(
         monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD,
@@ -310,7 +373,7 @@ function EditorPane({
         contextMenuGroupId: 'navigation',
         contextMenuOrder: 1.1,
         run: () => {
-          onGoToDefinition?.(editor, file)
+          onGoToDefinition?.(editor, fileRef.current)
         },
       })
       if (dGoto) customActionDisposablesRef.current.push(dGoto)
@@ -322,7 +385,7 @@ function EditorPane({
         contextMenuGroupId: 'navigation',
         contextMenuOrder: 1.2,
         run: () => {
-          onPeekDefinition?.(editor, file)
+          onPeekDefinition?.(editor, fileRef.current)
         },
       })
       if (dPeek) customActionDisposablesRef.current.push(dPeek)
@@ -334,7 +397,7 @@ function EditorPane({
         contextMenuGroupId: 'navigation',
         contextMenuOrder: 1.3,
         run: () => {
-          onFindReferences?.(editor, file)
+          onFindReferences?.(editor, fileRef.current)
         },
       })
       if (dRefs) customActionDisposablesRef.current.push(dRefs)
@@ -346,7 +409,7 @@ function EditorPane({
         contextMenuGroupId: 'navigation',
         contextMenuOrder: 1.4,
         run: () => {
-          onToggleReadOnly?.(file?.name)
+          onToggleReadOnly?.(fileRef.current?.name)
         },
       })
       if (dToggleReadOnly) customActionDisposablesRef.current.push(dToggleReadOnly)
@@ -492,7 +555,7 @@ function EditorPane({
       // Ignore registration error
     }
 
-    onUpdateModelDecorations?.(editor, monaco, file)
+    onUpdateModelDecorations?.(editor, monaco, fileRef.current)
   }
 
   return (
@@ -569,15 +632,13 @@ function EditorPane({
             ) : null}
             <Editor
               path={file.name}
+              keepCurrentModel
               className="editor-panel__editor"
               defaultLanguage={monacoLanguage}
               language={monacoLanguage}
               theme={selectedTheme}
-              value={file.code ?? file.content ?? ''}
-              onChange={(val) => {
-                if (file?.isReadOnly) return
-                onChange?.(val, file.name)
-              }}
+              defaultValue={file.code ?? file.content ?? ''}
+              onChange={handleEditorChange}
               loading={
                 <div className="editor-panel__loading-state" role="status" aria-live="polite">
                   <div className="editor-panel__loading-spinner" aria-hidden="true" />
@@ -588,11 +649,7 @@ function EditorPane({
                 </div>
               }
               onMount={handleEditorMount}
-              options={{
-                ...editorOptions,
-                readOnly: Boolean(file?.isReadOnly),
-                domReadOnly: Boolean(file?.isReadOnly),
-              }}
+              options={editorOptionsWithReadOnly}
             />
           </EditorErrorBoundary>
         ) : (

@@ -1,3 +1,5 @@
+import React from 'react'
+
 function LanguageTabs({ activeLanguage, languages, onSelectLanguage }) {
   return (
     <section className="language-tabs" aria-label="Language selector">
@@ -28,4 +30,4 @@ function LanguageTabs({ activeLanguage, languages, onSelectLanguage }) {
   )
 }
 
-export default LanguageTabs
+export default React.memo(LanguageTabs)

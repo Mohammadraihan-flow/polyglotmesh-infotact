@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 import { getExtension, getLanguageLabelFromFileName } from '../utils/languageUtils.js'
 import FileIcon from './FileIcon.jsx'
 
@@ -69,13 +69,17 @@ function FileExplorer({
   }
 
   const trimmedQuery = searchQuery.trim().toLowerCase()
-  const filteredFiles = trimmedQuery
-    ? files.filter((file) => file.name.toLowerCase().includes(trimmedQuery))
-    : files
+  const filteredFiles = useMemo(() => {
+    return trimmedQuery
+      ? files.filter((file) => file.name.toLowerCase().includes(trimmedQuery))
+      : files
+  }, [files, trimmedQuery])
 
-  const validRecentFiles = (recentFileNames || [])
-    .map((name) => files.find((file) => file.name === name))
-    .filter(Boolean)
+  const validRecentFiles = useMemo(() => {
+    return (recentFileNames || [])
+      .map((name) => files.find((file) => file.name === name))
+      .filter(Boolean)
+  }, [files, recentFileNames])
 
   return (
     <div className="file-explorer" aria-label="Project File Explorer">
@@ -290,5 +294,5 @@ function FileExplorer({
   )
 }
 
-export default FileExplorer
+export default React.memo(FileExplorer)
 

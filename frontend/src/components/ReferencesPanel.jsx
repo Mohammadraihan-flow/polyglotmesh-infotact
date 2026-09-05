@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 
 function ReferencesPanel({
   references = [],
@@ -235,4 +235,4 @@ function ReferencesPanel({
   )
 }
 
-export default ReferencesPanel
+export default React.memo(ReferencesPanel)

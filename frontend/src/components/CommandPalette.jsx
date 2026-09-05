@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import React, { useEffect, useMemo, useRef, useState } from 'react'
 
 function getActiveMonacoEditor() {
   if (typeof window === 'undefined' || !window.monaco) return null
@@ -29,7 +29,7 @@ function CommandPalette({
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef(null)
 
-  const commands = [
+  const commands = useMemo(() => [
     {
       id: 'run',
       label: 'Run',
@@ -496,16 +496,26 @@ function CommandPalette({
         }
       },
     },
-  ]
+  ], [
+    onRun,
+    onSave,
+    onOpenSettings,
+    isSplit,
+    onToggleSplit,
+    onResetLayout,
+    onResetSession,
+    isReadOnly,
+    onToggleReadOnly,
+  ])
 
-  const filteredCommands = commands.filter((cmd) => {
+  const filteredCommands = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return true
-    return (
+    if (!q) return commands
+    return commands.filter((cmd) =>
       cmd.label.toLowerCase().includes(q) ||
       cmd.description.toLowerCase().includes(q)
     )
-  })
+  }, [commands, query])
 
   useEffect(() => {
     if (isOpen) {
@@ -610,4 +620,4 @@ function CommandPalette({
   )
 }
 
-export default CommandPalette
+export default React.memo(CommandPalette)

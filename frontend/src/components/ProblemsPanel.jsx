@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import React, { useMemo, useState } from 'react'
 
 function ProblemsPanel({ problems = [], activeFile, onNavigateToProblem }) {
   const [filterText, setFilterText] = useState('')
@@ -258,4 +258,4 @@ function ProblemsPanel({ problems = [], activeFile, onNavigateToProblem }) {
   )
 }
 
-export default ProblemsPanel
+export default React.memo(ProblemsPanel)

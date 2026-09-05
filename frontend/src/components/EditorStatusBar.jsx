@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { getLanguageLabelFromFileName } from '../utils/languageUtils.js'
 
 function EditorStatusBar({
@@ -8,7 +8,6 @@ function EditorStatusBar({
   saveMessage,
   problems = [],
   paneId = null,
-  isReadOnly = false,
   onToggleReadOnly,
 }) {
   const [cursorPos, setCursorPos] = useState({ line: 1, column: 1 })
@@ -86,6 +85,16 @@ function EditorStatusBar({
     }
   }, [editor, activeFile])
 
+  const { errorCount, warningCount } = useMemo(() => {
+    let errs = 0
+    let warns = 0
+    for (let i = 0; i < problems.length; i++) {
+      if (problems[i].severityCode === 8) errs++
+      else if (problems[i].severityCode === 4) warns++
+    }
+    return { errorCount: errs, warningCount: warns }
+  }, [problems])
+
   if (!activeFile) return null
 
   const languageLabel = activeFile.label || getLanguageLabelFromFileName(activeFile.name)
@@ -100,9 +109,6 @@ function EditorStatusBar({
   const validTabSizes = [2, 4, 8]
   const parsedTabSize = Number(editorSettings?.tabSize)
   const tabSize = validTabSizes.includes(parsedTabSize) ? parsedTabSize : 4
-
-  const errorCount = problems.filter((p) => p.severityCode === 8).length
-  const warningCount = problems.filter((p) => p.severityCode === 4).length
 
   return (
     <footer className="editor-status-bar" aria-label="Editor status bar">
@@ -251,5 +257,5 @@ function EditorStatusBar({
   )
 }
 
-export default EditorStatusBar
+export default React.memo(EditorStatusBar)
 

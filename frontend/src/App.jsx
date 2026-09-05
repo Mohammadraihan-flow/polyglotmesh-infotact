@@ -8,29 +8,17 @@ import {
   getExtension,
   getLanguageLabelFromFileName,
   getMonacoLanguageFromFileName,
-  LANGUAGE_DEFAULT_FILENAMES,
 } from './utils/languageUtils.js'
 import {
   loadEditorSession,
   saveEditorSession,
   clearEditorSession,
   validateSplitRatio,
+  LEGACY_SPLIT_RATIO_KEY,
 } from './utils/sessionManager.js'
 import { useMonacoMarkers } from './hooks/useMonacoMarkers.js'
 import { useMonacoSymbols } from './hooks/useMonacoSymbols.js'
 import './App.css'
-
-const languages = [
-  'JavaScript',
-  'Python',
-  'Java',
-  'C',
-  'C++',
-  'C/C++ Header',
-  'JSON',
-  'HTML',
-  'CSS',
-]
 
 function isValidFileName(fileName) {
   const trimmedName = fileName ? fileName.trim() : ''
@@ -219,22 +207,25 @@ function App() {
   const [editorSettings, setEditorSettings] = useState(getInitialSettings)
   const [isEditorSettingsOpen, setIsEditorSettingsOpen] = useState(false)
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false)
-  const [saveMessage, setSaveMessage] = useState('')
+  const [saveMessage, setSaveMessage] = useState(() =>
+    initialSessionResult.isRestored && initialWorkspaceState.files.length > 0
+      ? 'Session restored'
+      : '',
+  )
   const runTimerRef = useRef(null)
   const saveTimerRef = useRef(null)
   const autoSaveTimerRef = useRef(null)
   const pendingChangesRef = useRef({})
 
-  // Non-intrusive status notification when a saved session is restored
+  // Clear session restored message after delay
   useEffect(() => {
-    if (initialSessionResult.isRestored && initialWorkspaceState.files.length > 0) {
-      setSaveMessage('Session restored')
+    if (saveMessage === 'Session restored') {
       const timer = setTimeout(() => {
         setSaveMessage('')
       }, 2500)
       return () => clearTimeout(timer)
     }
-  }, [initialSessionResult.isRestored, initialWorkspaceState.files.length])
+  }, [saveMessage])
 
   useEffect(() => {
     try {
@@ -243,7 +234,7 @@ function App() {
       if (editorSettings.wordWrap && ['on', 'off', 'wordWrapColumn'].includes(editorSettings.wordWrap)) {
         localStorage.setItem('polyglotmesh-word-wrap', editorSettings.wordWrap)
       }
-    } catch (e) {
+    } catch {
       // Ignore error
     }
     const currentTheme = editorSettings.theme ?? 'vs-dark'
@@ -255,18 +246,24 @@ function App() {
     const fileExists = files.some((f) => f.name === activeFileName)
     if (!fileExists) return
 
-    setRecentFileNames((prev) => {
-      const filtered = prev.filter((name) => name !== activeFileName)
-      return [activeFileName, ...filtered].slice(0, 5)
-    })
+    const timer = setTimeout(() => {
+      setRecentFileNames((prev) => {
+        const filtered = prev.filter((name) => name !== activeFileName)
+        return [activeFileName, ...filtered].slice(0, 5)
+      })
+    }, 0)
+    return () => clearTimeout(timer)
   }, [activeFileName, files])
 
   useEffect(() => {
     const existingNames = new Set(files.map((f) => f.name))
-    setRecentFileNames((prev) => {
-      const filtered = prev.filter((name) => existingNames.has(name))
-      return filtered.length === prev.length ? prev : filtered
-    })
+    const timer = setTimeout(() => {
+      setRecentFileNames((prev) => {
+        const filtered = prev.filter((name) => existingNames.has(name))
+        return filtered.length === prev.length ? prev : filtered
+      })
+    }, 0)
+    return () => clearTimeout(timer)
   }, [files])
 
   const filesRef = useRef(files)
@@ -399,12 +396,13 @@ function App() {
     isSplit && activePane === 'secondary' && secondaryFile
       ? secondaryFile
       : primaryFile
-  const activeLanguage = activeFile
-    ? getLanguageLabelFromFileName(activeFile.name)
-    : ''
-  const openFiles = openFileNames
-    .map((name) => filesWithReadOnly.find((file) => file.name === name))
-    .filter(Boolean)
+  const openFiles = useMemo(
+    () =>
+      openFileNames
+        .map((name) => filesWithReadOnly.find((file) => file.name === name))
+        .filter(Boolean),
+    [filesWithReadOnly, openFileNames],
+  )
   const problems = useMonacoMarkers(openFiles, files)
   const {
     symbols,
@@ -420,9 +418,12 @@ function App() {
 
   // Clear references when active file or active pane changes to prevent stale results
   useEffect(() => {
-    setReferences([])
-    setReferenceSymbol('')
-    setIsLoadingReferences(false)
+    const timer = setTimeout(() => {
+      setReferences([])
+      setReferenceSymbol('')
+      setIsLoadingReferences(false)
+    }, 0)
+    return () => clearTimeout(timer)
   }, [activeFileName, secondaryFileName, activePane])
 
   const handleReferencesFound = useCallback((refs, symbol) => {
@@ -439,8 +440,12 @@ function App() {
   const handleCreateFile = useCallback((fileName) => {
     flushAutoSave()
     const trimmedName = fileName ? fileName.trim() : 'untitled.js'
+
     if (!isValidFileName(trimmedName)) {
-      return { success: false, message: 'Enter a valid file name.' }
+      return {
+        success: false,
+        message: 'Invalid file name. Please avoid / \\ : * ? " < > | characters.',
+      }
     }
 
     const currentFiles = filesRef.current
@@ -463,40 +468,18 @@ function App() {
     }
 
     const uniqueName = makeUniqueFileName(trimmedName, currentFiles)
-    const monacoLanguage = getMonacoLanguageFromFileName(uniqueName)
-    const label = getLanguageLabelFromFileName(uniqueName)
-
     const newFile = {
       id: uniqueName,
       name: uniqueName,
-      label,
-      language: monacoLanguage,
-      monacoLanguage,
       code: '',
-      content: '',
       isDirty: false,
+      isReadOnly: false,
+      lastModified: Date.now(),
     }
 
-    const nextFiles = [...currentFiles, newFile]
-    const nextOpen = currentOpenNames.includes(uniqueName)
-      ? currentOpenNames
-      : [...currentOpenNames, uniqueName]
-
-    setFiles(nextFiles)
-    setOpenFileNames(nextOpen)
+    setFiles((prevFiles) => [...prevFiles, newFile])
+    setOpenFileNames((prevOpen) => [...prevOpen, uniqueName])
     setActiveFileName(uniqueName)
-
-    saveWorkspaceToLocalStorage(
-      nextFiles,
-      nextOpen,
-      uniqueName,
-      recentFileNamesRef.current,
-      isSplitRef.current,
-      secondaryFileNameRef.current,
-      splitRatioRef.current,
-      readOnlyFileNamesRef.current,
-      activePaneRef.current,
-    )
 
     return {
       success: true,
@@ -507,25 +490,6 @@ function App() {
           : `File created as ${uniqueName}.`,
     }
   }, [flushAutoSave])
-
-  const handleSelectLanguage = (targetLanguage) => {
-    flushAutoSave()
-    const defaultFileName = LANGUAGE_DEFAULT_FILENAMES[targetLanguage] ?? 'main.js'
-
-    const existingFile = files.find(
-      (file) => file.name.toLowerCase() === defaultFileName.toLowerCase(),
-    )
-
-    if (existingFile) {
-      if (!openFileNames.includes(existingFile.name)) {
-        setOpenFileNames((prevOpen) => [...prevOpen, existingFile.name])
-      }
-      setActiveFileName(existingFile.name)
-      return
-    }
-
-    handleCreateFile(defaultFileName)
-  }
 
   const handleSelectFile = useCallback(
     (fileName, targetPane) => {
@@ -578,7 +542,7 @@ function App() {
   )
 
   const handleCloseTab = useCallback(
-    (fileName, targetPane) => {
+    (fileName) => {
       flushAutoSave()
       const index = openFileNamesRef.current.indexOf(fileName)
       if (index === -1) return
@@ -677,10 +641,15 @@ function App() {
       try {
         const models = window.monaco.editor.getModels()
         const targetModel = models.find(
-          (m) => m.uri.path === `/${fileName}` || m.uri.path === fileName,
+          (m) =>
+            m.uri.path === `/${fileName}` ||
+            m.uri.path === fileName ||
+            m.uri.fsPath === fileName ||
+            m.uri.toString().endsWith(`/${fileName}`) ||
+            m.uri.toString().endsWith(fileName),
         )
         targetModel?.dispose()
-      } catch (e) {
+      } catch {
         // Ignore error
       }
     }
@@ -783,10 +752,15 @@ function App() {
         try {
           const models = window.monaco.editor.getModels()
           const oldModel = models.find(
-            (m) => m.uri.path === `/${oldFileName}` || m.uri.path === oldFileName,
+            (m) =>
+              m.uri.path === `/${oldFileName}` ||
+              m.uri.path === oldFileName ||
+              m.uri.fsPath === oldFileName ||
+              m.uri.toString().endsWith(`/${oldFileName}`) ||
+              m.uri.toString().endsWith(oldFileName),
           )
           oldModel?.dispose()
-        } catch (e) {
+        } catch {
           // Ignore error
         }
       }
@@ -868,23 +842,16 @@ function App() {
       const newContent = value ?? ''
 
       pendingChangesRef.current[targetFile] = newContent
-      setSaveMessage('Saving...')
 
-      setFiles((currentFiles) =>
-        currentFiles.map((file) => {
-          if (file.name === targetFile) {
-            const currentContent = file.code ?? file.content ?? ''
-            if (currentContent === newContent) return file
-            return {
-              ...file,
-              code: newContent,
-              content: newContent,
-              isDirty: true,
-            }
-          }
-          return file
-        }),
-      )
+      setFiles((currentFiles) => {
+        const file = currentFiles.find((f) => f.name === targetFile)
+        if (file && !file.isDirty) {
+          return currentFiles.map((f) =>
+            f.name === targetFile ? { ...f, isDirty: true } : f,
+          )
+        }
+        return currentFiles
+      })
 
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current)
@@ -1048,7 +1015,7 @@ function App() {
     const valid = validateSplitRatio(newRatio, 0.5)
     setSplitRatio(valid)
     try {
-      localStorage.setItem(SPLIT_RATIO_STORAGE_KEY, String(valid))
+      localStorage.setItem(LEGACY_SPLIT_RATIO_KEY, String(valid))
     } catch {
       // Ignore
     }
@@ -1402,6 +1369,14 @@ function App() {
     }
   }, [handleKeyDown])
 
+  const handleToggleSettings = useCallback(() => {
+    setIsEditorSettingsOpen((current) => !current)
+  }, [])
+
+  const handleCloseSettings = useCallback(() => {
+    setIsEditorSettingsOpen(false)
+  }, [])
+
   return (
     <main className="ide-shell">
       <Header />
@@ -1415,7 +1390,7 @@ function App() {
           onSelectFile={handleSelectFile}
           onRenameFile={handleRenameFile}
           onDeleteFile={handleDeleteFile}
-          onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
+          onToggleSettings={handleToggleSettings}
           symbols={symbols}
           isLoadingSymbols={isLoadingSymbols}
           hasSymbolProvider={hasSymbolProvider}
@@ -1451,8 +1426,8 @@ function App() {
             editorSettings={editorSettings}
             onEditorSettingsChange={setEditorSettings}
             isSettingsOpen={isEditorSettingsOpen}
-            onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
-            onCloseSettings={() => setIsEditorSettingsOpen(false)}
+            onToggleSettings={handleToggleSettings}
+            onCloseSettings={handleCloseSettings}
             saveMessage={saveMessage}
             problems={problems}
             onReferencesFound={handleReferencesFound}

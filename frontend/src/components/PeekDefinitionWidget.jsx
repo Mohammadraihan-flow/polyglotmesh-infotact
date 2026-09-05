@@ -102,4 +102,4 @@ function PeekDefinitionWidget({
   )
 }
 
-export default PeekDefinitionWidget
+export default React.memo(PeekDefinitionWidget)

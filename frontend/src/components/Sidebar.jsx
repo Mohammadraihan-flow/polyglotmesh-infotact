@@ -27,13 +27,13 @@ function Sidebar({
 
   const resolvedActiveFile = activeFile || files.find((f) => f.name === activeFileName) || null
 
-  const handleViewChange = (view) => {
+  const handleViewChange = React.useCallback((view) => {
     if (onSidebarViewChange) {
       onSidebarViewChange(view)
     } else {
       setInternalView(view)
     }
-  }
+  }, [onSidebarViewChange])
 
   useEffect(() => {
     const handleOpenOutline = () => {
@@ -54,7 +54,7 @@ function Sidebar({
       window.removeEventListener('polyglotmesh:open-outline', handleOpenOutline)
       window.removeEventListener('polyglotmesh:open-files', handleOpenFiles)
     }
-  }, [])
+  }, [handleViewChange])
 
   return (
     <aside className="sidebar" aria-label="Workspace navigation">
@@ -151,4 +151,4 @@ function Sidebar({
   )
 }
 
-export default Sidebar
+export default React.memo(Sidebar)
