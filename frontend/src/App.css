@@ -1340,6 +1340,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.16s ease;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -1639,6 +1640,7 @@
   border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.15s ease;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -2582,6 +2584,7 @@
   cursor: pointer;
   font-size: 0.8rem;
   color: var(--text);
+  -webkit-user-select: none;
   user-select: none;
   transition: background-color 0.12s ease, color 0.12s ease;
 }
@@ -2951,6 +2954,7 @@
   opacity: 0.6;
   text-align: right;
   padding-right: 0.8rem;
+  -webkit-user-select: none;
   user-select: none;
   font-size: 0.74rem;
 }
@@ -3232,6 +3236,7 @@
   border: 1px solid var(--border, rgba(255, 255, 255, 0.07));
   cursor: pointer;
   transition: all 0.14s ease;
+  -webkit-user-select: none;
   user-select: none;
 }
 
@@ -3310,6 +3315,7 @@
   color: var(--text-muted);
   opacity: 0.6;
   font-size: 0.74rem;
+  -webkit-user-select: none;
   user-select: none;
   min-width: 1.8rem;
 }
