@@ -4,6 +4,7 @@ import EditorSettings from './EditorSettings.jsx'
 import EditorTabs from './EditorTabs.jsx'
 import EditorStatusBar from './EditorStatusBar.jsx'
 import EditorBreadcrumb from './EditorBreadcrumb.jsx'
+import EditorToolbar from './EditorToolbar.jsx'
 import PeekDefinitionWidget from './PeekDefinitionWidget.jsx'
 import { getMonacoLanguageFromFileName } from '../utils/languageUtils.js'
 import { findDefinition, findReferences } from '../utils/monacoNavigationService.js'
@@ -254,6 +255,7 @@ function EditorPanel({
   onCloseTab,
   onCreateFile,
   onChange,
+  onSave,
   isRunning,
   onRunClick,
   editorSettings,
@@ -474,6 +476,35 @@ function EditorPanel({
       }
     }
   }
+
+  const handleSave = useCallback(() => {
+    if (onSave) {
+      onSave()
+    } else {
+      window.dispatchEvent(new CustomEvent('polyglotmesh:save'))
+    }
+  }, [onSave])
+
+  const handleToggleWordWrap = useCallback(() => {
+    onEditorSettingsChange?.((prev) => {
+      const current = prev?.wordWrap === 'off' || prev?.wordWrap === false ? 'off' : 'on'
+      const next = current === 'off' ? 'on' : 'off'
+      return {
+        ...prev,
+        wordWrap: next,
+      }
+    })
+    const editor = editorRef.current || editorInstance
+    if (editor) {
+      editor.focus()
+      const action = editor.getAction('editor.action.toggleWordWrap')
+      if (action) {
+        action.run()
+      } else {
+        editor.trigger('user', 'editor.action.toggleWordWrap')
+      }
+    }
+  }, [editorInstance, onEditorSettingsChange])
 
   const handleFormatDocument = useCallback(async () => {
     const editor = editorInstance || editorRef.current
@@ -844,6 +875,7 @@ function EditorPanel({
     const onExpandSel = () => handleExpandSelection()
     const onShrinkSel = () => handleShrinkSelection()
     const onToggleCol = () => handleToggleColumnSelection()
+    const onToggleWrap = () => handleToggleWordWrap()
 
     window.addEventListener('polyglotmesh:goto-definition', onGoToDef)
     window.addEventListener('polyglotmesh:peek-definition', onPeekDef)
@@ -856,6 +888,7 @@ function EditorPanel({
     window.addEventListener('polyglotmesh:expand-selection', onExpandSel)
     window.addEventListener('polyglotmesh:shrink-selection', onShrinkSel)
     window.addEventListener('polyglotmesh:toggle-column-selection', onToggleCol)
+    window.addEventListener('polyglotmesh:toggle-word-wrap', onToggleWrap)
 
     return () => {
       window.removeEventListener('polyglotmesh:goto-definition', onGoToDef)
@@ -869,6 +902,7 @@ function EditorPanel({
       window.removeEventListener('polyglotmesh:expand-selection', onExpandSel)
       window.removeEventListener('polyglotmesh:shrink-selection', onShrinkSel)
       window.removeEventListener('polyglotmesh:toggle-column-selection', onToggleCol)
+      window.removeEventListener('polyglotmesh:toggle-word-wrap', onToggleWrap)
     }
   }, [
     handleAddCursorAbove,
@@ -1271,100 +1305,24 @@ function EditorPanel({
             </div>
           ) : null}
 
-          <button
-            type="button"
-            className="command-palette-button goto-def-button"
-            aria-label="Go to Definition"
-            title="Go to Definition (F12)"
-            onClick={handleGoToDefinition}
-            disabled={!activeFile}
-          >
-            <span className="command-palette-button__icon">↗</span>
-            <span className="command-palette-button__text">Go to Def</span>
-          </button>
-
-          <button
-            type="button"
-            className="command-palette-button quick-fix-button"
-            aria-label="Quick Fix / Code Actions"
-            title="Quick Fix / Code Actions (Ctrl+.)"
-            onClick={handleQuickFix}
-            disabled={!activeFile}
-          >
-            <span className="command-palette-button__icon">💡</span>
-            <span className="command-palette-button__text">Quick Fix</span>
-          </button>
-
-          <button
-            type="button"
-            className="command-palette-button format-document-button"
-            aria-label="Format Document"
-            title="Format Document (Shift+Alt+F / Ctrl+Shift+I)"
-            onClick={handleFormatDocument}
-            disabled={!activeFile}
-          >
-            <span className="command-palette-button__icon">✨</span>
-            <span className="command-palette-button__text">Format</span>
-          </button>
-
-          <button
-            type="button"
-            className="command-palette-button"
-            aria-label="Command Palette"
-            title="Command Palette (Ctrl+Shift+P)"
-            onClick={handleOpenCommandPalette}
-            disabled={!activeFile}
-          >
-            <span className="command-palette-button__icon">⌘</span>
-            <span className="command-palette-button__text">Command Palette</span>
-          </button>
-
-          <div className="editor-panel__zoom-controls" role="group" aria-label="Editor Zoom Controls">
-            <button
-              type="button"
-              className="editor-panel__zoom-btn"
-              onClick={handleZoomOut}
-              disabled={currentFontSize <= 10}
-              title="Zoom Out (Ctrl+-)"
-              aria-label="Zoom Out"
-            >
-              −
-            </button>
-            <button
-              type="button"
-              className={`editor-panel__zoom-reset-btn${currentFontSize === 14 ? ' editor-panel__zoom-reset-btn--disabled' : ''}`}
-              onClick={handleResetZoom}
-              disabled={currentFontSize === 14}
-              title={`Reset Zoom (${currentFontSize}px)`}
-              aria-label="Reset Zoom"
-            >
-              {currentFontSize}px
-            </button>
-            <button
-              type="button"
-              className="editor-panel__zoom-btn"
-              onClick={handleZoomIn}
-              disabled={currentFontSize >= 32}
-              title="Zoom In (Ctrl+=)"
-              aria-label="Zoom In"
-            >
-              +
-            </button>
-          </div>
-
-          <button
-            type="button"
-            className="settings-button"
-            aria-label="Settings"
-            title="Settings"
-            onClick={onToggleSettings}
-          >
-            ⚙️
-          </button>
-
-          <button type="button" className="run-button" disabled={isRunning || !activeFile} onClick={onRunClick}>
-            {isRunning ? 'Running...' : 'Run'}
-          </button>
+          <EditorToolbar
+            activeFile={activeFile}
+            onSave={handleSave}
+            onFormatDocument={handleFormatDocument}
+            onQuickFix={handleQuickFix}
+            onGoToDefinition={handleGoToDefinition}
+            onFindReferences={handleFindReferences}
+            onToggleWordWrap={handleToggleWordWrap}
+            isWordWrapOn={wordWrapSetting === 'on'}
+            onOpenCommandPalette={handleOpenCommandPalette}
+            currentFontSize={currentFontSize}
+            onZoomIn={handleZoomIn}
+            onZoomOut={handleZoomOut}
+            onResetZoom={handleResetZoom}
+            onToggleSettings={onToggleSettings}
+            onRunClick={onRunClick}
+            isRunning={isRunning}
+          />
         </div>
       </div>
 

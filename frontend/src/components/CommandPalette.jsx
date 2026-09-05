@@ -384,6 +384,24 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         }
       },
     },
+    {
+      id: 'toggle-word-wrap',
+      label: 'View: Toggle Word Wrap',
+      description: 'Toggle word wrapping in the active editor',
+      shortcut: 'Alt+Z',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-word-wrap'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              activeEditor.getAction('editor.action.toggleWordWrap')?.run()
+            }
+          }
+        }
+      },
+    },
   ]
 
   const filteredCommands = commands.filter((cmd) => {

@@ -814,6 +814,14 @@ function App() {
     }, 2500)
   }, [flushAutoSave])
 
+  useEffect(() => {
+    const onSaveEvent = () => handleSave()
+    window.addEventListener('polyglotmesh:save', onSaveEvent)
+    return () => {
+      window.removeEventListener('polyglotmesh:save', onSaveEvent)
+    }
+  }, [handleSave])
+
   useEffect(
     () => () => {
       if (runTimerRef.current) {
@@ -1088,6 +1096,7 @@ function App() {
             onCreateFile={handleCreateFile}
             onDeleteFile={handleDeleteFile}
             onChange={handleEditorChange}
+            onSave={handleSave}
             isRunning={isRunning}
             onRunClick={handleRunClick}
             editorSettings={editorSettings}
