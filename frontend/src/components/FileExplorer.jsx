@@ -202,6 +202,15 @@ function FileExplorer({
                   <FileIcon extension={ext} />
                 </span>
                 <span className="file-explorer__name">{file.name}</span>
+                {file.isReadOnly ? (
+                  <span
+                    className="file-explorer__readonly-icon"
+                    title={`${file.name} is in Read-Only Preview Mode`}
+                    aria-label="Read-Only"
+                  >
+                    🔒
+                  </span>
+                ) : null}
                 {file.isDirty ? (
                   <span className="file-explorer__dirty-dot" title="Unsaved changes">
                     ●

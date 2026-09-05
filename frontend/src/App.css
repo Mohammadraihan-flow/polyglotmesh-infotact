@@ -3745,3 +3745,119 @@
     height: 34px;
   }
 }
+
+/* Commit 63: Preview / Read-Only File Mode */
+.editor-toolbar__btn--readonly {
+  color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.12) !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+}
+
+.editor-toolbar__btn--readonly:hover {
+  background: rgba(245, 158, 11, 0.22) !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+  color: #fbbf24 !important;
+}
+
+.readonly-panel-title-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.12rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  margin-left: 0.5rem;
+  vertical-align: middle;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.editor-tabs__readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  margin-right: 0.25rem;
+  color: #f59e0b;
+  line-height: 1;
+  opacity: 0.85;
+}
+
+.editor-pane__readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  padding: 0.12rem 0.4rem;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.18);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  letter-spacing: 0.02em;
+  -webkit-user-select: none;
+  user-select: none;
+  cursor: default;
+}
+
+.editor-breadcrumb__readonly-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.08rem 0.38rem;
+  border-radius: 4px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  margin-left: 0.35rem;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.file-explorer__readonly-icon {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  margin-left: auto;
+  color: #f59e0b;
+  opacity: 0.85;
+  padding-right: 0.25rem;
+}
+
+.editor-status-bar__item--mode {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  cursor: pointer;
+  padding: 0.1rem 0.4rem;
+  font-family: inherit;
+  font-size: inherit;
+  color: var(--text-muted, #94a3b8);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.15s ease;
+}
+
+.editor-status-bar__item--mode:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-main, #f8fafc);
+}
+
+.editor-status-bar__item--readonly {
+  background: rgba(245, 158, 11, 0.16) !important;
+  color: #f59e0b !important;
+  border-color: rgba(245, 158, 11, 0.35) !important;
+  font-weight: 600;
+}
+
+.editor-status-bar__item--readonly:hover {
+  background: rgba(245, 158, 11, 0.28) !important;
+  color: #fbbf24 !important;
+  border-color: rgba(245, 158, 11, 0.5) !important;
+}

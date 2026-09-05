@@ -46,6 +46,15 @@ function EditorBreadcrumb({ activeFile }) {
           <span className="editor-breadcrumb__text editor-breadcrumb__text--filename" title={actualFileName}>
             {actualFileName}
           </span>
+          {activeFile.isReadOnly ? (
+            <span
+              className="editor-breadcrumb__readonly-badge"
+              title="Read-Only Preview Mode"
+              aria-label="Read-Only"
+            >
+              🔒 [Read-Only]
+            </span>
+          ) : null}
         </li>
       </ol>
     </nav>

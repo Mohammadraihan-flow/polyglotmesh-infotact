@@ -227,6 +227,8 @@ function EditorPanel({
   saveMessage,
   problems = [],
   onReferencesFound,
+  isReadOnly = false,
+  onToggleReadOnly,
 }) {
   const safeEditorSettings = editorSettings || {}
   const selectedTheme = safeEditorSettings.theme ?? 'vs-dark'
@@ -654,6 +656,10 @@ function EditorPanel({
     const editor = getActiveEditor()
     const file = getActiveFile()
     if (!editor || !file) return
+    if (file.isReadOnly) {
+      showCodeActionFeedback('Cannot format in Read-Only Preview Mode')
+      return
+    }
     try {
       editor.focus()
       const action = editor.getAction('editor.action.formatDocument')
@@ -665,12 +671,16 @@ function EditorPanel({
     } catch {
       // Ignore
     }
-  }, [getActiveEditor, getActiveFile])
+  }, [getActiveEditor, getActiveFile, showCodeActionFeedback])
 
   const handleFormatSelection = useCallback(async () => {
     const editor = getActiveEditor()
     const file = getActiveFile()
     if (!editor || !file) return
+    if (file.isReadOnly) {
+      showCodeActionFeedback('Cannot format selection in Read-Only Preview Mode')
+      return
+    }
     try {
       editor.focus()
       const selection = editor.getSelection()
@@ -686,13 +696,17 @@ function EditorPanel({
     } catch {
       // Ignore
     }
-  }, [getActiveEditor, getActiveFile])
+  }, [getActiveEditor, getActiveFile, showCodeActionFeedback])
 
   const handleQuickFix = useCallback(async () => {
     const editor = getActiveEditor()
     const file = getActiveFile()
     if (!editor || !file) {
       showCodeActionFeedback('No active editor')
+      return
+    }
+    if (file.isReadOnly) {
+      showCodeActionFeedback('Cannot apply code actions in Read-Only Preview Mode')
       return
     }
 
@@ -1281,6 +1295,11 @@ function EditorPanel({
           <div className="panel-heading__title-row">
             <h2 id="editor-panel-title" className="panel-heading__title">
               {currentActiveFile ? `${currentActiveFile.name} workspace` : 'No open file'}
+              {currentActiveFile?.isReadOnly ? (
+                <span className="readonly-panel-title-badge" title="File is in Read-Only Preview Mode">
+                  🔒 [Read-Only]
+                </span>
+              ) : null}
               {isSplit ? (
                 <span className="split-panel-title-badge">
                   [Split View • {activePane === 'primary' ? 'Pane 1 Active' : 'Pane 2 Active'}]
@@ -1330,6 +1349,8 @@ function EditorPanel({
 
           <EditorToolbar
             activeFile={currentActiveFile}
+            isReadOnly={Boolean(currentActiveFile?.isReadOnly)}
+            onToggleReadOnly={onToggleReadOnly}
             onSave={handleSave}
             onFormatDocument={handleFormatDocument}
             onQuickFix={handleQuickFix}
@@ -1395,6 +1416,7 @@ function EditorPanel({
                 peekDefinitionData={activePane === 'primary' ? peekDefinitionData : null}
                 onClosePeekDefinition={() => setPeekDefinitionData(null)}
                 onSelectPeekDefinition={handleSelectPeekDefinition}
+                onToggleReadOnly={onToggleReadOnly}
               />
             </div>
 
@@ -1455,6 +1477,7 @@ function EditorPanel({
                 peekDefinitionData={activePane === 'secondary' ? peekDefinitionData : null}
                 onClosePeekDefinition={() => setPeekDefinitionData(null)}
                 onSelectPeekDefinition={handleSelectPeekDefinition}
+                onToggleReadOnly={onToggleReadOnly}
               />
             </div>
           </div>
@@ -1484,12 +1507,15 @@ function EditorPanel({
             peekDefinitionData={peekDefinitionData}
             onClosePeekDefinition={() => setPeekDefinitionData(null)}
             onSelectPeekDefinition={handleSelectPeekDefinition}
+            onToggleReadOnly={onToggleReadOnly}
           />
         )}
 
         <EditorStatusBar
           editor={getActiveEditor()}
           activeFile={currentActiveFile}
+          isReadOnly={Boolean(currentActiveFile?.isReadOnly)}
+          onToggleReadOnly={onToggleReadOnly}
           editorSettings={editorSettings}
           saveMessage={saveMessage}
           problems={problems}

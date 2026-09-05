@@ -71,6 +71,15 @@ function EditorTabs({ openFiles = [], activeFileName, onSelectFile, onCloseTab, 
                     <FileIcon fileName={file.name} size={15} />
                   </span>
                   <span className="editor-tabs__tab-name">{file.name}</span>
+                  {file.isReadOnly ? (
+                    <span
+                      className="editor-tabs__readonly-badge"
+                      title={`${file.name} is in Read-Only Preview Mode`}
+                      aria-label="Read-Only"
+                    >
+                      🔒
+                    </span>
+                  ) : null}
                   {file.isDirty ? (
                     <span className="editor-tabs__dirty-dot" title="Unsaved changes">
                       ●

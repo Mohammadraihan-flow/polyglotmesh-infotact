@@ -63,6 +63,7 @@ function EditorPane({
   onCloseTab,
   onCreateFile,
   onCloseSplit,
+  onToggleReadOnly,
   onChange,
   onMount,
   editorOptions,
@@ -136,9 +137,13 @@ function EditorPane({
   // Update options on this editor instance
   useEffect(() => {
     if (editorRef.current && editorOptions) {
-      editorRef.current.updateOptions(editorOptions)
+      editorRef.current.updateOptions({
+        ...editorOptions,
+        readOnly: Boolean(file?.isReadOnly),
+        domReadOnly: Boolean(file?.isReadOnly),
+      })
     }
-  }, [editorOptions])
+  }, [editorOptions, file?.isReadOnly])
 
   const handleEditorMount = (editor, monaco) => {
     editorRef.current = editor
@@ -334,6 +339,18 @@ function EditorPane({
       })
       if (dRefs) customActionDisposablesRef.current.push(dRefs)
 
+      const dToggleReadOnly = editor.addAction({
+        id: `polyglotmesh.toggleReadOnly.${paneId}`,
+        label: 'Toggle Read-Only / Preview Mode',
+        keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.KeyP],
+        contextMenuGroupId: 'navigation',
+        contextMenuOrder: 1.4,
+        run: () => {
+          onToggleReadOnly?.(file?.name)
+        },
+      })
+      if (dToggleReadOnly) customActionDisposablesRef.current.push(dToggleReadOnly)
+
       const dQuickFix = editor.addAction({
         id: `polyglotmesh.quickFix.${paneId}`,
         label: 'Quick Fix / Code Actions',
@@ -497,33 +514,44 @@ function EditorPane({
           />
         </div>
 
-        {isSplit ? (
-          <div className="editor-pane__controls">
+        <div className="editor-pane__controls">
+          {file?.isReadOnly ? (
             <span
-              className={`editor-pane__indicator-badge ${
-                isActive ? 'editor-pane__indicator-badge--active' : ''
-              }`}
-              title={isActive ? 'Active Editor Pane' : 'Click to activate this pane'}
+              className="editor-pane__readonly-badge"
+              title={`${file.name} is in Read-Only Preview Mode`}
+              aria-label="Read-Only Mode"
             >
-              {paneId === 'primary' ? 'Pane 1' : 'Pane 2'}
-              {isActive ? ' • Active' : ''}
+              🔒 Read-Only
             </span>
-            {paneId === 'secondary' && onCloseSplit ? (
-              <button
-                type="button"
-                className="editor-pane__close-split-btn"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onCloseSplit()
-                }}
-                aria-label="Close secondary editor pane"
-                title="Close Split (Ctrl+\)"
+          ) : null}
+          {isSplit ? (
+            <>
+              <span
+                className={`editor-pane__indicator-badge ${
+                  isActive ? 'editor-pane__indicator-badge--active' : ''
+                }`}
+                title={isActive ? 'Active Editor Pane' : 'Click to activate this pane'}
               >
-                ✕
-              </button>
-            ) : null}
-          </div>
-        ) : null}
+                {paneId === 'primary' ? 'Pane 1' : 'Pane 2'}
+                {isActive ? ' • Active' : ''}
+              </span>
+              {paneId === 'secondary' && onCloseSplit ? (
+                <button
+                  type="button"
+                  className="editor-pane__close-split-btn"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCloseSplit()
+                  }}
+                  aria-label="Close secondary editor pane"
+                  title="Close Split (Ctrl+\)"
+                >
+                  ✕
+                </button>
+              ) : null}
+            </>
+          ) : null}
+        </div>
       </div>
 
       <div className="editor-pane__body">
@@ -546,7 +574,10 @@ function EditorPane({
               language={monacoLanguage}
               theme={selectedTheme}
               value={file.code ?? file.content ?? ''}
-              onChange={(val) => onChange?.(val, file.name)}
+              onChange={(val) => {
+                if (file?.isReadOnly) return
+                onChange?.(val, file.name)
+              }}
               loading={
                 <div className="editor-panel__loading-state" role="status" aria-live="polite">
                   <div className="editor-panel__loading-spinner" aria-hidden="true" />
@@ -557,7 +588,11 @@ function EditorPane({
                 </div>
               }
               onMount={handleEditorMount}
-              options={editorOptions}
+              options={{
+                ...editorOptions,
+                readOnly: Boolean(file?.isReadOnly),
+                domReadOnly: Boolean(file?.isReadOnly),
+              }}
             />
           </EditorErrorBoundary>
         ) : (

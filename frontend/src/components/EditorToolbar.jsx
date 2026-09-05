@@ -2,6 +2,8 @@ import React from 'react'
 
 function EditorToolbar({
   activeFile,
+  isReadOnly = false,
+  onToggleReadOnly,
   onSave,
   onFormatDocument,
   onQuickFix,
@@ -80,10 +82,18 @@ function EditorToolbar({
         <button
           type="button"
           className="command-palette-button format-document-button editor-toolbar__btn editor-toolbar__btn--format"
-          aria-label="Format Document (Shift+Alt+F / Ctrl+Shift+I)"
-          title="Format Document (Shift+Alt+F / Ctrl+Shift+I)"
+          aria-label={
+            isReadOnly
+              ? 'Format Document (Disabled in Preview Mode)'
+              : 'Format Document (Shift+Alt+F / Ctrl+Shift+I)'
+          }
+          title={
+            isReadOnly
+              ? 'Format Document (Disabled in Preview Mode)'
+              : 'Format Document (Shift+Alt+F / Ctrl+Shift+I)'
+          }
           onClick={onFormatDocument}
-          disabled={!activeFile}
+          disabled={!activeFile || isReadOnly}
         >
           <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
             ✨
@@ -95,10 +105,18 @@ function EditorToolbar({
         <button
           type="button"
           className="command-palette-button quick-fix-button editor-toolbar__btn editor-toolbar__btn--quickfix"
-          aria-label="Code Actions / Quick Fix (Ctrl+.)"
-          title="Code Actions / Quick Fix (Ctrl+.)"
+          aria-label={
+            isReadOnly
+              ? 'Code Actions / Quick Fix (Disabled in Preview Mode)'
+              : 'Code Actions / Quick Fix (Ctrl+.)'
+          }
+          title={
+            isReadOnly
+              ? 'Code Actions / Quick Fix (Disabled in Preview Mode)'
+              : 'Code Actions / Quick Fix (Ctrl+.)'
+          }
           onClick={onQuickFix}
-          disabled={!activeFile}
+          disabled={!activeFile || isReadOnly}
         >
           <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
             💡
@@ -157,6 +175,63 @@ function EditorToolbar({
       <span className="editor-toolbar__divider" aria-hidden="true" />
 
       <div className="editor-toolbar__group editor-toolbar__group--view">
+        {/* Preview / Read-Only Mode Toggle */}
+        <button
+          type="button"
+          className={`command-palette-button preview-mode-button editor-toolbar__btn editor-toolbar__btn--preview ${
+            isReadOnly ? 'editor-toolbar__btn--active editor-toolbar__btn--readonly' : ''
+          }`}
+          aria-label={
+            isReadOnly
+              ? 'Switch to Edit Mode (Alt+P) - Currently Preview Mode'
+              : 'Switch to Preview Mode (Alt+P) - Currently Edit Mode'
+          }
+          title={
+            isReadOnly
+              ? 'Preview Mode: Read-Only (Click or Alt+P to switch to Edit Mode)'
+              : 'Edit Mode (Click or Alt+P to switch to Preview Mode)'
+          }
+          onClick={onToggleReadOnly}
+          disabled={!activeFile}
+        >
+          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
+            {isReadOnly ? (
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                aria-hidden="true"
+              >
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 9.9-1" />
+              </svg>
+            )}
+          </span>
+          <span className="command-palette-button__text editor-toolbar__label">
+            {isReadOnly ? 'Preview' : 'Edit'}
+          </span>
+        </button>
+
         {/* Toggle Word Wrap */}
         <button
           type="button"

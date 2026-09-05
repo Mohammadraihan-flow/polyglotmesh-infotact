@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import CommandPalette from './components/CommandPalette.jsx'
 import ConsolePanel from './components/ConsolePanel.jsx'
 import EditorPanel from './components/EditorPanel.jsx'
@@ -75,6 +75,7 @@ function saveWorkspaceToLocalStorage(
   isSplit = false,
   secondaryFileName = null,
   splitRatio = 0.5,
+  readOnlyFileNames = [],
 ) {
   try {
     const validRatio = validateSplitRatio(splitRatio, 0.5)
@@ -94,6 +95,7 @@ function saveWorkspaceToLocalStorage(
       isSplit: Boolean(isSplit),
       secondaryFileName: secondaryFileName ?? null,
       splitRatio: validRatio,
+      readOnlyFileNames: Array.isArray(readOnlyFileNames) ? readOnlyFileNames : [],
     }
     localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(payload))
     localStorage.setItem(SPLIT_RATIO_STORAGE_KEY, String(validRatio))
@@ -111,6 +113,7 @@ function getInitialWorkspace() {
     isSplit: false,
     secondaryFileName: null,
     splitRatio: 0.5,
+    readOnlyFileNames: [],
   }
 
   try {
@@ -192,6 +195,10 @@ function getInitialWorkspace() {
       // Ignore
     }
 
+    const validReadOnlyNames = Array.isArray(parsed.readOnlyFileNames)
+      ? parsed.readOnlyFileNames.filter((name) => validNamesSet.has(name))
+      : []
+
     return {
       files: validFiles,
       openFileNames: validOpenNames,
@@ -200,6 +207,7 @@ function getInitialWorkspace() {
       isSplit: isSplit && Boolean(validSecondaryName),
       secondaryFileName: validSecondaryName,
       splitRatio: validSplitRatio,
+      readOnlyFileNames: validReadOnlyNames,
     }
   } catch (e) {
     console.warn('PolyglotMesh: Unable to parse saved workspace from localStorage.', e)
@@ -331,6 +339,7 @@ function App() {
   const [isSplit, setIsSplit] = useState(initialWorkspaceState.isSplit ?? false)
   const [secondaryFileName, setSecondaryFileName] = useState(initialWorkspaceState.secondaryFileName ?? null)
   const [splitRatio, setSplitRatio] = useState(initialWorkspaceState.splitRatio ?? 0.5)
+  const [readOnlyFileNames, setReadOnlyFileNames] = useState(initialWorkspaceState.readOnlyFileNames ?? [])
   const [activePane, setActivePane] = useState('primary')
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
@@ -383,6 +392,7 @@ function App() {
   const isSplitRef = useRef(isSplit)
   const secondaryFileNameRef = useRef(secondaryFileName)
   const splitRatioRef = useRef(splitRatio)
+  const readOnlyFileNamesRef = useRef(readOnlyFileNames)
   const activePaneRef = useRef(activePane)
 
   useEffect(() => {
@@ -414,6 +424,10 @@ function App() {
   }, [splitRatio])
 
   useEffect(() => {
+    readOnlyFileNamesRef.current = readOnlyFileNames
+  }, [readOnlyFileNames])
+
+  useEffect(() => {
     activePaneRef.current = activePane
   }, [activePane])
 
@@ -426,8 +440,9 @@ function App() {
       isSplit,
       secondaryFileName,
       splitRatio,
+      readOnlyFileNames,
     )
-  }, [openFileNames, activeFileName, recentFileNames, isSplit, secondaryFileName, splitRatio])
+  }, [openFileNames, activeFileName, recentFileNames, isSplit, secondaryFileName, splitRatio, readOnlyFileNames])
 
   const flushAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) {
@@ -458,6 +473,7 @@ function App() {
         isSplitRef.current,
         secondaryFileNameRef.current,
         splitRatioRef.current,
+        readOnlyFileNamesRef.current,
       )
 
       setSaveMessage('Workspace saved')
@@ -481,10 +497,17 @@ function App() {
     }
   }, [flushAutoSave])
 
-  const primaryFile = files.find((file) => file.name === activeFileName) ?? null
+  const filesWithReadOnly = useMemo(() => {
+    return files.map((file) => ({
+      ...file,
+      isReadOnly: Boolean(readOnlyFileNames.includes(file.name)),
+    }))
+  }, [files, readOnlyFileNames])
+
+  const primaryFile = filesWithReadOnly.find((file) => file.name === activeFileName) ?? null
   const secondaryFile =
     isSplit && secondaryFileName
-      ? files.find((file) => file.name === secondaryFileName) ?? null
+      ? filesWithReadOnly.find((file) => file.name === secondaryFileName) ?? null
       : null
   const activeFile =
     isSplit && activePane === 'secondary' && secondaryFile
@@ -494,7 +517,7 @@ function App() {
     ? getLanguageLabelFromFileName(activeFile.name)
     : ''
   const openFiles = openFileNames
-    .map((name) => files.find((file) => file.name === name))
+    .map((name) => filesWithReadOnly.find((file) => file.name === name))
     .filter(Boolean)
   const problems = useMonacoMarkers(openFiles, files)
   const {
@@ -816,6 +839,9 @@ function App() {
       setSecondaryFileName(nextSecondary)
     }
 
+    const nextReadOnly = readOnlyFileNamesRef.current.filter((name) => name !== fileName)
+    setReadOnlyFileNames(nextReadOnly)
+
     saveWorkspaceToLocalStorage(
       nextFiles,
       nextOpenNames,
@@ -823,6 +849,8 @@ function App() {
       nextRecent,
       isSplitRef.current,
       nextSecondary,
+      splitRatioRef.current,
+      nextReadOnly,
     )
   }, [])
 
@@ -915,6 +943,11 @@ function App() {
         setSecondaryFileName(trimmedNewName)
       }
 
+      const nextReadOnly = readOnlyFileNamesRef.current.map((name) =>
+        name === oldFileName ? trimmedNewName : name,
+      )
+      setReadOnlyFileNames(nextReadOnly)
+
       saveWorkspaceToLocalStorage(
         nextFiles,
         nextOpen,
@@ -922,6 +955,8 @@ function App() {
         nextRecent,
         isSplitRef.current,
         nextSecondary,
+        splitRatioRef.current,
+        nextReadOnly,
       )
 
       return { success: true, message: 'File renamed.' }
@@ -937,7 +972,7 @@ function App() {
           ? secondaryFileNameRef.current
           : activeFileNameRef.current)
 
-      if (!targetFile) return
+      if (!targetFile || readOnlyFileNamesRef.current.includes(targetFile)) return
 
       const newContent = value ?? ''
 
@@ -999,6 +1034,19 @@ function App() {
 
     if (!currentTargetName) return
 
+    const isReadOnly = readOnlyFileNamesRef.current.includes(currentTargetName)
+    if (isReadOnly) {
+      setSaveMessage(`${currentTargetName} is in Read-Only Preview Mode`)
+      if (saveTimerRef.current) {
+        clearTimeout(saveTimerRef.current)
+      }
+      saveTimerRef.current = window.setTimeout(() => {
+        setSaveMessage('')
+        saveTimerRef.current = null
+      }, 2500)
+      return
+    }
+
     setFiles((currentFiles) =>
       currentFiles.map((file) =>
         file.name === currentTargetName ? { ...file, isDirty: false } : file,
@@ -1014,6 +1062,52 @@ function App() {
       saveTimerRef.current = null
     }, 2500)
   }, [flushAutoSave])
+
+  const handleToggleReadOnly = useCallback(
+    (targetFileName) => {
+      const currentTarget =
+        targetFileName ||
+        (isSplitRef.current && activePaneRef.current === 'secondary' && secondaryFileNameRef.current
+          ? secondaryFileNameRef.current
+          : activeFileNameRef.current)
+
+      if (!currentTarget) return
+
+      setReadOnlyFileNames((prev) => {
+        const isCurrentlyReadOnly = prev.includes(currentTarget)
+        const next = isCurrentlyReadOnly
+          ? prev.filter((n) => n !== currentTarget)
+          : [...prev, currentTarget]
+
+        saveWorkspaceToLocalStorage(
+          filesRef.current,
+          openFileNamesRef.current,
+          activeFileNameRef.current,
+          recentFileNamesRef.current,
+          isSplitRef.current,
+          secondaryFileNameRef.current,
+          splitRatioRef.current,
+          next,
+        )
+
+        setSaveMessage(
+          isCurrentlyReadOnly
+            ? `${currentTarget}: Edit Mode active`
+            : `${currentTarget}: Preview Mode active (Read-Only)`,
+        )
+        if (saveTimerRef.current) {
+          clearTimeout(saveTimerRef.current)
+        }
+        saveTimerRef.current = window.setTimeout(() => {
+          setSaveMessage('')
+          saveTimerRef.current = null
+        }, 2500)
+
+        return next
+      })
+    },
+    [],
+  )
 
   const handleToggleSplit = useCallback(() => {
     flushAutoSave()
@@ -1095,6 +1189,10 @@ function App() {
       if (isSplitRef.current) handleCloseSplit()
     }
     const onResetLayoutEvent = () => handleResetLayout()
+    const onToggleReadOnlyEvent = (e) => {
+      const target = e?.detail?.fileName
+      handleToggleReadOnly(target)
+    }
     const onFocusPaneEvent = (e) => {
       const target = e?.detail?.pane
       if (target === 'primary' || target === 'secondary') {
@@ -1107,6 +1205,7 @@ function App() {
     window.addEventListener('polyglotmesh:open-split', onOpenSplitEvent)
     window.addEventListener('polyglotmesh:close-split', onCloseSplitEvent)
     window.addEventListener('polyglotmesh:reset-editor-layout', onResetLayoutEvent)
+    window.addEventListener('polyglotmesh:toggle-readonly', onToggleReadOnlyEvent)
     window.addEventListener('polyglotmesh:focus-pane', onFocusPaneEvent)
 
     return () => {
@@ -1115,9 +1214,10 @@ function App() {
       window.removeEventListener('polyglotmesh:open-split', onOpenSplitEvent)
       window.removeEventListener('polyglotmesh:close-split', onCloseSplitEvent)
       window.removeEventListener('polyglotmesh:reset-editor-layout', onResetLayoutEvent)
+      window.removeEventListener('polyglotmesh:toggle-readonly', onToggleReadOnlyEvent)
       window.removeEventListener('polyglotmesh:focus-pane', onFocusPaneEvent)
     }
-  }, [handleSave, handleToggleSplit, handleCloseSplit, handleResetLayout])
+  }, [handleSave, handleToggleSplit, handleCloseSplit, handleResetLayout, handleToggleReadOnly])
 
   useEffect(
     () => () => {
@@ -1359,6 +1459,13 @@ function App() {
         return
       }
 
+      // 20. Alt+P -> Toggle Read-Only / Preview Mode
+      if ((event.key === 'p' || event.key === 'P') && event.altKey && !event.shiftKey && !modifier) {
+        event.preventDefault()
+        event.stopPropagation()
+        handleToggleReadOnly()
+        return
+      }
     },
     [
       isCommandPaletteOpen,
@@ -1370,6 +1477,7 @@ function App() {
       handlePrevTab,
       handleRunClick,
       handleToggleSplit,
+      handleToggleReadOnly,
     ],
   )
 
@@ -1386,7 +1494,7 @@ function App() {
 
       <div className="ide-body">
         <Sidebar
-          files={files}
+          files={filesWithReadOnly}
           activeFile={activeFile}
           activeFileName={activeFile?.name}
           recentFileNames={recentFileNames}
@@ -1412,10 +1520,12 @@ function App() {
             splitRatio={splitRatio}
             onSplitRatioChange={handleSplitRatioChange}
             onResetLayout={handleResetLayout}
+            isReadOnly={Boolean(activeFile?.isReadOnly)}
+            onToggleReadOnly={handleToggleReadOnly}
             activePane={activePane}
             onSetActivePane={setActivePane}
             openFiles={openFiles}
-            files={files}
+            files={filesWithReadOnly}
             onSelectFile={handleSelectFile}
             onCloseTab={handleCloseTab}
             onCreateFile={handleCreateFile}
@@ -1439,7 +1549,7 @@ function App() {
             isRunning={isRunning}
             activeFile={activeFile}
             openFiles={openFiles}
-            files={files}
+            files={filesWithReadOnly}
             onSelectFile={handleSelectFile}
             problems={problems}
             references={references}
@@ -1459,6 +1569,8 @@ function App() {
         isSplit={isSplit}
         onToggleSplit={handleToggleSplit}
         onResetLayout={handleResetLayout}
+        isReadOnly={Boolean(activeFile?.isReadOnly)}
+        onToggleReadOnly={handleToggleReadOnly}
       />
     </main>
   )

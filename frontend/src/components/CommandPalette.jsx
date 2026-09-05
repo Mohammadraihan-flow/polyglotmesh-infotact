@@ -21,6 +21,8 @@ function CommandPalette({
   isSplit = false,
   onToggleSplit,
   onResetLayout,
+  isReadOnly = false,
+  onToggleReadOnly,
 }) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -97,6 +99,19 @@ function CommandPalette({
           onResetLayout()
         } else if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:reset-editor-layout'))
+        }
+      },
+    },
+    {
+      id: 'view-toggle-readonly',
+      label: isReadOnly ? 'View: Switch to Edit Mode' : 'View: Switch to Preview / Read-Only Mode',
+      description: 'Toggle read-only preview mode for active file',
+      shortcut: 'Alt+P',
+      action: () => {
+        if (onToggleReadOnly) {
+          onToggleReadOnly()
+        } else if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-readonly'))
         }
       },
     },

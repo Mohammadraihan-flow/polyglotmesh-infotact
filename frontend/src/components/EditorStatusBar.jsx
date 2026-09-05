@@ -8,6 +8,8 @@ function EditorStatusBar({
   saveMessage,
   problems = [],
   paneId = null,
+  isReadOnly = false,
+  onToggleReadOnly,
 }) {
   const [cursorPos, setCursorPos] = useState({ line: 1, column: 1 })
   const [lineCount, setLineCount] = useState(1)
@@ -226,6 +228,24 @@ function EditorStatusBar({
         <span className="editor-status-bar__item editor-status-bar__item--tabsize">
           Spaces: {tabSize}
         </span>
+        <span className="editor-status-bar__divider" aria-hidden="true">
+          |
+        </span>
+        <button
+          type="button"
+          className={`editor-status-bar__item editor-status-bar__item--mode ${
+            activeFile.isReadOnly ? 'editor-status-bar__item--readonly' : ''
+          }`}
+          onClick={() => onToggleReadOnly?.(activeFile.name)}
+          title={
+            activeFile.isReadOnly
+              ? 'Preview Mode (Read-Only) • Click or Alt+P to switch to Edit Mode'
+              : 'Edit Mode • Click or Alt+P to switch to Preview Mode'
+          }
+          aria-label={activeFile.isReadOnly ? 'Switch to Edit Mode' : 'Switch to Preview Mode'}
+        >
+          {activeFile.isReadOnly ? '🔒 Read-Only' : '✏️ Edit'}
+        </button>
       </div>
     </footer>
   )
