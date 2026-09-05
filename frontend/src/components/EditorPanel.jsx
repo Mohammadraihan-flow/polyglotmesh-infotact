@@ -205,6 +205,9 @@ function EditorPanel({
   isSplit = false,
   onToggleSplit,
   onCloseSplit,
+  splitRatio = 0.5,
+  onSplitRatioChange,
+  onResetLayout,
   activePane = 'primary',
   onSetActivePane,
   openFiles = [],
@@ -231,6 +234,111 @@ function EditorPanel({
   const settingsContainerRef = useRef(null)
   const primaryEditorRef = useRef(null)
   const secondaryEditorRef = useRef(null)
+  const splitContainerRef = useRef(null)
+  const isDraggingRef = useRef(false)
+  const [isResizing, setIsResizing] = useState(false)
+  const [localSplitRatio, setLocalSplitRatio] = useState(() => {
+    const r = typeof splitRatio === 'number' ? splitRatio : 0.5
+    return r >= 0.2 && r <= 0.8 ? r : 0.5
+  })
+  const splitRatioRef = useRef(localSplitRatio)
+  splitRatioRef.current = localSplitRatio
+
+  useEffect(() => {
+    if (typeof splitRatio === 'number' && splitRatio >= 0.2 && splitRatio <= 0.8) {
+      setLocalSplitRatio(splitRatio)
+      if (splitContainerRef.current) {
+        splitContainerRef.current.style.setProperty('--split-ratio', String(splitRatio))
+      }
+      primaryEditorRef.current?.layout()
+      secondaryEditorRef.current?.layout()
+    }
+  }, [splitRatio])
+
+  const handleDividerPointerDown = useCallback((e) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+
+    isDraggingRef.current = true
+    setIsResizing(true)
+    try {
+      e.currentTarget.setPointerCapture(e.pointerId)
+    } catch {
+      // Ignore
+    }
+  }, [])
+
+  const handleDividerPointerMove = useCallback((e) => {
+    if (!isDraggingRef.current || !splitContainerRef.current) return
+    e.preventDefault()
+
+    const rect = splitContainerRef.current.getBoundingClientRect()
+    if (rect.width <= 0) return
+
+    const pointerX = e.clientX
+    const rawRatio = (pointerX - rect.left) / rect.width
+    const clampedRatio = Math.max(0.2, Math.min(0.8, rawRatio))
+    const roundedRatio = Math.round(clampedRatio * 1000) / 1000
+
+    splitRatioRef.current = roundedRatio
+    setLocalSplitRatio(roundedRatio)
+    if (splitContainerRef.current) {
+      splitContainerRef.current.style.setProperty('--split-ratio', String(roundedRatio))
+    }
+
+    if (primaryEditorRef.current) {
+      primaryEditorRef.current.layout()
+    }
+    if (secondaryEditorRef.current) {
+      secondaryEditorRef.current.layout()
+    }
+  }, [])
+
+  const handleDividerPointerUp = useCallback((e) => {
+    if (!isDraggingRef.current) return
+    isDraggingRef.current = false
+    setIsResizing(false)
+
+    try {
+      if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+        e.currentTarget.releasePointerCapture(e.pointerId)
+      }
+    } catch {
+      // Ignore
+    }
+
+    const finalRatio = splitRatioRef.current
+    onSplitRatioChange?.(finalRatio)
+
+    window.requestAnimationFrame(() => {
+      primaryEditorRef.current?.layout()
+      secondaryEditorRef.current?.layout()
+    })
+  }, [onSplitRatioChange])
+
+  const handleResetLayout = useCallback(() => {
+    setLocalSplitRatio(0.5)
+    splitRatioRef.current = 0.5
+    if (splitContainerRef.current) {
+      splitContainerRef.current.style.setProperty('--split-ratio', '0.5')
+    }
+    onResetLayout?.()
+    onSplitRatioChange?.(0.5)
+    window.requestAnimationFrame(() => {
+      primaryEditorRef.current?.layout()
+      secondaryEditorRef.current?.layout()
+    })
+  }, [onResetLayout, onSplitRatioChange])
+
+  useEffect(() => {
+    const handleResetEvent = () => handleResetLayout()
+    window.addEventListener('polyglotmesh:reset-editor-layout', handleResetEvent)
+    return () => {
+      window.removeEventListener('polyglotmesh:reset-editor-layout', handleResetEvent)
+    }
+  }, [handleResetLayout])
+
   const monacoRef = useRef(null)
   const [activeEditorInstance, setActiveEditorInstance] = useState(null)
   const [codeActionFeedback, setCodeActionFeedback] = useState(null)
@@ -1231,6 +1339,7 @@ function EditorPanel({
             isWordWrapOn={wordWrapSetting === 'on'}
             isSplit={isSplit}
             onToggleSplit={onToggleSplit}
+            onResetLayout={handleResetLayout}
             onOpenCommandPalette={handleOpenCommandPalette}
             currentFontSize={currentFontSize}
             onZoomIn={handleZoomIn}
@@ -1245,70 +1354,109 @@ function EditorPanel({
 
       <div className={`editor-panel__surface ${isSplit ? 'editor-panel__surface--split' : ''}`}>
         {isSplit ? (
-          <div className="editor-panel__split-container">
-            <EditorPane
-              paneId="primary"
-              file={primaryFile || activeFile}
-              isActive={activePane === 'primary'}
-              isSplit={true}
-              openFiles={openFiles}
-              files={files}
-              otherActiveFileName={secondaryFile?.name}
-              onActivate={handleActivatePane}
-              onSelectFile={(fileName) => onSelectFile?.(fileName, 'primary')}
-              onCloseTab={(fileName) => onCloseTab?.(fileName, 'primary')}
-              onCreateFile={onCreateFile}
-              onChange={onChange}
-              onMount={handlePaneMount}
-              editorOptions={editorOptions}
-              selectedTheme={selectedTheme}
-              viewStatesRef={viewStatesRef}
-              onGoToDefinition={handleGoToDefinition}
-              onPeekDefinition={handlePeekDefinition}
-              onFindReferences={handleFindReferences}
-              onQuickFix={handleQuickFix}
-              onFormatDocument={handleFormatDocument}
-              onUpdateModelDecorations={updateModelDecorations}
-              peekDefinitionData={activePane === 'primary' ? peekDefinitionData : null}
-              onClosePeekDefinition={() => setPeekDefinitionData(null)}
-              onSelectPeekDefinition={handleSelectPeekDefinition}
-            />
+          <div
+            ref={splitContainerRef}
+            className={`editor-panel__split-container ${
+              isResizing ? 'editor-panel__split-container--resizing' : ''
+            }`}
+            style={{ '--split-ratio': localSplitRatio }}
+          >
+            <div
+              className="editor-panel__pane-wrapper editor-panel__pane-wrapper--primary"
+              style={{
+                flex: `0 0 calc(${localSplitRatio * 100}% - 2.5px)`,
+                maxWidth: `calc(${localSplitRatio * 100}% - 2.5px)`,
+                minWidth: '20%',
+              }}
+            >
+              <EditorPane
+                paneId="primary"
+                file={primaryFile || activeFile}
+                isActive={activePane === 'primary'}
+                isSplit={true}
+                openFiles={openFiles}
+                files={files}
+                otherActiveFileName={secondaryFile?.name}
+                onActivate={handleActivatePane}
+                onSelectFile={(fileName) => onSelectFile?.(fileName, 'primary')}
+                onCloseTab={(fileName) => onCloseTab?.(fileName, 'primary')}
+                onCreateFile={onCreateFile}
+                onChange={onChange}
+                onMount={handlePaneMount}
+                editorOptions={editorOptions}
+                selectedTheme={selectedTheme}
+                viewStatesRef={viewStatesRef}
+                onGoToDefinition={handleGoToDefinition}
+                onPeekDefinition={handlePeekDefinition}
+                onFindReferences={handleFindReferences}
+                onQuickFix={handleQuickFix}
+                onFormatDocument={handleFormatDocument}
+                onUpdateModelDecorations={updateModelDecorations}
+                peekDefinitionData={activePane === 'primary' ? peekDefinitionData : null}
+                onClosePeekDefinition={() => setPeekDefinitionData(null)}
+                onSelectPeekDefinition={handleSelectPeekDefinition}
+              />
+            </div>
 
             <div
-              className="split-editor__divider"
+              className={`split-editor__divider ${
+                isResizing ? 'split-editor__divider--dragging' : ''
+              }`}
               role="separator"
               aria-orientation="vertical"
-              title="Split editor divider"
-            />
+              aria-valuenow={Math.round(localSplitRatio * 100)}
+              aria-valuemin={20}
+              aria-valuemax={80}
+              aria-label="Resize Editor Panes"
+              title="Drag to resize • Double-click to reset (50/50)"
+              onPointerDown={handleDividerPointerDown}
+              onPointerMove={handleDividerPointerMove}
+              onPointerUp={handleDividerPointerUp}
+              onPointerCancel={handleDividerPointerUp}
+              onDoubleClick={handleResetLayout}
+            >
+              <div className="split-editor__handle" aria-hidden="true">
+                <span className="split-editor__handle-bar" />
+              </div>
+            </div>
 
-            <EditorPane
-              paneId="secondary"
-              file={secondaryFile}
-              isActive={activePane === 'secondary'}
-              isSplit={true}
-              openFiles={openFiles}
-              files={files}
-              otherActiveFileName={(primaryFile || activeFile)?.name}
-              onActivate={handleActivatePane}
-              onSelectFile={(fileName) => onSelectFile?.(fileName, 'secondary')}
-              onCloseTab={(fileName) => onCloseTab?.(fileName, 'secondary')}
-              onCreateFile={onCreateFile}
-              onCloseSplit={onCloseSplit}
-              onChange={onChange}
-              onMount={handlePaneMount}
-              editorOptions={editorOptions}
-              selectedTheme={selectedTheme}
-              viewStatesRef={viewStatesRef}
-              onGoToDefinition={handleGoToDefinition}
-              onPeekDefinition={handlePeekDefinition}
-              onFindReferences={handleFindReferences}
-              onQuickFix={handleQuickFix}
-              onFormatDocument={handleFormatDocument}
-              onUpdateModelDecorations={updateModelDecorations}
-              peekDefinitionData={activePane === 'secondary' ? peekDefinitionData : null}
-              onClosePeekDefinition={() => setPeekDefinitionData(null)}
-              onSelectPeekDefinition={handleSelectPeekDefinition}
-            />
+            <div
+              className="editor-panel__pane-wrapper editor-panel__pane-wrapper--secondary"
+              style={{
+                flex: `0 0 calc(${(1 - localSplitRatio) * 100}% - 2.5px)`,
+                maxWidth: `calc(${(1 - localSplitRatio) * 100}% - 2.5px)`,
+                minWidth: '20%',
+              }}
+            >
+              <EditorPane
+                paneId="secondary"
+                file={secondaryFile}
+                isActive={activePane === 'secondary'}
+                isSplit={true}
+                openFiles={openFiles}
+                files={files}
+                otherActiveFileName={(primaryFile || activeFile)?.name}
+                onActivate={handleActivatePane}
+                onSelectFile={(fileName) => onSelectFile?.(fileName, 'secondary')}
+                onCloseTab={(fileName) => onCloseTab?.(fileName, 'secondary')}
+                onCreateFile={onCreateFile}
+                onCloseSplit={onCloseSplit}
+                onChange={onChange}
+                onMount={handlePaneMount}
+                editorOptions={editorOptions}
+                selectedTheme={selectedTheme}
+                viewStatesRef={viewStatesRef}
+                onGoToDefinition={handleGoToDefinition}
+                onPeekDefinition={handlePeekDefinition}
+                onFindReferences={handleFindReferences}
+                onQuickFix={handleQuickFix}
+                onFormatDocument={handleFormatDocument}
+                onUpdateModelDecorations={updateModelDecorations}
+                peekDefinitionData={activePane === 'secondary' ? peekDefinitionData : null}
+                onClosePeekDefinition={() => setPeekDefinitionData(null)}
+                onSelectPeekDefinition={handleSelectPeekDefinition}
+              />
+            </div>
           </div>
         ) : (
           <EditorPane

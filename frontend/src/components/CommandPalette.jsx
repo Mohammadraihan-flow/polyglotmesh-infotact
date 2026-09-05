@@ -20,6 +20,7 @@ function CommandPalette({
   onOpenSettings,
   isSplit = false,
   onToggleSplit,
+  onResetLayout,
 }) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
@@ -83,6 +84,19 @@ function CommandPalette({
           onToggleSplit()
         } else if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:close-split'))
+        }
+      },
+    },
+    {
+      id: 'view-reset-editor-layout',
+      label: 'View: Reset Editor Layout',
+      description: 'Reset editor split ratio to default 50/50',
+      shortcut: 'Reset Layout',
+      action: () => {
+        if (onResetLayout) {
+          onResetLayout()
+        } else if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:reset-editor-layout'))
         }
       },
     },

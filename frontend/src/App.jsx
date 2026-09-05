@@ -57,6 +57,15 @@ function makeUniqueFileName(desiredName, existingFiles) {
 const WORKSPACE_STORAGE_KEY = 'polyglotmesh-workspace'
 const SETTINGS_STORAGE_KEY = 'polyglotmesh-editor-settings'
 const LEGACY_SETTINGS_STORAGE_KEY = 'polyglotmesh_editor_settings'
+const SPLIT_RATIO_STORAGE_KEY = 'polyglotmesh-editor-split-ratio'
+
+function validateSplitRatio(val, fallback = 0.5) {
+  const num = typeof val === 'number' ? val : parseFloat(val)
+  if (typeof num === 'number' && !isNaN(num) && isFinite(num) && num >= 0.2 && num <= 0.8) {
+    return Math.round(num * 1000) / 1000
+  }
+  return fallback
+}
 
 function saveWorkspaceToLocalStorage(
   files,
@@ -65,8 +74,10 @@ function saveWorkspaceToLocalStorage(
   recentFileNames,
   isSplit = false,
   secondaryFileName = null,
+  splitRatio = 0.5,
 ) {
   try {
+    const validRatio = validateSplitRatio(splitRatio, 0.5)
     const payload = {
       files: files.map((file) => ({
         id: file.id ?? file.name,
@@ -82,8 +93,10 @@ function saveWorkspaceToLocalStorage(
       recentFileNames: recentFileNames ?? [],
       isSplit: Boolean(isSplit),
       secondaryFileName: secondaryFileName ?? null,
+      splitRatio: validRatio,
     }
     localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(payload))
+    localStorage.setItem(SPLIT_RATIO_STORAGE_KEY, String(validRatio))
   } catch (e) {
     console.warn('PolyglotMesh: Unable to save workspace to localStorage.', e)
   }
@@ -97,6 +110,7 @@ function getInitialWorkspace() {
     recentFileNames: [],
     isSplit: false,
     secondaryFileName: null,
+    splitRatio: 0.5,
   }
 
   try {
@@ -166,6 +180,18 @@ function getInitialWorkspace() {
       validSecondaryName = parsed.secondaryFileName
     }
 
+    let validSplitRatio = 0.5
+    try {
+      const storedRatio = localStorage.getItem(SPLIT_RATIO_STORAGE_KEY)
+      if (storedRatio) {
+        validSplitRatio = validateSplitRatio(parseFloat(storedRatio), 0.5)
+      } else if (typeof parsed.splitRatio !== 'undefined') {
+        validSplitRatio = validateSplitRatio(parsed.splitRatio, 0.5)
+      }
+    } catch {
+      // Ignore
+    }
+
     return {
       files: validFiles,
       openFileNames: validOpenNames,
@@ -173,6 +199,7 @@ function getInitialWorkspace() {
       recentFileNames: validRecentNames,
       isSplit: isSplit && Boolean(validSecondaryName),
       secondaryFileName: validSecondaryName,
+      splitRatio: validSplitRatio,
     }
   } catch (e) {
     console.warn('PolyglotMesh: Unable to parse saved workspace from localStorage.', e)
@@ -303,6 +330,7 @@ function App() {
   const [recentFileNames, setRecentFileNames] = useState(initialWorkspaceState.recentFileNames)
   const [isSplit, setIsSplit] = useState(initialWorkspaceState.isSplit ?? false)
   const [secondaryFileName, setSecondaryFileName] = useState(initialWorkspaceState.secondaryFileName ?? null)
+  const [splitRatio, setSplitRatio] = useState(initialWorkspaceState.splitRatio ?? 0.5)
   const [activePane, setActivePane] = useState('primary')
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
@@ -354,6 +382,7 @@ function App() {
   const recentFileNamesRef = useRef(recentFileNames)
   const isSplitRef = useRef(isSplit)
   const secondaryFileNameRef = useRef(secondaryFileName)
+  const splitRatioRef = useRef(splitRatio)
   const activePaneRef = useRef(activePane)
 
   useEffect(() => {
@@ -381,6 +410,10 @@ function App() {
   }, [secondaryFileName])
 
   useEffect(() => {
+    splitRatioRef.current = splitRatio
+  }, [splitRatio])
+
+  useEffect(() => {
     activePaneRef.current = activePane
   }, [activePane])
 
@@ -392,8 +425,9 @@ function App() {
       recentFileNames,
       isSplit,
       secondaryFileName,
+      splitRatio,
     )
-  }, [openFileNames, activeFileName, recentFileNames, isSplit, secondaryFileName])
+  }, [openFileNames, activeFileName, recentFileNames, isSplit, secondaryFileName, splitRatio])
 
   const flushAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) {
@@ -423,6 +457,7 @@ function App() {
         recentFileNamesRef.current,
         isSplitRef.current,
         secondaryFileNameRef.current,
+        splitRatioRef.current,
       )
 
       setSaveMessage('Workspace saved')
@@ -1023,6 +1058,33 @@ function App() {
     setActivePane('primary')
   }, [flushAutoSave])
 
+  const handleSplitRatioChange = useCallback((newRatio) => {
+    const valid = validateSplitRatio(newRatio, 0.5)
+    setSplitRatio(valid)
+    try {
+      localStorage.setItem(SPLIT_RATIO_STORAGE_KEY, String(valid))
+    } catch {
+      // Ignore
+    }
+  }, [])
+
+  const handleResetLayout = useCallback(() => {
+    setSplitRatio(0.5)
+    try {
+      localStorage.setItem(SPLIT_RATIO_STORAGE_KEY, '0.5')
+    } catch {
+      // Ignore
+    }
+    setSaveMessage('Editor layout reset to 50/50')
+    if (saveTimerRef.current) {
+      clearTimeout(saveTimerRef.current)
+    }
+    saveTimerRef.current = setTimeout(() => {
+      setSaveMessage('')
+      saveTimerRef.current = null
+    }, 2500)
+  }, [])
+
   useEffect(() => {
     const onSaveEvent = () => handleSave()
     const onToggleSplitEvent = () => handleToggleSplit()
@@ -1032,6 +1094,7 @@ function App() {
     const onCloseSplitEvent = () => {
       if (isSplitRef.current) handleCloseSplit()
     }
+    const onResetLayoutEvent = () => handleResetLayout()
     const onFocusPaneEvent = (e) => {
       const target = e?.detail?.pane
       if (target === 'primary' || target === 'secondary') {
@@ -1043,6 +1106,7 @@ function App() {
     window.addEventListener('polyglotmesh:toggle-split', onToggleSplitEvent)
     window.addEventListener('polyglotmesh:open-split', onOpenSplitEvent)
     window.addEventListener('polyglotmesh:close-split', onCloseSplitEvent)
+    window.addEventListener('polyglotmesh:reset-editor-layout', onResetLayoutEvent)
     window.addEventListener('polyglotmesh:focus-pane', onFocusPaneEvent)
 
     return () => {
@@ -1050,9 +1114,10 @@ function App() {
       window.removeEventListener('polyglotmesh:toggle-split', onToggleSplitEvent)
       window.removeEventListener('polyglotmesh:open-split', onOpenSplitEvent)
       window.removeEventListener('polyglotmesh:close-split', onCloseSplitEvent)
+      window.removeEventListener('polyglotmesh:reset-editor-layout', onResetLayoutEvent)
       window.removeEventListener('polyglotmesh:focus-pane', onFocusPaneEvent)
     }
-  }, [handleSave, handleToggleSplit, handleCloseSplit])
+  }, [handleSave, handleToggleSplit, handleCloseSplit, handleResetLayout])
 
   useEffect(
     () => () => {
@@ -1344,6 +1409,9 @@ function App() {
             isSplit={isSplit}
             onToggleSplit={handleToggleSplit}
             onCloseSplit={handleCloseSplit}
+            splitRatio={splitRatio}
+            onSplitRatioChange={handleSplitRatioChange}
+            onResetLayout={handleResetLayout}
             activePane={activePane}
             onSetActivePane={setActivePane}
             openFiles={openFiles}
@@ -1390,6 +1458,7 @@ function App() {
         onOpenSettings={() => setIsEditorSettingsOpen(true)}
         isSplit={isSplit}
         onToggleSplit={handleToggleSplit}
+        onResetLayout={handleResetLayout}
       />
     </main>
   )
