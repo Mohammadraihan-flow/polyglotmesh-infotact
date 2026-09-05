@@ -190,7 +190,12 @@
   min-width: 220px;
   max-width: 340px;
   box-sizing: border-box;
+}
+
+.file-explorer__tree {
+  flex: 1;
   overflow-y: auto;
+  min-height: 0;
 }
 
 .sidebar__title {

@@ -93,6 +93,8 @@ function EditorToolbar({
   activeFile,
   isReadOnly = false,
   onToggleReadOnly,
+  onCreateFile,
+  onChange,
   onSave,
   onFormatDocument,
   onQuickFix,
@@ -114,12 +116,88 @@ function EditorToolbar({
 }) {
   const isDirty = Boolean(activeFile?.isDirty)
 
+  const handleCreateFile = () => {
+    if (onCreateFile) onCreateFile()
+  }
+
+  const handleNewWindow = () => {
+    window.open(window.location.href, '_blank')
+  }
+
+  const handleSelectFile = async () => {
+    try {
+      const [fileHandle] = await window.showOpenFilePicker()
+      const file = await fileHandle.getFile()
+      const content = await file.text()
+      if (onCreateFile) {
+        const result = onCreateFile(file.name)
+        if (result && result.fileName && onChange) {
+          onChange(result.fileName, content)
+        }
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
+  const handleOpenFolder = async () => {
+    try {
+      const dirHandle = await window.showDirectoryPicker()
+      for await (const entry of dirHandle.values()) {
+        if (entry.kind === 'file') {
+          const file = await entry.getFile()
+          const content = await file.text()
+          if (onCreateFile) {
+            const result = onCreateFile(file.name)
+            if (result && result.fileName && onChange) {
+              onChange(result.fileName, content)
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error(e)
+    }
+  }
+
   return (
     <div className="editor-toolbar" role="toolbar" aria-label="Editor command toolbar" style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid var(--border)' }}>
       <div className="editor-toolbar__group" style={{ display: 'flex', gap: '4px' }}>
         
         {/* FILE MENU */}
         <Dropdown label="File">
+          <button
+            type="button"
+            onClick={handleCreateFile}
+            title="Create File"
+          >
+            <span>📄</span>
+            <span>Create File</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleNewWindow}
+            title="New Window"
+          >
+            <span>🪟</span>
+            <span>New Window</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleSelectFile}
+            title="Select File"
+          >
+            <span>📂</span>
+            <span>Select File</span>
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenFolder}
+            title="Open Folder"
+          >
+            <span>📁</span>
+            <span>Open Folder</span>
+          </button>
           <button
             type="button"
             onClick={onSave}

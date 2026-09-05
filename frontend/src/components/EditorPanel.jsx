@@ -1419,6 +1419,8 @@ function EditorPanel({
             activeFile={currentActiveFile}
             isReadOnly={Boolean(currentActiveFile?.isReadOnly)}
             onToggleReadOnly={onToggleReadOnly}
+            onCreateFile={onCreateFile}
+            onChange={onChange}
             onSave={handleSave}
             onFormatDocument={handleFormatDocument}
             onQuickFix={handleQuickFix}
