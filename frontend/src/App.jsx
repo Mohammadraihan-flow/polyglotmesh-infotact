@@ -175,6 +175,10 @@ const defaultSettings = {
   smoothScrolling: true,
   highlightActiveLine: true,
   renderWhitespace: 'none',
+  cursorBlinking: 'smooth',
+  cursorStyle: 'line',
+  cursorSmoothCaretAnimation: 'on',
+  selectionHighlight: true,
   theme: 'vs-dark',
 }
 
@@ -236,11 +240,27 @@ const getInitialSettings = () => {
           ['none', 'boundary', 'selection', 'all'].includes(parsed.renderWhitespace)
             ? parsed.renderWhitespace
             : 'none',
+        cursorBlinking:
+          ['smooth', 'blink', 'solid', 'phase', 'expand'].includes(parsed.cursorBlinking)
+            ? parsed.cursorBlinking
+            : 'smooth',
+        cursorStyle:
+          ['line', 'block', 'underline'].includes(parsed.cursorStyle)
+            ? parsed.cursorStyle
+            : 'line',
+        cursorSmoothCaretAnimation:
+          parsed.cursorSmoothCaretAnimation === 'off' || parsed.cursorSmoothCaretAnimation === false
+            ? 'off'
+            : 'on',
+        selectionHighlight:
+          typeof parsed.selectionHighlight === 'boolean'
+            ? parsed.selectionHighlight
+            : true,
       }
     } else if (wordWrapVal) {
       settings = { ...defaultSettings, wordWrap: wordWrapVal }
     }
-  } catch (e) {
+  } catch {
     // Ignore error
   }
   if (typeof document !== 'undefined') {

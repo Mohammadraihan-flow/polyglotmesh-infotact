@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { getLanguageLabelFromFileName } from '../utils/languageUtils.js'
 
 function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
@@ -9,7 +9,6 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
 
   useEffect(() => {
     if (!editor || !activeFile) {
-      setSelectionStats(null)
       return
     }
 
@@ -27,15 +26,32 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
         setCursorPos({ line: position.lineNumber, column: position.column })
       }
 
-      const selection = editor.getSelection()
+      const selections = editor.getSelections()
+      const primarySelection = editor.getSelection()
       const model = editor.getModel()
-      if (selection && !selection.isEmpty() && model) {
-        const selectedText = model.getValueInRange(selection)
-        const selectedLineCount = Math.abs(selection.endLineNumber - selection.startLineNumber) + 1
+
+      if (selections && selections.length > 1 && model) {
+        let totalChars = 0
+        let totalLines = 0
+        selections.forEach((sel) => {
+          if (!sel.isEmpty()) {
+            totalChars += model.getValueInRange(sel).length
+            totalLines += Math.abs(sel.endLineNumber - sel.startLineNumber) + 1
+          }
+        })
+        setSelectionStats({
+          selectedLineCount: totalLines,
+          selectedCharCount: totalChars,
+          multiCursorCount: selections.length,
+        })
+      } else if (primarySelection && !primarySelection.isEmpty() && model) {
+        const selectedText = model.getValueInRange(primarySelection)
+        const selectedLineCount = Math.abs(primarySelection.endLineNumber - primarySelection.startLineNumber) + 1
         const selectedCharCount = selectedText.length
         setSelectionStats({
           selectedLineCount,
           selectedCharCount,
+          multiCursorCount: 0,
         })
       } else {
         setSelectionStats(null)
@@ -45,25 +61,8 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
     updateModelStats()
     updateCursorAndSelection()
 
-    const selectionListener = editor.onDidChangeCursorSelection((e) => {
-      if (e.selection) {
-        const position = editor.getPosition()
-        if (position) {
-          setCursorPos({ line: position.lineNumber, column: position.column })
-        }
-        const model = editor.getModel()
-        if (e.selection && !e.selection.isEmpty() && model) {
-          const selectedText = model.getValueInRange(e.selection)
-          const selectedLineCount = Math.abs(e.selection.endLineNumber - e.selection.startLineNumber) + 1
-          const selectedCharCount = selectedText.length
-          setSelectionStats({
-            selectedLineCount,
-            selectedCharCount,
-          })
-        } else {
-          setSelectionStats(null)
-        }
-      }
+    const selectionListener = editor.onDidChangeCursorSelection(() => {
+      updateCursorAndSelection()
     })
 
     const contentListener = editor.onDidChangeModelContent(() => {
@@ -74,6 +73,7 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
     return () => {
       selectionListener.dispose()
       contentListener.dispose()
+      setSelectionStats(null)
     }
   }, [editor, activeFile])
 
@@ -109,6 +109,16 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
             <span className="editor-status-bar__divider" aria-hidden="true">
               |
             </span>
+            {selectionStats.multiCursorCount > 1 ? (
+              <>
+                <span className="editor-status-bar__item editor-status-bar__item--multicursor">
+                  {selectionStats.multiCursorCount} cursors
+                </span>
+                <span className="editor-status-bar__divider" aria-hidden="true">
+                  |
+                </span>
+              </>
+            ) : null}
             <span className="editor-status-bar__item editor-status-bar__item--selection-lines">
               {selectionStats.selectedLineCount} {selectionStats.selectedLineCount === 1 ? 'line selected' : 'lines selected'}
             </span>

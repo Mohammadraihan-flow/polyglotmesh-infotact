@@ -1,4 +1,3 @@
-import React from 'react'
 
 const THEMES = [
   {
@@ -393,6 +392,90 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
                     type="button"
                     className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
                     onClick={() => handleSettingChange('renderWhitespace', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="editor-settings__section">
+            <label className="editor-settings__label" htmlFor="editor-cursor-style">
+              Cursor Style
+            </label>
+            <select
+              id="editor-cursor-style"
+              className="editor-settings__select"
+              value={['line', 'block', 'underline'].includes(settings.cursorStyle) ? settings.cursorStyle : 'line'}
+              onChange={(event) => handleSettingChange('cursorStyle', event.target.value)}
+            >
+              <option value="line">Line</option>
+              <option value="block">Block</option>
+              <option value="underline">Underline</option>
+            </select>
+          </div>
+
+          <div className="editor-settings__section">
+            <label className="editor-settings__label" htmlFor="editor-cursor-blinking">
+              Cursor Blinking
+            </label>
+            <select
+              id="editor-cursor-blinking"
+              className="editor-settings__select"
+              value={
+                ['smooth', 'blink', 'solid', 'phase', 'expand'].includes(settings.cursorBlinking)
+                  ? settings.cursorBlinking
+                  : 'smooth'
+              }
+              onChange={(event) => handleSettingChange('cursorBlinking', event.target.value)}
+            >
+              <option value="smooth">Smooth</option>
+              <option value="blink">Blink</option>
+              <option value="solid">Solid (No Blink)</option>
+              <option value="phase">Phase</option>
+              <option value="expand">Expand</option>
+            </select>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Smooth Caret Animation</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Smooth Caret Animation">
+              {[
+                { label: 'On', value: 'on' },
+                { label: 'Off', value: 'off' },
+              ].map((option) => {
+                const isActive = (settings.cursorSmoothCaretAnimation ?? 'on') === option.value
+
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('cursorSmoothCaretAnimation', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Selection Highlight</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Selection Highlight">
+              {[
+                { label: 'On', value: true },
+                { label: 'Off', value: false },
+              ].map((option) => {
+                const isActive = (settings.selectionHighlight ?? true) === option.value
+
+                return (
+                  <button
+                    key={String(option.value)}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('selectionHighlight', option.value)}
                   >
                     {option.label}
                   </button>

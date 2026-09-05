@@ -65,6 +65,18 @@ const baseEditorOptions = {
   foldingStrategy: 'auto',
   showFoldingControls: 'always',
   foldingHighlight: true,
+  cursorWidth: 2,
+  cursorBlinking: 'smooth',
+  cursorStyle: 'line',
+  cursorSmoothCaretAnimation: 'on',
+  cursorSurroundingLines: 1,
+  cursorSurroundingLinesStyle: 'default',
+  roundedSelection: true,
+  selectionHighlight: true,
+  occurrencesHighlight: 'singleFile',
+  multiCursorModifier: 'alt',
+  multiCursorPaste: 'spread',
+  matchBrackets: 'always',
   find: {
     addExtraSpaceOnTop: false,
     autoFindInSelection: 'multiline',
@@ -97,6 +109,9 @@ function defineMonacoThemes(monaco) {
         'editorCursor.foreground': '#f8f8f0',
         'editor.selectionBackground': '#49483e',
         'editor.inactiveSelectionBackground': '#3a3a30',
+        'editor.selectionHighlightBackground': '#49483e88',
+        'editor.wordHighlightBackground': '#49483e66',
+        'editor.wordHighlightStrongBackground': '#f9267244',
         'editor.lineHighlightBackground': '#3e3d32',
         'editorLineNumber.foreground': '#90908a',
         'editorLineNumber.activeForeground': '#c4c4bf',
@@ -136,6 +151,9 @@ function defineMonacoThemes(monaco) {
         'editorCursor.foreground': '#f8f8f2',
         'editor.selectionBackground': '#44475a',
         'editor.inactiveSelectionBackground': '#343746',
+        'editor.selectionHighlightBackground': '#44475a88',
+        'editor.wordHighlightBackground': '#bd93f933',
+        'editor.wordHighlightStrongBackground': '#ff79c644',
         'editor.lineHighlightBackground': '#44475a44',
         'editorLineNumber.foreground': '#6272a4',
         'editorLineNumber.activeForeground': '#f8f8f2',
@@ -175,6 +193,9 @@ function defineMonacoThemes(monaco) {
         'editorCursor.foreground': '#839496',
         'editor.selectionBackground': '#073642',
         'editor.inactiveSelectionBackground': '#002129',
+        'editor.selectionHighlightBackground': '#586e7555',
+        'editor.wordHighlightBackground': '#073642aa',
+        'editor.wordHighlightStrongBackground': '#2aa19844',
         'editor.lineHighlightBackground': '#073642',
         'editorLineNumber.foreground': '#586e75',
         'editorLineNumber.activeForeground': '#93a1a1',
@@ -192,7 +213,7 @@ function defineMonacoThemes(monaco) {
         'editor.findMatchHighlightBackground': '#07364288',
       },
     })
-  } catch (e) {
+  } catch {
     // Ignore theme re-definition errors
   }
 }
@@ -203,7 +224,6 @@ function EditorPanel({
   onSelectFile,
   onCloseTab,
   onCreateFile,
-  onDeleteFile,
   onChange,
   isRunning,
   onRunClick,
@@ -284,6 +304,26 @@ function EditorPanel({
       ? safeEditorSettings.renderWhitespace
       : 'none'
 
+  const cursorBlinkingSetting =
+    ['smooth', 'blink', 'solid', 'phase', 'expand'].includes(safeEditorSettings.cursorBlinking)
+      ? safeEditorSettings.cursorBlinking
+      : 'smooth'
+
+  const cursorStyleSetting =
+    ['line', 'block', 'underline'].includes(safeEditorSettings.cursorStyle)
+      ? safeEditorSettings.cursorStyle
+      : 'line'
+
+  const cursorSmoothCaretAnimationSetting =
+    safeEditorSettings.cursorSmoothCaretAnimation === 'off' || safeEditorSettings.cursorSmoothCaretAnimation === false
+      ? 'off'
+      : 'on'
+
+  const selectionHighlightSetting =
+    typeof safeEditorSettings.selectionHighlight === 'boolean'
+      ? safeEditorSettings.selectionHighlight
+      : true
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -327,6 +367,18 @@ function EditorPanel({
     smoothScrolling: smoothScrollingSetting,
     renderLineHighlight: highlightActiveLineSetting ? 'all' : 'none',
     renderWhitespace: renderWhitespaceSetting,
+    cursorBlinking: cursorBlinkingSetting,
+    cursorStyle: cursorStyleSetting,
+    cursorSmoothCaretAnimation: cursorSmoothCaretAnimationSetting,
+    cursorWidth: 2,
+    cursorSurroundingLines: 1,
+    cursorSurroundingLinesStyle: 'default',
+    roundedSelection: true,
+    selectionHighlight: selectionHighlightSetting,
+    occurrencesHighlight: 'singleFile',
+    multiCursorModifier: 'alt',
+    multiCursorPaste: 'spread',
+    matchBrackets: 'always',
     wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
     snippetSuggestions: 'inline',
     acceptSuggestionOnEnter: 'on',
@@ -387,7 +439,7 @@ function EditorPanel({
         if (state) {
           viewStatesRef.current[currentName] = state
         }
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }
@@ -406,7 +458,7 @@ function EditorPanel({
     if (viewStatesRef.current[currentName]) {
       try {
         editor.restoreViewState(viewStatesRef.current[currentName])
-      } catch (e) {
+      } catch {
         // Ignore
       }
     }
@@ -465,6 +517,10 @@ function EditorPanel({
     smoothScrollingSetting,
     highlightActiveLineSetting,
     renderWhitespaceSetting,
+    cursorBlinkingSetting,
+    cursorStyleSetting,
+    cursorSmoothCaretAnimationSetting,
+    selectionHighlightSetting,
   ])
 
   useEffect(() => {
@@ -645,7 +701,7 @@ function EditorPanel({
                       }
                     }
                   )
-                } catch (e) {
+                } catch {
                   // Ignore if shortcut binding exists
                 }
 
@@ -656,7 +712,7 @@ function EditorPanel({
                       if (state) {
                         viewStatesRef.current[activeFileNameRef.current] = state
                       }
-                    } catch (e) {
+                    } catch {
                       // Ignore
                     }
                   }
@@ -669,7 +725,7 @@ function EditorPanel({
                       if (state) {
                         viewStatesRef.current[activeFileNameRef.current] = state
                       }
-                    } catch (e) {
+                    } catch {
                       // Ignore
                     }
                   }
@@ -680,7 +736,7 @@ function EditorPanel({
                   if (currentName && viewStatesRef.current[currentName]) {
                     try {
                       editor.restoreViewState(viewStatesRef.current[currentName])
-                    } catch (e) {
+                    } catch {
                       // Ignore
                     }
                   }
@@ -692,7 +748,7 @@ function EditorPanel({
               options={editorOptions}
             />
             <EditorStatusBar
-              editor={editorInstance || editorRef.current}
+              editor={editorInstance}
               activeFile={activeFile}
               editorSettings={editorSettings}
               saveMessage={saveMessage}
