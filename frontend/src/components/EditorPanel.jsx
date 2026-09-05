@@ -79,6 +79,9 @@ const baseEditorOptions = {
   matchBrackets: 'always',
   formatOnType: false,
   lightbulb: { enabled: true },
+  glyphMargin: true,
+  overviewRulerLanes: 3,
+  overviewRulerBorder: true,
   find: {
     addExtraSpaceOnTop: false,
     autoFindInSelection: 'multiline',
@@ -129,6 +132,13 @@ function defineMonacoThemes(monaco) {
         'inputOption.activeBorder': '#a6e22e',
         'editor.findMatchBackground': '#e6db7444',
         'editor.findMatchHighlightBackground': '#49483e88',
+        'editorError.foreground': '#f87171',
+        'editorWarning.foreground': '#fbbf24',
+        'editorInfo.foreground': '#60a5fa',
+        'editorHint.foreground': '#c084fc',
+        'editorOverviewRuler.errorForeground': '#f87171cc',
+        'editorOverviewRuler.warningForeground': '#fbbf24cc',
+        'editorOverviewRuler.infoForeground': '#60a5facc',
       },
     })
 
@@ -171,6 +181,13 @@ function defineMonacoThemes(monaco) {
         'inputOption.activeBorder': '#ff79c6',
         'editor.findMatchBackground': '#ffb86c44',
         'editor.findMatchHighlightBackground': '#44475a88',
+        'editorError.foreground': '#ff5555',
+        'editorWarning.foreground': '#ffb86c',
+        'editorInfo.foreground': '#8be9fd',
+        'editorHint.foreground': '#bd93f9',
+        'editorOverviewRuler.errorForeground': '#ff5555cc',
+        'editorOverviewRuler.warningForeground': '#ffb86ccc',
+        'editorOverviewRuler.infoForeground': '#8be9fdcc',
       },
     })
 
@@ -213,6 +230,13 @@ function defineMonacoThemes(monaco) {
         'inputOption.activeBorder': '#268bd2',
         'editor.findMatchBackground': '#b5890044',
         'editor.findMatchHighlightBackground': '#07364288',
+        'editorError.foreground': '#dc322f',
+        'editorWarning.foreground': '#b58900',
+        'editorInfo.foreground': '#268bd2',
+        'editorHint.foreground': '#6c71c4',
+        'editorOverviewRuler.errorForeground': '#dc322fcc',
+        'editorOverviewRuler.warningForeground': '#b58900cc',
+        'editorOverviewRuler.infoForeground': '#268bd2cc',
       },
     })
   } catch {
@@ -395,6 +419,9 @@ function EditorPanel({
     acceptSuggestionOnEnter: 'on',
     tabCompletion: 'on',
     lightbulb: { enabled: true },
+    glyphMargin: true,
+    overviewRulerLanes: 3,
+    overviewRulerBorder: true,
   }
 
   const viewStatesRef = useRef({})
@@ -563,6 +590,155 @@ function EditorPanel({
       window.removeEventListener('polyglotmesh:quick-fix', handleQuickFixEvent)
     }
   }, [handleQuickFix])
+
+  const decorationsByUriRef = useRef(new Map())
+
+  const updateModelDecorations = useCallback(() => {
+    const editor = editorInstance || editorRef.current
+    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+    if (!editor || !monaco) return
+
+    const model = editor.getModel()
+    if (!model || model.isDisposed()) return
+
+    try {
+      const uriStr = model.uri.toString()
+      const oldDecorations = decorationsByUriRef.current.get(uriStr) || []
+      const markers = monaco.editor.getModelMarkers({ resource: model.uri }) || []
+
+      // Group markers by start line so that glyph margin and line hover can prioritize severity
+      const markersByLine = new Map()
+      markers.forEach((m) => {
+        const line = m.startLineNumber || 1
+        if (!markersByLine.has(line)) {
+          markersByLine.set(line, [])
+        }
+        markersByLine.get(line).push(m)
+      })
+
+      const newDecorations = markers.map((marker) => {
+        const isError = marker.severity === 8
+        const isWarning = marker.severity === 4
+        const isInfo = marker.severity === 2
+
+        const startLine = marker.startLineNumber || 1
+        const startCol = marker.startColumn || 1
+        const endLine = marker.endLineNumber || startLine
+        const endCol = marker.endColumn || startCol
+
+        const rulerColor = isError
+          ? '#f87171cc'
+          : isWarning
+          ? '#fbbf24cc'
+          : isInfo
+          ? '#60a5facc'
+          : '#c084fccc'
+
+        // Determine glyph on this line: assign glyph only to the primary marker on each line
+        const lineMarkers = markersByLine.get(startLine) || [marker]
+        const maxSeverityOnLine = Math.max(...lineMarkers.map((lm) => lm.severity || 1))
+        const primaryMarkerOnLine = lineMarkers.find((lm) => (lm.severity || 1) === maxSeverityOnLine)
+
+        let glyphClass = undefined
+        let glyphHoverMessage = undefined
+
+        if (primaryMarkerOnLine === marker) {
+          glyphClass = maxSeverityOnLine === 8
+            ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--error'
+            : maxSeverityOnLine === 4
+            ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--warning'
+            : maxSeverityOnLine === 2
+            ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--info'
+            : 'monaco-diagnostic-glyph monaco-diagnostic-glyph--hint'
+
+          const hoverEntries = lineMarkers.map((lm) => {
+            const sev = lm.severity === 8 ? 'Error' : lm.severity === 4 ? 'Warning' : lm.severity === 2 ? 'Info' : 'Hint'
+            const src = lm.source ? ` *(${lm.source})*` : ''
+            const loc = `[Line ${lm.startLineNumber}, Col ${lm.startColumn}]`
+            return `• **${sev}** ${loc}: ${lm.message}${src}`
+          })
+
+          glyphHoverMessage = {
+            value: hoverEntries.join('\n\n'),
+          }
+        }
+
+        return {
+          range: new monaco.Range(startLine, startCol, endLine, endCol),
+          options: {
+            isWholeLine: false,
+            glyphMarginClassName: glyphClass,
+            glyphMarginHoverMessage: glyphHoverMessage,
+            overviewRuler: {
+              color: rulerColor,
+              position: isError
+                ? monaco.editor.OverviewRulerLane.Right
+                : isWarning
+                ? monaco.editor.OverviewRulerLane.Center
+                : monaco.editor.OverviewRulerLane.Left,
+            },
+            minimap: {
+              color: rulerColor,
+              position: monaco.editor.MinimapPosition.Inline,
+            },
+          },
+        }
+      })
+
+      const appliedDecorations = editor.deltaDecorations(oldDecorations, newDecorations)
+      decorationsByUriRef.current.set(uriStr, appliedDecorations)
+    } catch {
+      // Ignore if editor or model is in transition
+    }
+  }, [editorInstance, globalMonaco])
+
+  useEffect(() => {
+    updateModelDecorations()
+  }, [activeFile?.id, activeFile?.name, updateModelDecorations])
+
+  useEffect(() => {
+    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+    if (!monaco?.editor?.onDidChangeMarkers) return
+
+    const disposable = monaco.editor.onDidChangeMarkers((affectedUris) => {
+      const editor = editorInstance || editorRef.current
+      const model = editor?.getModel()
+      if (!model || model.isDisposed()) return
+
+      const currentUriStr = model.uri.toString()
+      const isAffected =
+        !affectedUris ||
+        affectedUris.length === 0 ||
+        affectedUris.some((uri) => uri.toString() === currentUriStr)
+
+      if (isAffected) {
+        updateModelDecorations()
+      }
+    })
+
+    return () => {
+      disposable.dispose()
+    }
+  }, [editorInstance, globalMonaco, updateModelDecorations])
+
+  useEffect(() => {
+    return () => {
+      const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+      if (monaco?.editor) {
+        decorationsByUriRef.current.forEach((decIds, uriStr) => {
+          try {
+            const m = monaco.editor.getModel(monaco.Uri.parse(uriStr))
+            if (m && !m.isDisposed()) {
+              m.deltaDecorations(decIds, [])
+            }
+          } catch {
+            // Ignore
+          }
+        })
+        decorationsByUriRef.current.clear()
+      }
+    }
+  }, [editorInstance, globalMonaco])
 
   const currentFontSize = editorSettings?.fontSize ?? 14
 
@@ -945,7 +1121,9 @@ function EditorPanel({
                       // Ignore
                     }
                   }
+                  updateModelDecorations()
                 })
+                updateModelDecorations()
               }}
               beforeMount={(monaco) => {
                 defineMonacoThemes(monaco)

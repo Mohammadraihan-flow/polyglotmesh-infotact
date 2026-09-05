@@ -2241,3 +2241,61 @@
   margin-left: auto;
 }
 
+/* Monaco Enhanced Error and Warning Decorations */
+.monaco-diagnostic-glyph {
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 10;
+}
+
+.monaco-diagnostic-glyph--hint::before {
+  content: '';
+  display: block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #c084fc;
+  box-shadow: 0 0 5px rgba(192, 132, 252, 0.75);
+  transition: transform 0.15s ease;
+}
+
+.monaco-diagnostic-glyph--info::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #60a5fa;
+  box-shadow: 0 0 6px rgba(96, 165, 250, 0.75);
+  transition: transform 0.15s ease;
+}
+
+.monaco-diagnostic-glyph--warning::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fbbf24;
+  box-shadow: 0 0 6px rgba(251, 191, 36, 0.75);
+  transition: transform 0.15s ease;
+}
+
+.monaco-diagnostic-glyph--error::before {
+  content: '';
+  display: block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f87171;
+  box-shadow: 0 0 6px rgba(248, 113, 113, 0.75);
+  transition: transform 0.15s ease;
+}
+
+.monaco-diagnostic-glyph:hover::before {
+  transform: scale(1.4);
+}
+
+
