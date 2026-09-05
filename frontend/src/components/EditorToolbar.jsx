@@ -9,6 +9,8 @@ function EditorToolbar({
   onFindReferences,
   onToggleWordWrap,
   isWordWrapOn,
+  isSplit = false,
+  onToggleSplit,
   onOpenCommandPalette,
   currentFontSize = 14,
   onZoomIn,
@@ -196,6 +198,45 @@ function EditorToolbar({
             ⌘
           </span>
           <span className="command-palette-button__text editor-toolbar__label">Palette</span>
+        </button>
+
+        {/* Split Editor */}
+        <button
+          type="button"
+          className={`command-palette-button split-editor-button editor-toolbar__btn editor-toolbar__btn--split ${
+            isSplit ? 'editor-toolbar__btn--active' : ''
+          }`}
+          aria-label={
+            isSplit
+              ? 'Close Split Editor (Ctrl+\\)'
+              : 'Split Editor Right (Ctrl+\\)'
+          }
+          title={
+            isSplit
+              ? 'Close Split Editor (Ctrl+\\)'
+              : 'Split Editor Right (Ctrl+\\)'
+          }
+          onClick={onToggleSplit}
+        >
+          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
+            <svg
+              viewBox="0 0 24 24"
+              width="14"
+              height="14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <rect x="3" y="3" width="18" height="18" rx="2" />
+              <line x1="12" y1="3" x2="12" y2="21" />
+            </svg>
+          </span>
+          <span className="command-palette-button__text editor-toolbar__label">
+            {isSplit ? 'Close Split' : 'Split'}
+          </span>
         </button>
       </div>
 

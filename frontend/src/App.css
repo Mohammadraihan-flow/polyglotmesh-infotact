@@ -3446,5 +3446,208 @@
   font-weight: 600;
 }
 
+/* ============================================================ */
+/* Split Editor / Side-by-Side Editing (Commit 61)             */
+/* ============================================================ */
 
+.editor-panel__surface--split {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+  position: relative;
+}
 
+.editor-panel__split-container {
+  display: flex;
+  flex-direction: row;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-surface, #0f172a);
+}
+
+.split-editor__divider {
+  width: 4px;
+  background: var(--border, #1e293b);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 5;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.split-editor__divider:hover {
+  background: var(--accent-strong, #3b82f6);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.4);
+  cursor: col-resize;
+}
+
+.editor-pane {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 50%;
+  min-width: 0;
+  min-height: 0;
+  position: relative;
+  overflow: hidden;
+  background: var(--bg-surface, #0f172a);
+  transition: box-shadow 0.2s ease, opacity 0.2s ease;
+}
+
+.editor-pane--active {
+  box-shadow: inset 0 0 0 1px var(--accent-strong, #3b82f6);
+  z-index: 2;
+}
+
+.editor-pane--inactive {
+  opacity: 0.94;
+}
+
+.editor-pane--inactive:hover {
+  opacity: 1;
+}
+
+.editor-pane__header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--header-bg, #090d16);
+  border-bottom: 1px solid var(--border, #1e293b);
+  flex-shrink: 0;
+  min-width: 0;
+  overflow: hidden;
+  height: 38px;
+}
+
+.editor-pane__tabs-wrapper {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  height: 100%;
+  display: flex;
+  align-items: stretch;
+}
+
+.editor-pane__tabs-wrapper .editor-tabs__shell {
+  width: 100%;
+  border-bottom: none;
+}
+
+.editor-pane__controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0 0.65rem;
+  flex-shrink: 0;
+  height: 100%;
+  border-left: 1px solid var(--border, #1e293b);
+  background: var(--header-bg, #090d16);
+}
+
+.editor-pane__indicator-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: rgba(148, 163, 184, 0.12);
+  color: var(--text-muted, #94a3b8);
+  letter-spacing: 0.02em;
+  -webkit-user-select: none;
+  user-select: none;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.editor-pane__indicator-badge--active {
+  background: rgba(59, 130, 246, 0.2);
+  color: #60a5fa;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  box-shadow: 0 0 8px rgba(59, 130, 246, 0.25);
+}
+
+.editor-pane__close-split-btn {
+  appearance: none;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted, #94a3b8);
+  border-radius: 4px;
+  width: 22px;
+  height: 22px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  padding: 0;
+  line-height: 1;
+}
+
+.editor-pane__close-split-btn:hover {
+  color: #ef4444;
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.editor-pane__body {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  min-width: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.status-bar__pane-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  background: rgba(59, 130, 246, 0.18);
+  color: #93c5fd;
+  border: 1px solid rgba(59, 130, 246, 0.35);
+  -webkit-user-select: none;
+  user-select: none;
+  letter-spacing: 0.02em;
+}
+
+.status-bar__pane-icon {
+  font-size: 0.75rem;
+  line-height: 1;
+  opacity: 0.9;
+}
+
+/* Responsive Split Editor Layout */
+@media (max-width: 768px) {
+  .editor-panel__split-container {
+    flex-direction: column;
+  }
+
+  .split-editor__divider {
+    width: 100%;
+    height: 4px;
+    cursor: row-resize;
+  }
+
+  .editor-pane {
+    flex: 1 1 50%;
+    min-height: 200px;
+    min-width: 100%;
+  }
+
+  .editor-pane__header-bar {
+    height: 34px;
+  }
+}

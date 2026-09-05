@@ -1,60 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react'
-import Editor, { useMonaco } from '@monaco-editor/react'
+import { useMonaco } from '@monaco-editor/react'
 import EditorSettings from './EditorSettings.jsx'
-import EditorTabs from './EditorTabs.jsx'
 import EditorStatusBar from './EditorStatusBar.jsx'
-import EditorBreadcrumb from './EditorBreadcrumb.jsx'
 import EditorToolbar from './EditorToolbar.jsx'
-import PeekDefinitionWidget from './PeekDefinitionWidget.jsx'
+import EditorPane from './EditorPane.jsx'
 import { getMonacoLanguageFromFileName } from '../utils/languageUtils.js'
 import { findDefinition, findReferences } from '../utils/monacoNavigationService.js'
-
-class EditorErrorBoundary extends React.Component {
-  constructor(props) {
-    super(props)
-    this.state = { hasError: false }
-  }
-
-  static getDerivedStateFromError() {
-    return { hasError: true }
-  }
-
-  componentDidCatch(error, errorInfo) {
-    console.error('Monaco Editor Error Boundary:', error, errorInfo)
-  }
-
-  handleRetry = () => {
-    this.setState({ hasError: false })
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="editor-panel__error-state" role="alert" aria-live="assertive">
-          <div className="editor-panel__error-content">
-            <span className="editor-panel__error-icon" aria-hidden="true">
-              ⚠️
-            </span>
-            <h3 className="editor-panel__error-title">Failed to load Editor</h3>
-            <p className="editor-panel__error-description">
-              Monaco Editor could not be initialized. Please check your connection or try again.
-            </p>
-            <button
-              type="button"
-              className="editor-panel__error-retry-btn"
-              onClick={this.handleRetry}
-              aria-label="Try loading Monaco Editor again"
-            >
-              Try Again
-            </button>
-          </div>
-        </div>
-      )
-    }
-
-    return this.props.children
-  }
-}
 
 const baseEditorOptions = {
   fontSize: 14,
@@ -249,6 +200,13 @@ function defineMonacoThemes(monaco) {
 
 function EditorPanel({
   activeFile,
+  primaryFile,
+  secondaryFile,
+  isSplit = false,
+  onToggleSplit,
+  onCloseSplit,
+  activePane = 'primary',
+  onSetActivePane,
   openFiles = [],
   files = [],
   onSelectFile,
@@ -268,17 +226,13 @@ function EditorPanel({
   onReferencesFound,
 }) {
   const safeEditorSettings = editorSettings || {}
-
-  const monacoLanguage = activeFile
-    ? getMonacoLanguageFromFileName(activeFile.name)
-    : 'plaintext'
-
   const selectedTheme = safeEditorSettings.theme ?? 'vs-dark'
 
   const settingsContainerRef = useRef(null)
-  const editorRef = useRef(null)
+  const primaryEditorRef = useRef(null)
+  const secondaryEditorRef = useRef(null)
   const monacoRef = useRef(null)
-  const [editorInstance, setEditorInstance] = useState(null)
+  const [activeEditorInstance, setActiveEditorInstance] = useState(null)
   const [codeActionFeedback, setCodeActionFeedback] = useState(null)
   const [navigationFeedback, setNavigationFeedback] = useState(null)
   const [peekDefinitionData, setPeekDefinitionData] = useState(null)
@@ -286,10 +240,32 @@ function EditorPanel({
   const navFeedbackTimerRef = useRef(null)
   const filesRef = useRef(files)
   filesRef.current = files
-  const activeFileRef = useRef(activeFile)
-  activeFileRef.current = activeFile
+  const viewStatesRef = useRef({})
+  const decorationsByUriRef = useRef(new Map())
   const globalMonaco = useMonaco()
 
+  // Determine currently active file
+  const currentActiveFile =
+    isSplit && activePane === 'secondary' && secondaryFile
+      ? secondaryFile
+      : primaryFile || activeFile
+
+  // Determine currently active editor
+  const getActiveEditor = useCallback(() => {
+    if (isSplit && activePane === 'secondary' && secondaryEditorRef.current) {
+      return secondaryEditorRef.current
+    }
+    return primaryEditorRef.current || activeEditorInstance
+  }, [isSplit, activePane, activeEditorInstance])
+
+  const getActiveFile = useCallback(() => {
+    if (isSplit && activePane === 'secondary' && secondaryFile) {
+      return secondaryFile
+    }
+    return primaryFile || activeFile
+  }, [isSplit, activePane, secondaryFile, primaryFile, activeFile])
+
+  // Editor options calculation
   const validTabSizes = [2, 4, 8]
   const parsedTabSize = Number(safeEditorSettings.tabSize)
   const tabSize = validTabSizes.includes(parsedTabSize) ? parsedTabSize : 4
@@ -448,67 +424,128 @@ function EditorPanel({
     overviewRulerBorder: true,
   }
 
-  const viewStatesRef = useRef({})
-  const activeFileNameRef = useRef(activeFile?.name)
-
-  const handleFoldAll = () => {
-    const editor = editorInstance || editorRef.current
-    if (editor) {
-      editor.focus()
-      const foldAction = editor.getAction('editor.foldAll')
-      if (foldAction) {
-        foldAction.run()
-      } else {
-        editor.trigger('fold', 'editor.foldAll')
+  // Handle pane activation
+  const handleActivatePane = useCallback((paneId) => {
+    onSetActivePane?.(paneId)
+    const targetEditor = paneId === 'secondary' ? secondaryEditorRef.current : primaryEditorRef.current
+    if (targetEditor) {
+      setActiveEditorInstance(targetEditor)
+      if (typeof window !== 'undefined') {
+        window.__polyglotmeshActiveEditor = targetEditor
       }
     }
-  }
+  }, [onSetActivePane])
 
-  const handleUnfoldAll = () => {
-    const editor = editorInstance || editorRef.current
-    if (editor) {
-      editor.focus()
-      const unfoldAction = editor.getAction('editor.action.unfoldAll')
-      if (unfoldAction) {
-        unfoldAction.run()
-      } else {
-        editor.trigger('unfold', 'editor.unfoldAll')
+  // Handle pane mount
+  const handlePaneMount = useCallback((editor, monaco, paneId) => {
+    monacoRef.current = monaco
+    if (paneId === 'primary') {
+      primaryEditorRef.current = editor
+    } else {
+      secondaryEditorRef.current = editor
+    }
+
+    if (paneId === activePane || !activeEditorInstance) {
+      setActiveEditorInstance(editor)
+      if (typeof window !== 'undefined') {
+        window.__polyglotmeshActiveEditor = editor
       }
     }
-  }
 
+    defineMonacoThemes(monaco)
+    monaco.editor.setTheme(selectedTheme)
+
+    try {
+      monaco.editor.registerEditorOpener({
+        openCodeEditor(source, resource, selectionOrPosition) {
+          const rawPath = resource.path || resource.fsPath || resource.toString()
+          const cleanName = rawPath.replace(/^file:\/\/\//, '').replace(/^\//, '').split('/').pop()
+          const targetFile = filesRef.current.find(
+            (f) => f.name === cleanName || resource.toString().endsWith(f.name),
+          )
+          if (targetFile) {
+            onSelectFile?.(targetFile.name, activePane)
+            if (selectionOrPosition) {
+              setTimeout(() => {
+                const line = selectionOrPosition.lineNumber || selectionOrPosition.startLineNumber || 1
+                const col = selectionOrPosition.column || selectionOrPosition.startColumn || 1
+                source.setPosition({ lineNumber: line, column: col })
+                source.revealPositionInCenterIfOutsideViewport({ lineNumber: line, column: col })
+                source.focus()
+              }, 60)
+            }
+            return true
+          }
+          return false
+        },
+      })
+    } catch {
+      // Ignore
+    }
+  }, [activePane, activeEditorInstance, selectedTheme, onSelectFile])
+
+  // Sync theme changes
+  useEffect(() => {
+    const activeMonaco = globalMonaco || monacoRef.current
+    if (activeMonaco && selectedTheme) {
+      defineMonacoThemes(activeMonaco)
+      activeMonaco.editor.setTheme(selectedTheme)
+    }
+  }, [globalMonaco, selectedTheme])
+
+  // Sync active pane to window.__polyglotmeshActiveEditor
+  useEffect(() => {
+    const targetEditor = activePane === 'secondary' ? secondaryEditorRef.current : primaryEditorRef.current
+    if (targetEditor) {
+      setActiveEditorInstance(targetEditor)
+      if (typeof window !== 'undefined') {
+        window.__polyglotmeshActiveEditor = targetEditor
+      }
+    }
+  }, [activePane])
+
+  // Feedback helpers
+  const showCodeActionFeedback = useCallback((msg) => {
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current)
+    }
+    setCodeActionFeedback(msg)
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setCodeActionFeedback(null)
+    }, 3000)
+  }, [])
+
+  const showNavigationFeedback = useCallback((msg) => {
+    if (navFeedbackTimerRef.current) {
+      clearTimeout(navFeedbackTimerRef.current)
+    }
+    setNavigationFeedback(msg)
+    navFeedbackTimerRef.current = setTimeout(() => {
+      setNavigationFeedback(null)
+    }, 3000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) clearTimeout(feedbackTimeoutRef.current)
+      if (navFeedbackTimerRef.current) clearTimeout(navFeedbackTimerRef.current)
+    }
+  }, [])
+
+  // Toolbar action handlers that target activeEditor and currentActiveFile
   const handleSave = useCallback(() => {
+    const fileToSave = getActiveFile()
     if (onSave) {
-      onSave()
+      onSave(fileToSave?.name)
     } else {
       window.dispatchEvent(new CustomEvent('polyglotmesh:save'))
     }
-  }, [onSave])
-
-  const handleToggleWordWrap = useCallback(() => {
-    onEditorSettingsChange?.((prev) => {
-      const current = prev?.wordWrap === 'off' || prev?.wordWrap === false ? 'off' : 'on'
-      const next = current === 'off' ? 'on' : 'off'
-      return {
-        ...prev,
-        wordWrap: next,
-      }
-    })
-    const editor = editorRef.current || editorInstance
-    if (editor) {
-      editor.focus()
-      const action = editor.getAction('editor.action.toggleWordWrap')
-      if (action) {
-        action.run()
-      } else {
-        editor.trigger('user', 'editor.action.toggleWordWrap')
-      }
-    }
-  }, [editorInstance, onEditorSettingsChange])
+  }, [getActiveFile, onSave])
 
   const handleFormatDocument = useCallback(async () => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
+    const editor = getActiveEditor()
+    const file = getActiveFile()
+    if (!editor || !file) return
     try {
       editor.focus()
       const action = editor.getAction('editor.action.formatDocument')
@@ -518,13 +555,14 @@ function EditorPanel({
         editor.trigger('user', 'editor.action.formatDocument')
       }
     } catch {
-      // Ignore if formatting provider is unavailable
+      // Ignore
     }
-  }, [editorInstance, activeFile])
+  }, [getActiveEditor, getActiveFile])
 
   const handleFormatSelection = useCallback(async () => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
+    const editor = getActiveEditor()
+    const file = getActiveFile()
+    if (!editor || !file) return
     try {
       editor.focus()
       const selection = editor.getSelection()
@@ -538,103 +576,14 @@ function EditorPanel({
         editor.trigger('user', 'editor.action.formatSelection')
       }
     } catch {
-      // Ignore if formatting provider is unavailable
+      // Ignore
     }
-  }, [editorInstance, activeFile])
-
-  const handleAddCursorAbove = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
-    editor.focus()
-    const act = editor.getAction('editor.action.insertCursorAbove')
-    if (act) act.run()
-    else editor.trigger('selection', 'editor.action.insertCursorAbove')
-  }, [editorInstance, activeFile])
-
-  const handleAddCursorBelow = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
-    editor.focus()
-    const act = editor.getAction('editor.action.insertCursorBelow')
-    if (act) act.run()
-    else editor.trigger('selection', 'editor.action.insertCursorBelow')
-  }, [editorInstance, activeFile])
-
-  const handleAddCursorsToLineEnds = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
-    editor.focus()
-    const act = editor.getAction('editor.action.insertCursorAtEndOfEachLineSelected')
-    if (act) act.run()
-    else editor.trigger('selection', 'editor.action.insertCursorAtEndOfEachLineSelected')
-  }, [editorInstance, activeFile])
-
-  const handleAddNextOccurrence = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
-    editor.focus()
-    const act = editor.getAction('editor.action.addSelectionToNextFindMatch')
-    if (act) act.run()
-    else editor.trigger('selection', 'editor.action.addSelectionToNextFindMatch')
-  }, [editorInstance, activeFile])
-
-  const handleSelectAllOccurrences = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
-    editor.focus()
-    const act = editor.getAction('editor.action.selectHighlights')
-    if (act) act.run()
-    else editor.trigger('selection', 'editor.action.selectHighlights')
-  }, [editorInstance, activeFile])
-
-  const handleExpandSelection = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
-    editor.focus()
-    const act = editor.getAction('editor.action.smartSelect.expand')
-    if (act) act.run()
-    else editor.trigger('selection', 'editor.action.smartSelect.expand')
-  }, [editorInstance, activeFile])
-
-  const handleShrinkSelection = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
-    editor.focus()
-    const act = editor.getAction('editor.action.smartSelect.shrink')
-    if (act) act.run()
-    else editor.trigger('selection', 'editor.action.smartSelect.shrink')
-  }, [editorInstance, activeFile])
-
-  const handleToggleColumnSelection = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) return
-    editor.focus()
-    const act = editor.getAction('editor.action.toggleColumnSelection')
-    if (act) act.run()
-    else editor.trigger('selection', 'editor.action.toggleColumnSelection')
-  }, [editorInstance, activeFile])
-
-  const showCodeActionFeedback = useCallback((msg) => {
-    if (feedbackTimeoutRef.current) {
-      clearTimeout(feedbackTimeoutRef.current)
-    }
-    setCodeActionFeedback(msg)
-    feedbackTimeoutRef.current = setTimeout(() => {
-      setCodeActionFeedback(null)
-    }, 3000)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (feedbackTimeoutRef.current) {
-        clearTimeout(feedbackTimeoutRef.current)
-      }
-    }
-  }, [])
+  }, [getActiveEditor, getActiveFile])
 
   const handleQuickFix = useCallback(async () => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile) {
+    const editor = getActiveEditor()
+    const file = getActiveFile()
+    if (!editor || !file) {
       showCodeActionFeedback('No active editor')
       return
     }
@@ -687,7 +636,7 @@ function EditorPanel({
             }
           }
         } catch {
-          // If checking getCodeActions fails or is unsupported, fall through
+          // Ignore
         }
       }
 
@@ -704,56 +653,28 @@ function EditorPanel({
     } catch {
       showCodeActionFeedback('No code actions available')
     }
-  }, [editorInstance, activeFile, globalMonaco, showCodeActionFeedback])
-
-  useEffect(() => {
-    const handleQuickFixEvent = () => {
-      handleQuickFix()
-    }
-    window.addEventListener('polyglotmesh:quick-fix', handleQuickFixEvent)
-    return () => {
-      window.removeEventListener('polyglotmesh:quick-fix', handleQuickFixEvent)
-    }
-  }, [handleQuickFix])
-
-  const showNavigationFeedback = useCallback((msg) => {
-    if (navFeedbackTimerRef.current) {
-      clearTimeout(navFeedbackTimerRef.current)
-    }
-    setNavigationFeedback(msg)
-    navFeedbackTimerRef.current = setTimeout(() => {
-      setNavigationFeedback(null)
-    }, 3000)
-  }, [])
-
-  useEffect(() => {
-    return () => {
-      if (navFeedbackTimerRef.current) {
-        clearTimeout(navFeedbackTimerRef.current)
-      }
-    }
-  }, [])
+  }, [getActiveEditor, getActiveFile, globalMonaco, showCodeActionFeedback])
 
   const handleGoToDefinition = useCallback(async () => {
-    const editor = editorInstance || editorRef.current
+    const editor = getActiveEditor()
+    const file = getActiveFile()
     const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
-    if (!editor || !monaco || !activeFile) {
+    if (!editor || !monaco || !file) {
       showNavigationFeedback('No active editor')
       return
     }
 
     try {
       editor.focus()
-      const result = await findDefinition(monaco, editor, activeFile, filesRef.current)
+      const result = await findDefinition(monaco, editor, file, filesRef.current)
       if (result.success && result.definitions?.length > 0) {
         const def = result.definitions[0]
         setPeekDefinitionData(null)
 
         if (!def.isSameFile && def.targetFile) {
-          onSelectFile?.(def.targetFile)
+          onSelectFile?.(def.targetFile, activePane)
           const jump = () => {
-            const currentEditors = monaco.editor?.getEditors?.() || [editor]
-            const ed = currentEditors[0] || editor
+            const ed = getActiveEditor() || editor
             if (ed) {
               ed.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
               ed.setSelection(def.range)
@@ -781,19 +702,20 @@ function EditorPanel({
     } catch {
       showNavigationFeedback('Definition query failed')
     }
-  }, [editorInstance, globalMonaco, activeFile, onSelectFile, showNavigationFeedback])
+  }, [getActiveEditor, getActiveFile, globalMonaco, activePane, onSelectFile, showNavigationFeedback])
 
   const handlePeekDefinition = useCallback(async () => {
-    const editor = editorInstance || editorRef.current
+    const editor = getActiveEditor()
+    const file = getActiveFile()
     const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
-    if (!editor || !monaco || !activeFile) {
+    if (!editor || !monaco || !file) {
       showNavigationFeedback('No active editor')
       return
     }
 
     try {
       editor.focus()
-      const result = await findDefinition(monaco, editor, activeFile, filesRef.current)
+      const result = await findDefinition(monaco, editor, file, filesRef.current)
       if (result.success && result.definitions?.length > 0) {
         setPeekDefinitionData(result.definitions[0])
       } else {
@@ -806,19 +728,20 @@ function EditorPanel({
     } catch {
       showNavigationFeedback('Peek definition query failed')
     }
-  }, [editorInstance, globalMonaco, activeFile, showNavigationFeedback])
+  }, [getActiveEditor, getActiveFile, globalMonaco, showNavigationFeedback])
 
   const handleFindReferences = useCallback(async () => {
-    const editor = editorInstance || editorRef.current
+    const editor = getActiveEditor()
+    const file = getActiveFile()
     const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
-    if (!editor || !monaco || !activeFile) {
+    if (!editor || !monaco || !file) {
       showNavigationFeedback('No active editor')
       return
     }
 
     try {
       editor.focus()
-      const result = await findReferences(monaco, editor, activeFile, filesRef.current)
+      const result = await findReferences(monaco, editor, file, filesRef.current)
       if (result.success && result.references?.length > 0) {
         onReferencesFound?.(result.references, result.symbolName)
         window.dispatchEvent(new CustomEvent('polyglotmesh:show-references'))
@@ -837,74 +760,354 @@ function EditorPanel({
     } catch {
       showNavigationFeedback('Find references query failed')
     }
-  }, [editorInstance, globalMonaco, activeFile, onReferencesFound, showNavigationFeedback])
+  }, [getActiveEditor, getActiveFile, globalMonaco, onReferencesFound, showNavigationFeedback])
 
-  const handleGoToDefinitionRef = useRef(handleGoToDefinition)
-  handleGoToDefinitionRef.current = handleGoToDefinition
-  const handlePeekDefinitionRef = useRef(handlePeekDefinition)
-  handlePeekDefinitionRef.current = handlePeekDefinition
-  const handleFindReferencesRef = useRef(handleFindReferences)
-  handleFindReferencesRef.current = handleFindReferences
-  const handleQuickFixRef = useRef(handleQuickFix)
-  handleQuickFixRef.current = handleQuickFix
-
-  const customActionDisposablesRef = useRef([])
-
-  useEffect(() => {
-    return () => {
-      customActionDisposablesRef.current.forEach((d) => {
-        try {
-          d?.dispose?.()
-        } catch {
-          // Ignore
+  const handleSelectPeekDefinition = useCallback((def, targetPaneId) => {
+    setPeekDefinitionData(null)
+    if (!def.isSameFile && def.targetFile) {
+      onSelectFile?.(def.targetFile, targetPaneId)
+      setTimeout(() => {
+        const ed = targetPaneId === 'secondary' ? secondaryEditorRef.current : primaryEditorRef.current
+        if (ed) {
+          ed.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+          ed.setSelection(def.range)
+          ed.revealPositionInCenterIfOutsideViewport({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+          ed.focus()
         }
-      })
-      customActionDisposablesRef.current = []
+      }, 60)
+    } else {
+      const ed = targetPaneId === 'secondary' ? secondaryEditorRef.current : primaryEditorRef.current
+      if (ed) {
+        ed.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+        ed.setSelection(def.range)
+        ed.revealPositionInCenterIfOutsideViewport({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
+        ed.focus()
+      }
     }
-  }, [])
+  }, [onSelectFile])
+
+  // Multi-cursor and selection handlers
+  const handleAddCursorAbove = useCallback(() => {
+    const editor = getActiveEditor()
+    if (!editor) return
+    editor.focus()
+    const act = editor.getAction('editor.action.insertCursorAbove')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.insertCursorAbove')
+  }, [getActiveEditor])
+
+  const handleAddCursorBelow = useCallback(() => {
+    const editor = getActiveEditor()
+    if (!editor) return
+    editor.focus()
+    const act = editor.getAction('editor.action.insertCursorBelow')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.insertCursorBelow')
+  }, [getActiveEditor])
+
+  const handleAddCursorsToLineEnds = useCallback(() => {
+    const editor = getActiveEditor()
+    if (!editor) return
+    editor.focus()
+    const act = editor.getAction('editor.action.insertCursorAtEndOfEachLineSelected')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.insertCursorAtEndOfEachLineSelected')
+  }, [getActiveEditor])
+
+  const handleAddNextOccurrence = useCallback(() => {
+    const editor = getActiveEditor()
+    if (!editor) return
+    editor.focus()
+    const act = editor.getAction('editor.action.addSelectionToNextFindMatch')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.addSelectionToNextFindMatch')
+  }, [getActiveEditor])
+
+  const handleSelectAllOccurrences = useCallback(() => {
+    const editor = getActiveEditor()
+    if (!editor) return
+    editor.focus()
+    const act = editor.getAction('editor.action.selectHighlights')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.selectHighlights')
+  }, [getActiveEditor])
+
+  const handleExpandSelection = useCallback(() => {
+    const editor = getActiveEditor()
+    if (!editor) return
+    editor.focus()
+    const act = editor.getAction('editor.action.smartSelect.expand')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.smartSelect.expand')
+  }, [getActiveEditor])
+
+  const handleShrinkSelection = useCallback(() => {
+    const editor = getActiveEditor()
+    if (!editor) return
+    editor.focus()
+    const act = editor.getAction('editor.action.smartSelect.shrink')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.smartSelect.shrink')
+  }, [getActiveEditor])
+
+  const handleToggleColumnSelection = useCallback(() => {
+    const editor = getActiveEditor()
+    if (!editor) return
+    editor.focus()
+    const act = editor.getAction('editor.action.toggleColumnSelection')
+    if (act) act.run()
+    else editor.trigger('selection', 'editor.action.toggleColumnSelection')
+  }, [getActiveEditor])
+
+  const handleToggleWordWrap = useCallback(() => {
+    onEditorSettingsChange?.((prev) => {
+      const current = prev?.wordWrap === 'off' || prev?.wordWrap === false ? 'off' : 'on'
+      const next = current === 'off' ? 'on' : 'off'
+      return {
+        ...prev,
+        wordWrap: next,
+      }
+    })
+    const editor = getActiveEditor()
+    if (editor) {
+      editor.focus()
+      const action = editor.getAction('editor.action.toggleWordWrap')
+      if (action) {
+        action.run()
+      } else {
+        editor.trigger('user', 'editor.action.toggleWordWrap')
+      }
+    }
+  }, [getActiveEditor, onEditorSettingsChange])
+
+  const handleFoldAll = useCallback(() => {
+    const editor = getActiveEditor()
+    if (editor) {
+      editor.focus()
+      const foldAction = editor.getAction('editor.foldAll')
+      if (foldAction) {
+        foldAction.run()
+      } else {
+        editor.trigger('fold', 'editor.foldAll')
+      }
+    }
+  }, [getActiveEditor])
+
+  const handleUnfoldAll = useCallback(() => {
+    const editor = getActiveEditor()
+    if (editor) {
+      editor.focus()
+      const unfoldAction = editor.getAction('editor.action.unfoldAll')
+      if (unfoldAction) {
+        unfoldAction.run()
+      } else {
+        editor.trigger('unfold', 'editor.unfoldAll')
+      }
+    }
+  }, [getActiveEditor])
+
+  const handleOpenCommandPalette = useCallback(() => {
+    const editor = getActiveEditor()
+    if (editor) {
+      editor.focus()
+      const action = editor.getAction('editor.action.quickCommand')
+      if (action) {
+        action.run()
+      } else {
+        editor.trigger('toolbar', 'editor.action.quickCommand')
+      }
+    }
+  }, [getActiveEditor])
+
+  // Zoom controls
+  const currentFontSize = editorSettings?.fontSize ?? 14
+  const handleZoomIn = () => {
+    const nextSize = Math.min(32, currentFontSize + 1)
+    onEditorSettingsChange?.({ ...editorSettings, fontSize: nextSize })
+  }
+  const handleZoomOut = () => {
+    const nextSize = Math.max(10, currentFontSize - 1)
+    onEditorSettingsChange?.({ ...editorSettings, fontSize: nextSize })
+  }
+  const handleResetZoom = () => {
+    onEditorSettingsChange?.({ ...editorSettings, fontSize: 14 })
+  }
+
+  // Diagnostic decorations
+  const updateModelDecorations = useCallback(() => {
+    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+    if (!monaco) return
+
+    const editorsToUpdate = [primaryEditorRef.current, secondaryEditorRef.current].filter(Boolean)
+    editorsToUpdate.forEach((editor) => {
+      const model = editor.getModel()
+      if (!model || model.isDisposed()) return
+
+      try {
+        const uriStr = model.uri.toString()
+        const oldDecorations = decorationsByUriRef.current.get(uriStr) || []
+        const markers = monaco.editor.getModelMarkers({ resource: model.uri }) || []
+
+        const markersByLine = new Map()
+        markers.forEach((m) => {
+          const line = m.startLineNumber || 1
+          if (!markersByLine.has(line)) {
+            markersByLine.set(line, [])
+          }
+          markersByLine.get(line).push(m)
+        })
+
+        const newDecorations = markers.map((marker) => {
+          const isError = marker.severity === 8
+          const isWarning = marker.severity === 4
+          const isInfo = marker.severity === 2
+
+          const startLine = marker.startLineNumber || 1
+          const startCol = marker.startColumn || 1
+          const endLine = marker.endLineNumber || startLine
+          const endCol = marker.endColumn || startCol
+
+          const rulerColor = isError
+            ? '#f87171cc'
+            : isWarning
+            ? '#fbbf24cc'
+            : isInfo
+            ? '#60a5facc'
+            : '#c084fccc'
+
+          const lineMarkers = markersByLine.get(startLine) || [marker]
+          const maxSeverityOnLine = Math.max(...lineMarkers.map((lm) => lm.severity || 1))
+          const primaryMarkerOnLine = lineMarkers.find((lm) => (lm.severity || 1) === maxSeverityOnLine)
+
+          let glyphClass = undefined
+          let glyphHoverMessage = undefined
+
+          if (primaryMarkerOnLine === marker) {
+            glyphClass =
+              maxSeverityOnLine === 8
+                ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--error'
+                : maxSeverityOnLine === 4
+                ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--warning'
+                : maxSeverityOnLine === 2
+                ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--info'
+                : 'monaco-diagnostic-glyph monaco-diagnostic-glyph--hint'
+
+            const hoverEntries = lineMarkers.map((lm) => {
+              const sev =
+                lm.severity === 8
+                  ? 'Error'
+                  : lm.severity === 4
+                  ? 'Warning'
+                  : lm.severity === 2
+                  ? 'Info'
+                  : 'Hint'
+              const src = lm.source ? ` *(${lm.source})*` : ''
+              const loc = `[Line ${lm.startLineNumber}, Col ${lm.startColumn}]`
+              return `• **${sev}** ${loc}: ${lm.message}${src}`
+            })
+
+            glyphHoverMessage = {
+              value: hoverEntries.join('\n\n'),
+            }
+          }
+
+          return {
+            range: new monaco.Range(startLine, startCol, endLine, endCol),
+            options: {
+              isWholeLine: false,
+              glyphMarginClassName: glyphClass,
+              glyphMarginHoverMessage: glyphHoverMessage,
+              overviewRuler: {
+                color: rulerColor,
+                position: isError
+                  ? monaco.editor.OverviewRulerLane.Right
+                  : isWarning
+                  ? monaco.editor.OverviewRulerLane.Center
+                  : monaco.editor.OverviewRulerLane.Left,
+              },
+              minimap: {
+                color: rulerColor,
+                position: monaco.editor.MinimapPosition.Inline,
+              },
+            },
+          }
+        })
+
+        const appliedDecorations = editor.deltaDecorations(oldDecorations, newDecorations)
+        decorationsByUriRef.current.set(uriStr, appliedDecorations)
+      } catch {
+        // Ignore
+      }
+    })
+  }, [globalMonaco])
 
   useEffect(() => {
-    const onGoToDef = () => handleGoToDefinitionRef.current?.()
-    const onPeekDef = () => handlePeekDefinitionRef.current?.()
-    const onFindRefs = () => handleFindReferencesRef.current?.()
-    const onCursorAbove = () => handleAddCursorAbove()
-    const onCursorBelow = () => handleAddCursorBelow()
-    const onLineEnds = () => handleAddCursorsToLineEnds()
-    const onNextOccur = () => handleAddNextOccurrence()
-    const onSelectAllOccur = () => handleSelectAllOccurrences()
-    const onExpandSel = () => handleExpandSelection()
-    const onShrinkSel = () => handleShrinkSelection()
-    const onToggleCol = () => handleToggleColumnSelection()
-    const onToggleWrap = () => handleToggleWordWrap()
+    updateModelDecorations()
+  }, [currentActiveFile?.id, currentActiveFile?.name, updateModelDecorations])
 
-    window.addEventListener('polyglotmesh:goto-definition', onGoToDef)
-    window.addEventListener('polyglotmesh:peek-definition', onPeekDef)
-    window.addEventListener('polyglotmesh:find-references', onFindRefs)
-    window.addEventListener('polyglotmesh:add-cursor-above', onCursorAbove)
-    window.addEventListener('polyglotmesh:add-cursor-below', onCursorBelow)
-    window.addEventListener('polyglotmesh:add-cursors-to-line-ends', onLineEnds)
-    window.addEventListener('polyglotmesh:add-next-occurrence', onNextOccur)
-    window.addEventListener('polyglotmesh:select-all-occurrences', onSelectAllOccur)
-    window.addEventListener('polyglotmesh:expand-selection', onExpandSel)
-    window.addEventListener('polyglotmesh:shrink-selection', onShrinkSel)
-    window.addEventListener('polyglotmesh:toggle-column-selection', onToggleCol)
-    window.addEventListener('polyglotmesh:toggle-word-wrap', onToggleWrap)
+  useEffect(() => {
+    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+    if (!monaco?.editor?.onDidChangeMarkers) return
+
+    const disposable = monaco.editor.onDidChangeMarkers(() => {
+      updateModelDecorations()
+    })
 
     return () => {
-      window.removeEventListener('polyglotmesh:goto-definition', onGoToDef)
-      window.removeEventListener('polyglotmesh:peek-definition', onPeekDef)
-      window.removeEventListener('polyglotmesh:find-references', onFindRefs)
-      window.removeEventListener('polyglotmesh:add-cursor-above', onCursorAbove)
-      window.removeEventListener('polyglotmesh:add-cursor-below', onCursorBelow)
-      window.removeEventListener('polyglotmesh:add-cursors-to-line-ends', onLineEnds)
-      window.removeEventListener('polyglotmesh:add-next-occurrence', onNextOccur)
-      window.removeEventListener('polyglotmesh:select-all-occurrences', onSelectAllOccur)
-      window.removeEventListener('polyglotmesh:expand-selection', onExpandSel)
-      window.removeEventListener('polyglotmesh:shrink-selection', onShrinkSel)
-      window.removeEventListener('polyglotmesh:toggle-column-selection', onToggleCol)
-      window.removeEventListener('polyglotmesh:toggle-word-wrap', onToggleWrap)
+      disposable.dispose()
+    }
+  }, [globalMonaco, updateModelDecorations])
+
+  // Global polyglotmesh custom events
+  useEffect(() => {
+    const onQuickFixEvent = () => handleQuickFix()
+    const onGoToDefEvent = () => handleGoToDefinition()
+    const onPeekDefEvent = () => handlePeekDefinition()
+    const onFindRefsEvent = () => handleFindReferences()
+    const onCursorAboveEvent = () => handleAddCursorAbove()
+    const onCursorBelowEvent = () => handleAddCursorBelow()
+    const onLineEndsEvent = () => handleAddCursorsToLineEnds()
+    const onNextOccurEvent = () => handleAddNextOccurrence()
+    const onSelectAllOccurEvent = () => handleSelectAllOccurrences()
+    const onExpandSelEvent = () => handleExpandSelection()
+    const onShrinkSelEvent = () => handleShrinkSelection()
+    const onToggleColEvent = () => handleToggleColumnSelection()
+    const onToggleWrapEvent = () => handleToggleWordWrap()
+
+    window.addEventListener('polyglotmesh:quick-fix', onQuickFixEvent)
+    window.addEventListener('polyglotmesh:goto-definition', onGoToDefEvent)
+    window.addEventListener('polyglotmesh:peek-definition', onPeekDefEvent)
+    window.addEventListener('polyglotmesh:find-references', onFindRefsEvent)
+    window.addEventListener('polyglotmesh:add-cursor-above', onCursorAboveEvent)
+    window.addEventListener('polyglotmesh:add-cursor-below', onCursorBelowEvent)
+    window.addEventListener('polyglotmesh:add-cursors-to-line-ends', onLineEndsEvent)
+    window.addEventListener('polyglotmesh:add-next-occurrence', onNextOccurEvent)
+    window.addEventListener('polyglotmesh:select-all-occurrences', onSelectAllOccurEvent)
+    window.addEventListener('polyglotmesh:expand-selection', onExpandSelEvent)
+    window.addEventListener('polyglotmesh:shrink-selection', onShrinkSelEvent)
+    window.addEventListener('polyglotmesh:toggle-column-selection', onToggleColEvent)
+    window.addEventListener('polyglotmesh:toggle-word-wrap', onToggleWrapEvent)
+
+    return () => {
+      window.removeEventListener('polyglotmesh:quick-fix', onQuickFixEvent)
+      window.removeEventListener('polyglotmesh:goto-definition', onGoToDefEvent)
+      window.removeEventListener('polyglotmesh:peek-definition', onPeekDefEvent)
+      window.removeEventListener('polyglotmesh:find-references', onFindRefsEvent)
+      window.removeEventListener('polyglotmesh:add-cursor-above', onCursorAboveEvent)
+      window.removeEventListener('polyglotmesh:add-cursor-below', onCursorBelowEvent)
+      window.removeEventListener('polyglotmesh:add-cursors-to-line-ends', onLineEndsEvent)
+      window.removeEventListener('polyglotmesh:add-next-occurrence', onNextOccurEvent)
+      window.removeEventListener('polyglotmesh:select-all-occurrences', onSelectAllOccurEvent)
+      window.removeEventListener('polyglotmesh:expand-selection', onExpandSelEvent)
+      window.removeEventListener('polyglotmesh:shrink-selection', onShrinkSelEvent)
+      window.removeEventListener('polyglotmesh:toggle-column-selection', onToggleColEvent)
+      window.removeEventListener('polyglotmesh:toggle-word-wrap', onToggleWrapEvent)
     }
   }, [
+    handleQuickFix,
+    handleGoToDefinition,
+    handlePeekDefinition,
+    handleFindReferences,
     handleAddCursorAbove,
     handleAddCursorBelow,
     handleAddCursorsToLineEnds,
@@ -913,15 +1116,16 @@ function EditorPanel({
     handleExpandSelection,
     handleShrinkSelection,
     handleToggleColumnSelection,
+    handleToggleWordWrap,
   ])
 
-  useEffect(() => {
-    setPeekDefinitionData(null)
-  }, [activeFile?.name])
-
+  // Sync background models
   useEffect(() => {
     const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
     if (!monaco?.editor || !Array.isArray(files) || files.length === 0) return
+
+    const primaryName = (primaryFile || activeFile)?.name
+    const secondaryName = secondaryFile?.name
 
     files.forEach((file) => {
       try {
@@ -932,7 +1136,7 @@ function EditorPanel({
 
         if (!m) {
           monaco.editor.createModel(content, lang, uri)
-        } else if (file.name !== activeFile?.name) {
+        } else if (file.name !== primaryName && file.name !== secondaryName) {
           const curr = m.getValue()
           if (curr !== content) {
             m.setValue(content)
@@ -942,318 +1146,24 @@ function EditorPanel({
           }
         }
       } catch {
-        // Ignore model sync errors
-      }
-    })
-  }, [files, activeFile?.name, globalMonaco])
-
-  const decorationsByUriRef = useRef(new Map())
-
-  const updateModelDecorations = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
-    if (!editor || !monaco) return
-
-    const model = editor.getModel()
-    if (!model || model.isDisposed()) return
-
-    try {
-      const uriStr = model.uri.toString()
-      const oldDecorations = decorationsByUriRef.current.get(uriStr) || []
-      const markers = monaco.editor.getModelMarkers({ resource: model.uri }) || []
-
-      // Group markers by start line so that glyph margin and line hover can prioritize severity
-      const markersByLine = new Map()
-      markers.forEach((m) => {
-        const line = m.startLineNumber || 1
-        if (!markersByLine.has(line)) {
-          markersByLine.set(line, [])
-        }
-        markersByLine.get(line).push(m)
-      })
-
-      const newDecorations = markers.map((marker) => {
-        const isError = marker.severity === 8
-        const isWarning = marker.severity === 4
-        const isInfo = marker.severity === 2
-
-        const startLine = marker.startLineNumber || 1
-        const startCol = marker.startColumn || 1
-        const endLine = marker.endLineNumber || startLine
-        const endCol = marker.endColumn || startCol
-
-        const rulerColor = isError
-          ? '#f87171cc'
-          : isWarning
-          ? '#fbbf24cc'
-          : isInfo
-          ? '#60a5facc'
-          : '#c084fccc'
-
-        // Determine glyph on this line: assign glyph only to the primary marker on each line
-        const lineMarkers = markersByLine.get(startLine) || [marker]
-        const maxSeverityOnLine = Math.max(...lineMarkers.map((lm) => lm.severity || 1))
-        const primaryMarkerOnLine = lineMarkers.find((lm) => (lm.severity || 1) === maxSeverityOnLine)
-
-        let glyphClass = undefined
-        let glyphHoverMessage = undefined
-
-        if (primaryMarkerOnLine === marker) {
-          glyphClass = maxSeverityOnLine === 8
-            ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--error'
-            : maxSeverityOnLine === 4
-            ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--warning'
-            : maxSeverityOnLine === 2
-            ? 'monaco-diagnostic-glyph monaco-diagnostic-glyph--info'
-            : 'monaco-diagnostic-glyph monaco-diagnostic-glyph--hint'
-
-          const hoverEntries = lineMarkers.map((lm) => {
-            const sev = lm.severity === 8 ? 'Error' : lm.severity === 4 ? 'Warning' : lm.severity === 2 ? 'Info' : 'Hint'
-            const src = lm.source ? ` *(${lm.source})*` : ''
-            const loc = `[Line ${lm.startLineNumber}, Col ${lm.startColumn}]`
-            return `• **${sev}** ${loc}: ${lm.message}${src}`
-          })
-
-          glyphHoverMessage = {
-            value: hoverEntries.join('\n\n'),
-          }
-        }
-
-        return {
-          range: new monaco.Range(startLine, startCol, endLine, endCol),
-          options: {
-            isWholeLine: false,
-            glyphMarginClassName: glyphClass,
-            glyphMarginHoverMessage: glyphHoverMessage,
-            overviewRuler: {
-              color: rulerColor,
-              position: isError
-                ? monaco.editor.OverviewRulerLane.Right
-                : isWarning
-                ? monaco.editor.OverviewRulerLane.Center
-                : monaco.editor.OverviewRulerLane.Left,
-            },
-            minimap: {
-              color: rulerColor,
-              position: monaco.editor.MinimapPosition.Inline,
-            },
-          },
-        }
-      })
-
-      const appliedDecorations = editor.deltaDecorations(oldDecorations, newDecorations)
-      decorationsByUriRef.current.set(uriStr, appliedDecorations)
-    } catch {
-      // Ignore if editor or model is in transition
-    }
-  }, [editorInstance, globalMonaco])
-
-  useEffect(() => {
-    updateModelDecorations()
-  }, [activeFile?.id, activeFile?.name, updateModelDecorations])
-
-  useEffect(() => {
-    const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
-    if (!monaco?.editor?.onDidChangeMarkers) return
-
-    const disposable = monaco.editor.onDidChangeMarkers((affectedUris) => {
-      const editor = editorInstance || editorRef.current
-      const model = editor?.getModel()
-      if (!model || model.isDisposed()) return
-
-      const currentUriStr = model.uri.toString()
-      const isAffected =
-        !affectedUris ||
-        affectedUris.length === 0 ||
-        affectedUris.some((uri) => uri.toString() === currentUriStr)
-
-      if (isAffected) {
-        updateModelDecorations()
-      }
-    })
-
-    return () => {
-      disposable.dispose()
-    }
-  }, [editorInstance, globalMonaco, updateModelDecorations])
-
-  useEffect(() => {
-    return () => {
-      const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
-      if (monaco?.editor) {
-        decorationsByUriRef.current.forEach((decIds, uriStr) => {
-          try {
-            const m = monaco.editor.getModel(monaco.Uri.parse(uriStr))
-            if (m && !m.isDisposed()) {
-              m.deltaDecorations(decIds, [])
-            }
-          } catch {
-            // Ignore
-          }
-        })
-        decorationsByUriRef.current.clear()
-      }
-    }
-  }, [editorInstance, globalMonaco])
-
-  const currentFontSize = editorSettings?.fontSize ?? 14
-
-  const handleZoomIn = () => {
-    const nextSize = Math.min(32, currentFontSize + 1)
-    onEditorSettingsChange?.({ ...editorSettings, fontSize: nextSize })
-  }
-
-  const handleZoomOut = () => {
-    const nextSize = Math.max(10, currentFontSize - 1)
-    onEditorSettingsChange?.({ ...editorSettings, fontSize: nextSize })
-  }
-
-  const handleResetZoom = () => {
-    onEditorSettingsChange?.({ ...editorSettings, fontSize: 14 })
-  }
-
-  const saveCurrentViewState = useCallback(() => {
-    const editor = editorRef.current || editorInstance
-    const currentName = activeFileNameRef.current
-    if (editor && currentName) {
-      try {
-        const state = editor.saveViewState()
-        if (state) {
-          viewStatesRef.current[currentName] = state
-        }
-      } catch {
         // Ignore
       }
-    }
-  }, [editorInstance])
-
-  useEffect(() => {
-    saveCurrentViewState()
-    activeFileNameRef.current = activeFile?.name
-  }, [activeFile?.name, saveCurrentViewState])
-
-  useEffect(() => {
-    const editor = editorInstance || editorRef.current
-    if (!editor || !activeFile?.name) return
-
-    const currentName = activeFile.name
-    if (viewStatesRef.current[currentName]) {
-      try {
-        editor.restoreViewState(viewStatesRef.current[currentName])
-      } catch {
-        // Ignore
-      }
-    }
-  }, [activeFile?.name, editorInstance])
-
-  useEffect(() => {
-    const openNamesSet = new Set(openFiles.map((f) => f.name))
-    Object.keys(viewStatesRef.current).forEach((name) => {
-      if (!openNamesSet.has(name)) {
-        delete viewStatesRef.current[name]
-      }
     })
-  }, [openFiles])
+  }, [files, primaryFile?.name, secondaryFile?.name, activeFile?.name, globalMonaco])
 
-  const handleOpenCommandPalette = useCallback(() => {
-    const editor = editorInstance || editorRef.current
-    if (editor) {
-      editor.focus()
-      const action = editor.getAction('editor.action.quickCommand')
-      if (action) {
-        action.run()
-      } else {
-        editor.trigger('toolbar', 'editor.action.quickCommand')
-      }
-    }
-  }, [editorInstance])
-
-  useEffect(() => {
-    const handleGlobalKeyDown = (e) => {
-      if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
-        e.preventDefault()
-        handleOpenCommandPalette()
-      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
-        e.preventDefault()
-        handleFormatDocument()
-      } else if (e.shiftKey && e.altKey && (e.key === 'F' || e.key === 'f')) {
-        e.preventDefault()
-        handleFormatDocument()
-      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === '.') {
-        e.preventDefault()
-        handleQuickFix()
-      }
-    }
-
-    window.addEventListener('keydown', handleGlobalKeyDown)
-    return () => {
-      window.removeEventListener('keydown', handleGlobalKeyDown)
-    }
-  }, [handleOpenCommandPalette, handleFormatDocument, handleQuickFix])
-
-  useEffect(() => {
-    if (editorRef.current) {
-      editorRef.current.updateOptions(editorOptions)
-    }
-  }, [
-    editorSettings,
-    wordWrapSetting,
-    tabSize,
-    autoIndentSetting,
-    bracketPairColorizationSetting,
-    showHoverSetting,
-    autoSuggestionsSetting,
-    parameterHintsSetting,
-    stickyScrollSetting,
-    smoothScrollingSetting,
-    highlightActiveLineSetting,
-    renderWhitespaceSetting,
-    cursorBlinkingSetting,
-    cursorStyleSetting,
-    cursorSmoothCaretAnimationSetting,
-    selectionHighlightSetting,
-    formatOnTypeSetting,
-    columnSelectionSetting,
-    multiCursorModifierSetting,
-  ])
-
+  // Close settings popup when clicking outside
   useEffect(() => {
     const handleDocumentMouseDown = (event) => {
-      if (!isSettingsOpen) {
-        return
-      }
-
+      if (!isSettingsOpen) return
       if (settingsContainerRef.current && !settingsContainerRef.current.contains(event.target)) {
         onCloseSettings?.()
       }
     }
-
     document.addEventListener('mousedown', handleDocumentMouseDown)
-
     return () => {
       document.removeEventListener('mousedown', handleDocumentMouseDown)
     }
   }, [isSettingsOpen, onCloseSettings])
-
-  useEffect(() => {
-    if (editorRef.current && monacoRef.current && activeFile) {
-      const model = editorRef.current.getModel()
-      if (model) {
-        const currentLang = model.getLanguageId()
-        if (currentLang !== monacoLanguage) {
-          monacoRef.current.editor.setModelLanguage(model, monacoLanguage)
-        }
-      }
-    }
-  }, [monacoLanguage, activeFile])
-
-  useEffect(() => {
-    const activeMonaco = globalMonaco || monacoRef.current
-    if (activeMonaco && selectedTheme) {
-      defineMonacoThemes(activeMonaco)
-      activeMonaco.editor.setTheme(selectedTheme)
-    }
-  }, [globalMonaco, selectedTheme])
 
   return (
     <section className="editor-panel" aria-labelledby="editor-panel-title">
@@ -1262,7 +1172,12 @@ function EditorPanel({
           <p className="panel-heading__eyebrow">Editor</p>
           <div className="panel-heading__title-row">
             <h2 id="editor-panel-title" className="panel-heading__title">
-              {activeFile ? `${activeFile.name} workspace` : 'No open file'}
+              {currentActiveFile ? `${currentActiveFile.name} workspace` : 'No open file'}
+              {isSplit ? (
+                <span className="split-panel-title-badge">
+                  [Split View • {activePane === 'primary' ? 'Pane 1 Active' : 'Pane 2 Active'}]
+                </span>
+              ) : null}
             </h2>
             {saveMessage ? (
               <span className="save-status-badge" role="status">
@@ -1300,13 +1215,13 @@ function EditorPanel({
                 onExpandSelection={handleExpandSelection}
                 onShrinkSelection={handleShrinkSelection}
                 onToggleColumnSelection={handleToggleColumnSelection}
-                activeFile={activeFile}
+                activeFile={currentActiveFile}
               />
             </div>
           ) : null}
 
           <EditorToolbar
-            activeFile={activeFile}
+            activeFile={currentActiveFile}
             onSave={handleSave}
             onFormatDocument={handleFormatDocument}
             onQuickFix={handleQuickFix}
@@ -1314,6 +1229,8 @@ function EditorPanel({
             onFindReferences={handleFindReferences}
             onToggleWordWrap={handleToggleWordWrap}
             isWordWrapOn={wordWrapSetting === 'on'}
+            isSplit={isSplit}
+            onToggleSplit={onToggleSplit}
             onOpenCommandPalette={handleOpenCommandPalette}
             currentFontSize={currentFontSize}
             onZoomIn={handleZoomIn}
@@ -1326,475 +1243,110 @@ function EditorPanel({
         </div>
       </div>
 
-
-      <EditorTabs
-        openFiles={openFiles}
-        activeFileName={activeFile?.name}
-        onSelectFile={onSelectFile}
-        onCloseTab={onCloseTab}
-        onCreateFile={onCreateFile}
-      />
-
-      <div className="editor-panel__surface">
-        {activeFile ? (
-          <EditorErrorBoundary>
-            <EditorBreadcrumb activeFile={activeFile} />
-            {peekDefinitionData ? (
-              <PeekDefinitionWidget
-                definition={peekDefinitionData}
-                onGoToDefinition={(def) => {
-                  setPeekDefinitionData(null)
-                  if (!def.isSameFile && def.targetFile) {
-                    onSelectFile?.(def.targetFile)
-                    setTimeout(() => {
-                      const ed = editorRef.current || editorInstance
-                      if (ed) {
-                        ed.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
-                        ed.setSelection(def.range)
-                        ed.revealPositionInCenterIfOutsideViewport({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
-                        ed.focus()
-                      }
-                    }, 60)
-                  } else {
-                    const ed = editorRef.current || editorInstance
-                    if (ed) {
-                      ed.setPosition({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
-                      ed.setSelection(def.range)
-                      ed.revealPositionInCenterIfOutsideViewport({ lineNumber: def.range.startLineNumber, column: def.range.startColumn })
-                      ed.focus()
-                    }
-                  }
-                }}
-                onClose={() => setPeekDefinitionData(null)}
-              />
-            ) : null}
-            <Editor
-              path={activeFile.name}
-              className="editor-panel__editor"
-              defaultLanguage={monacoLanguage}
-              language={monacoLanguage}
-              theme={selectedTheme}
-              value={activeFile.code ?? activeFile.content ?? ''}
+      <div className={`editor-panel__surface ${isSplit ? 'editor-panel__surface--split' : ''}`}>
+        {isSplit ? (
+          <div className="editor-panel__split-container">
+            <EditorPane
+              paneId="primary"
+              file={primaryFile || activeFile}
+              isActive={activePane === 'primary'}
+              isSplit={true}
+              openFiles={openFiles}
+              files={files}
+              otherActiveFileName={secondaryFile?.name}
+              onActivate={handleActivatePane}
+              onSelectFile={(fileName) => onSelectFile?.(fileName, 'primary')}
+              onCloseTab={(fileName) => onCloseTab?.(fileName, 'primary')}
+              onCreateFile={onCreateFile}
               onChange={onChange}
-              loading={
-                <div className="editor-panel__loading-state" role="status" aria-live="polite">
-                  <div className="editor-panel__loading-spinner" aria-hidden="true" />
-                  <p className="editor-panel__loading-title">Loading Editor...</p>
-                  <p className="editor-panel__loading-subtext">Initializing Monaco Editor workspace</p>
-                </div>
-              }
-              onMount={(editor, monaco) => {
-                editorRef.current = editor
-                monacoRef.current = monaco
-                setEditorInstance(editor)
-                if (typeof window !== 'undefined') {
-                  window.monaco = monaco
-                }
-                defineMonacoThemes(monaco)
-                monaco.editor.setTheme(selectedTheme)
-
-                try {
-                  monaco.editor.registerEditorOpener({
-                    openCodeEditor(source, resource, selectionOrPosition) {
-                      const rawPath = resource.path || resource.fsPath || resource.toString()
-                      const cleanName = rawPath.replace(/^file:\/\/\//, '').replace(/^\//, '').split('/').pop()
-                      const targetFile = filesRef.current.find(
-                        (f) => f.name === cleanName || resource.toString().endsWith(f.name),
-                      )
-                      if (targetFile) {
-                        onSelectFile?.(targetFile)
-                        if (selectionOrPosition) {
-                          setTimeout(() => {
-                            const line = selectionOrPosition.lineNumber || selectionOrPosition.startLineNumber || 1
-                            const col = selectionOrPosition.column || selectionOrPosition.startColumn || 1
-                            source.setPosition({ lineNumber: line, column: col })
-                            source.revealPositionInCenterIfOutsideViewport({ lineNumber: line, column: col })
-                            source.focus()
-                          }, 60)
-                        }
-                        return true
-                      }
-                      return false
-                    },
-                  })
-                } catch {
-                  // Ignore opener registration error
-                }
-
-                try {
-                  editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyP,
-                    () => {
-                      const action = editor.getAction('editor.action.quickCommand')
-                      if (action) {
-                        action.run()
-                      } else {
-                        editor.trigger('keyboard', 'editor.action.quickCommand')
-                      }
-                    }
-                  )
-                  editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI,
-                    () => {
-                      handleFormatDocument()
-                    }
-                  )
-                  editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyCode.Period,
-                    () => {
-                      handleQuickFix()
-                    }
-                  )
-                  editor.addCommand(monaco.KeyCode.F12, () => {
-                    handleGoToDefinitionRef.current?.()
-                  })
-                  editor.addCommand(monaco.KeyMod.Alt | monaco.KeyCode.F12, () => {
-                    handlePeekDefinitionRef.current?.()
-                  })
-                  editor.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F12, () => {
-                    handleFindReferencesRef.current?.()
-                  })
-                  editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD,
-                    () => {
-                      const act = editor.getAction('editor.action.addSelectionToNextFindMatch')
-                      if (act) act.run()
-                      else editor.trigger('keyboard', 'editor.action.addSelectionToNextFindMatch')
-                    }
-                  )
-                  editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyL,
-                    () => {
-                      const act = editor.getAction('editor.action.selectHighlights')
-                      if (act) act.run()
-                      else editor.trigger('keyboard', 'editor.action.selectHighlights')
-                    }
-                  )
-                  editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.UpArrow,
-                    () => {
-                      const act = editor.getAction('editor.action.insertCursorAbove')
-                      if (act) act.run()
-                      else editor.trigger('keyboard', 'editor.action.insertCursorAbove')
-                    }
-                  )
-                  editor.addCommand(
-                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.DownArrow,
-                    () => {
-                      const act = editor.getAction('editor.action.insertCursorBelow')
-                      if (act) act.run()
-                      else editor.trigger('keyboard', 'editor.action.insertCursorBelow')
-                    }
-                  )
-                  editor.addCommand(
-                    monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyI,
-                    () => {
-                      const act = editor.getAction('editor.action.insertCursorAtEndOfEachLineSelected')
-                      if (act) act.run()
-                      else editor.trigger('keyboard', 'editor.action.insertCursorAtEndOfEachLineSelected')
-                    }
-                  )
-                  editor.addCommand(
-                    monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.RightArrow,
-                    () => {
-                      const act = editor.getAction('editor.action.smartSelect.expand')
-                      if (act) act.run()
-                      else editor.trigger('keyboard', 'editor.action.smartSelect.expand')
-                    }
-                  )
-                  editor.addCommand(
-                    monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.LeftArrow,
-                    () => {
-                      const act = editor.getAction('editor.action.smartSelect.shrink')
-                      if (act) act.run()
-                      else editor.trigger('keyboard', 'editor.action.smartSelect.shrink')
-                    }
-                  )
-                } catch {
-                  // Ignore if shortcut binding exists
-                }
-
-                // Deduplicate context menu actions to prevent duplicate "Go to Definition"
-                try {
-                  const ctxMenuContrib = editor.getContribution('editor.contrib.contextmenu')
-                  if (ctxMenuContrib && !ctxMenuContrib._polyglotmeshWrapped) {
-                    const origGetMenuActions = ctxMenuContrib._getMenuActions.bind(ctxMenuContrib)
-                    ctxMenuContrib._getMenuActions = function (model, contextMenuId) {
-                      const list = origGetMenuActions(model, contextMenuId)
-                      // Filter out built-in editor.action.revealDefinition so polyglotmesh.gotoDefinition
-                      // (with multi-file switching and UI feedback) is the sole definition action in the context menu
-                      return list.filter((item) => item.id !== 'editor.action.revealDefinition')
-                    }
-                    ctxMenuContrib._polyglotmeshWrapped = true
-                  }
-                } catch {
-                  // Ignore context menu wrapping error
-                }
-
-                // Clear any previous custom action disposables
-                customActionDisposablesRef.current.forEach((d) => {
-                  try {
-                    d?.dispose?.()
-                  } catch {
-                    // Ignore
-                  }
-                })
-                customActionDisposablesRef.current = []
-
-                try {
-                  const dGoto = editor.addAction({
-                    id: 'polyglotmesh.gotoDefinition',
-                    label: 'Go to Definition',
-                    keybindings: [monaco.KeyCode.F12],
-                    contextMenuGroupId: 'navigation',
-                    contextMenuOrder: 1.1,
-                    run: () => {
-                      handleGoToDefinitionRef.current?.()
-                    },
-                  })
-                  if (dGoto) customActionDisposablesRef.current.push(dGoto)
-
-                  const dPeek = editor.addAction({
-                    id: 'polyglotmesh.peekDefinition',
-                    label: 'Peek Definition',
-                    keybindings: [monaco.KeyMod.Alt | monaco.KeyCode.F12],
-                    contextMenuGroupId: 'navigation',
-                    contextMenuOrder: 1.2,
-                    run: () => {
-                      handlePeekDefinitionRef.current?.()
-                    },
-                  })
-                  if (dPeek) customActionDisposablesRef.current.push(dPeek)
-
-                  const dRefs = editor.addAction({
-                    id: 'polyglotmesh.findReferences',
-                    label: 'Find All References',
-                    keybindings: [monaco.KeyMod.Shift | monaco.KeyCode.F12],
-                    contextMenuGroupId: 'navigation',
-                    contextMenuOrder: 1.3,
-                    run: () => {
-                      handleFindReferencesRef.current?.()
-                    },
-                  })
-                  if (dRefs) customActionDisposablesRef.current.push(dRefs)
-
-                  const dQuickFix = editor.addAction({
-                    id: 'polyglotmesh.quickFix',
-                    label: 'Quick Fix / Code Actions',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.Period],
-                    contextMenuGroupId: '1_modification',
-                    contextMenuOrder: 0.5,
-                    run: () => {
-                      handleQuickFixRef.current?.()
-                    },
-                  })
-                  if (dQuickFix) customActionDisposablesRef.current.push(dQuickFix)
-
-                  const dSelectAll = editor.addAction({
-                    id: 'polyglotmesh.selectAll',
-                    label: 'Select All',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyA],
-                    contextMenuGroupId: '9_cutcopypaste',
-                    contextMenuOrder: 4,
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.selectAll')
-                      if (act) {
-                        act.run()
-                      } else {
-                        ed.trigger('contextmenu', 'selectAll')
-                      }
-                    },
-                  })
-                  if (dSelectAll) customActionDisposablesRef.current.push(dSelectAll)
-
-                  const dNextOccur = editor.addAction({
-                    id: 'polyglotmesh.addNextOccurrence',
-                    label: 'Add Next Occurrence',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyD],
-                    contextMenuGroupId: '2_selection',
-                    contextMenuOrder: 1,
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.addSelectionToNextFindMatch')
-                      if (act) act.run()
-                      else ed.trigger('contextmenu', 'editor.action.addSelectionToNextFindMatch')
-                    },
-                  })
-                  if (dNextOccur) customActionDisposablesRef.current.push(dNextOccur)
-
-                  const dSelectAllOccur = editor.addAction({
-                    id: 'polyglotmesh.selectAllOccurrences',
-                    label: 'Select All Occurrences',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyL],
-                    contextMenuGroupId: '2_selection',
-                    contextMenuOrder: 2,
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.selectHighlights')
-                      if (act) act.run()
-                      else ed.trigger('contextmenu', 'editor.action.selectHighlights')
-                    },
-                  })
-                  if (dSelectAllOccur) customActionDisposablesRef.current.push(dSelectAllOccur)
-
-                  const dExpandSel = editor.addAction({
-                    id: 'polyglotmesh.expandSelection',
-                    label: 'Expand Selection',
-                    keybindings: [monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.RightArrow],
-                    contextMenuGroupId: '2_selection',
-                    contextMenuOrder: 3,
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.smartSelect.expand')
-                      if (act) act.run()
-                      else ed.trigger('contextmenu', 'editor.action.smartSelect.expand')
-                    },
-                  })
-                  if (dExpandSel) customActionDisposablesRef.current.push(dExpandSel)
-
-                  const dShrinkSel = editor.addAction({
-                    id: 'polyglotmesh.shrinkSelection',
-                    label: 'Shrink Selection',
-                    keybindings: [monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.LeftArrow],
-                    contextMenuGroupId: '2_selection',
-                    contextMenuOrder: 4,
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.smartSelect.shrink')
-                      if (act) act.run()
-                      else ed.trigger('contextmenu', 'editor.action.smartSelect.shrink')
-                    },
-                  })
-                  if (dShrinkSel) customActionDisposablesRef.current.push(dShrinkSel)
-
-                  const dCursorAbove = editor.addAction({
-                    id: 'polyglotmesh.addCursorAbove',
-                    label: 'Add Cursor Above',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.UpArrow],
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.insertCursorAbove')
-                      if (act) act.run()
-                      else ed.trigger('keyboard', 'editor.action.insertCursorAbove')
-                    },
-                  })
-                  if (dCursorAbove) customActionDisposablesRef.current.push(dCursorAbove)
-
-                  const dCursorBelow = editor.addAction({
-                    id: 'polyglotmesh.addCursorBelow',
-                    label: 'Add Cursor Below',
-                    keybindings: [monaco.KeyMod.CtrlCmd | monaco.KeyMod.Alt | monaco.KeyCode.DownArrow],
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.insertCursorBelow')
-                      if (act) act.run()
-                      else ed.trigger('keyboard', 'editor.action.insertCursorBelow')
-                    },
-                  })
-                  if (dCursorBelow) customActionDisposablesRef.current.push(dCursorBelow)
-
-                  const dCursorsToLineEnds = editor.addAction({
-                    id: 'polyglotmesh.addCursorsToLineEnds',
-                    label: 'Add Cursors to Line Ends',
-                    keybindings: [monaco.KeyMod.Shift | monaco.KeyMod.Alt | monaco.KeyCode.KeyI],
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.insertCursorAtEndOfEachLineSelected')
-                      if (act) act.run()
-                      else ed.trigger('keyboard', 'editor.action.insertCursorAtEndOfEachLineSelected')
-                    },
-                  })
-                  if (dCursorsToLineEnds) customActionDisposablesRef.current.push(dCursorsToLineEnds)
-
-                  const dColSel = editor.addAction({
-                    id: 'polyglotmesh.toggleColumnSelection',
-                    label: 'Toggle Column Selection Mode',
-                    run: (ed) => {
-                      ed.focus()
-                      const act = ed.getAction('editor.action.toggleColumnSelection')
-                      if (act) act.run()
-                      else ed.trigger('keyboard', 'editor.action.toggleColumnSelection')
-                    },
-                  })
-                  if (dColSel) customActionDisposablesRef.current.push(dColSel)
-                } catch {
-                  // Ignore action registration error
-                }
-
-                editor.onDidChangeCursorPosition(() => {
-                  if (activeFileNameRef.current) {
-                    try {
-                      const state = editor.saveViewState()
-                      if (state) {
-                        viewStatesRef.current[activeFileNameRef.current] = state
-                      }
-                    } catch {
-                      // Ignore
-                    }
-                  }
-                })
-
-                editor.onDidScrollChange(() => {
-                  if (activeFileNameRef.current) {
-                    try {
-                      const state = editor.saveViewState()
-                      if (state) {
-                        viewStatesRef.current[activeFileNameRef.current] = state
-                      }
-                    } catch {
-                      // Ignore
-                    }
-                  }
-                })
-
-                editor.onDidChangeModel(() => {
-                  const currentName = activeFileNameRef.current
-                  if (currentName && viewStatesRef.current[currentName]) {
-                    try {
-                      editor.restoreViewState(viewStatesRef.current[currentName])
-                    } catch {
-                      // Ignore
-                    }
-                  }
-                  updateModelDecorations()
-                })
-                updateModelDecorations()
-              }}
-              beforeMount={(monaco) => {
-                defineMonacoThemes(monaco)
-              }}
-              options={editorOptions}
+              onMount={handlePaneMount}
+              editorOptions={editorOptions}
+              selectedTheme={selectedTheme}
+              viewStatesRef={viewStatesRef}
+              onGoToDefinition={handleGoToDefinition}
+              onPeekDefinition={handlePeekDefinition}
+              onFindReferences={handleFindReferences}
+              onQuickFix={handleQuickFix}
+              onFormatDocument={handleFormatDocument}
+              onUpdateModelDecorations={updateModelDecorations}
+              peekDefinitionData={activePane === 'primary' ? peekDefinitionData : null}
+              onClosePeekDefinition={() => setPeekDefinitionData(null)}
+              onSelectPeekDefinition={handleSelectPeekDefinition}
             />
-            <EditorStatusBar
-              editor={editorInstance}
-              activeFile={activeFile}
-              editorSettings={editorSettings}
-              saveMessage={saveMessage}
-              problems={problems}
+
+            <div
+              className="split-editor__divider"
+              role="separator"
+              aria-orientation="vertical"
+              title="Split editor divider"
             />
-          </EditorErrorBoundary>
-        ) : (
-          <div className="editor-panel__empty-state" role="region" aria-label="No file selected">
-            <div className="editor-panel__empty-content">
-              <span className="editor-panel__empty-icon" aria-hidden="true">📂</span>
-              <h3 className="editor-panel__empty-title">No file selected</h3>
-              <p className="editor-panel__empty-description">
-                Create or select a file to start editing
-              </p>
-              {onCreateFile ? (
-                <button
-                  type="button"
-                  className="editor-panel__empty-create-btn"
-                  onClick={() => onCreateFile('untitled.js')}
-                  aria-label="Create new file"
-                >
-                  + Create File
-                </button>
-              ) : null}
-            </div>
+
+            <EditorPane
+              paneId="secondary"
+              file={secondaryFile}
+              isActive={activePane === 'secondary'}
+              isSplit={true}
+              openFiles={openFiles}
+              files={files}
+              otherActiveFileName={(primaryFile || activeFile)?.name}
+              onActivate={handleActivatePane}
+              onSelectFile={(fileName) => onSelectFile?.(fileName, 'secondary')}
+              onCloseTab={(fileName) => onCloseTab?.(fileName, 'secondary')}
+              onCreateFile={onCreateFile}
+              onCloseSplit={onCloseSplit}
+              onChange={onChange}
+              onMount={handlePaneMount}
+              editorOptions={editorOptions}
+              selectedTheme={selectedTheme}
+              viewStatesRef={viewStatesRef}
+              onGoToDefinition={handleGoToDefinition}
+              onPeekDefinition={handlePeekDefinition}
+              onFindReferences={handleFindReferences}
+              onQuickFix={handleQuickFix}
+              onFormatDocument={handleFormatDocument}
+              onUpdateModelDecorations={updateModelDecorations}
+              peekDefinitionData={activePane === 'secondary' ? peekDefinitionData : null}
+              onClosePeekDefinition={() => setPeekDefinitionData(null)}
+              onSelectPeekDefinition={handleSelectPeekDefinition}
+            />
           </div>
+        ) : (
+          <EditorPane
+            paneId="primary"
+            file={primaryFile || activeFile}
+            isActive={true}
+            isSplit={false}
+            openFiles={openFiles}
+            files={files}
+            onActivate={handleActivatePane}
+            onSelectFile={(fileName) => onSelectFile?.(fileName, 'primary')}
+            onCloseTab={(fileName) => onCloseTab?.(fileName, 'primary')}
+            onCreateFile={onCreateFile}
+            onChange={onChange}
+            onMount={handlePaneMount}
+            editorOptions={editorOptions}
+            selectedTheme={selectedTheme}
+            viewStatesRef={viewStatesRef}
+            onGoToDefinition={handleGoToDefinition}
+            onPeekDefinition={handlePeekDefinition}
+            onFindReferences={handleFindReferences}
+            onQuickFix={handleQuickFix}
+            onFormatDocument={handleFormatDocument}
+            onUpdateModelDecorations={updateModelDecorations}
+            peekDefinitionData={peekDefinitionData}
+            onClosePeekDefinition={() => setPeekDefinitionData(null)}
+            onSelectPeekDefinition={handleSelectPeekDefinition}
+          />
         )}
+
+        <EditorStatusBar
+          editor={getActiveEditor()}
+          activeFile={currentActiveFile}
+          editorSettings={editorSettings}
+          saveMessage={saveMessage}
+          problems={problems}
+          paneId={isSplit ? activePane : null}
+        />
       </div>
     </section>
   )

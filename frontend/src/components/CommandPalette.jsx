@@ -1,6 +1,26 @@
 import { useEffect, useRef, useState } from 'react'
 
-function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
+function getActiveMonacoEditor() {
+  if (typeof window === 'undefined' || !window.monaco) return null
+  const editors = window.monaco.editor.getEditors()
+  if (!editors || editors.length === 0) return null
+  const focused = editors.find((ed) => typeof ed.hasTextFocus === 'function' && ed.hasTextFocus())
+  if (focused) return focused
+  if (window.__polyglotmeshActiveEditor && editors.includes(window.__polyglotmeshActiveEditor)) {
+    return window.__polyglotmeshActiveEditor
+  }
+  return editors[0]
+}
+
+function CommandPalette({
+  isOpen,
+  onClose,
+  onRun,
+  onSave,
+  onOpenSettings,
+  isSplit = false,
+  onToggleSplit,
+}) {
   const [query, setQuery] = useState('')
   const [selectedIndex, setSelectedIndex] = useState(0)
   const inputRef = useRef(null)
@@ -28,17 +48,54 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       action: onOpenSettings,
     },
     {
+      id: 'view-split-editor',
+      label: 'View: Toggle Split Editor',
+      description: 'Toggle side-by-side split editor layout',
+      shortcut: 'Ctrl+\\',
+      action: () => {
+        if (onToggleSplit) {
+          onToggleSplit()
+        } else if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-split'))
+        }
+      },
+    },
+    {
+      id: 'view-split-editor-right',
+      label: 'View: Split Editor Right',
+      description: 'Open a side-by-side secondary editor pane',
+      shortcut: 'Split',
+      action: () => {
+        if (!isSplit && onToggleSplit) {
+          onToggleSplit()
+        } else if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:open-split'))
+        }
+      },
+    },
+    {
+      id: 'view-close-split-editor',
+      label: 'View: Close Split Editor',
+      description: 'Close secondary editor pane and return to single layout',
+      shortcut: 'Close Split',
+      action: () => {
+        if (isSplit && onToggleSplit) {
+          onToggleSplit()
+        } else if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:close-split'))
+        }
+      },
+    },
+    {
       id: 'format-document',
       label: 'Format Document',
       description: 'Format the entire active document',
       shortcut: 'Shift+Alt+F / Ctrl+Shift+I',
       action: () => {
-        if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
-          if (activeEditor) {
-            activeEditor.focus()
-            activeEditor.getAction('editor.action.formatDocument')?.run()
-          }
+        const activeEditor = getActiveMonacoEditor()
+        if (activeEditor) {
+          activeEditor.focus()
+          activeEditor.getAction('editor.action.formatDocument')?.run()
         }
       },
     },
@@ -48,14 +105,12 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       description: 'Format selected text in active document',
       shortcut: 'Ctrl+K Ctrl+F',
       action: () => {
-        if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
-          if (activeEditor) {
-            activeEditor.focus()
-            const selection = activeEditor.getSelection()
-            if (selection && !selection.isEmpty()) {
-              activeEditor.getAction('editor.action.formatSelection')?.run()
-            }
+        const activeEditor = getActiveMonacoEditor()
+        if (activeEditor) {
+          activeEditor.focus()
+          const selection = activeEditor.getSelection()
+          if (selection && !selection.isEmpty()) {
+            activeEditor.getAction('editor.action.formatSelection')?.run()
           }
         }
       },
@@ -68,16 +123,14 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       action: () => {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:quick-fix'))
-          if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
-            if (activeEditor) {
-              activeEditor.focus()
-              const action = activeEditor.getAction('editor.action.quickFix')
-              if (action) {
-                action.run()
-              } else {
-                activeEditor.trigger('commandPalette', 'editor.action.quickFix')
-              }
+          const activeEditor = getActiveMonacoEditor()
+          if (activeEditor) {
+            activeEditor.focus()
+            const action = activeEditor.getAction('editor.action.quickFix')
+            if (action) {
+              action.run()
+            } else {
+              activeEditor.trigger('commandPalette', 'editor.action.quickFix')
             }
           }
         }
@@ -89,12 +142,10 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       description: 'Jump to a specific line and column',
       shortcut: 'Ctrl+G',
       action: () => {
-        if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
-          if (activeEditor) {
-            activeEditor.focus()
-            activeEditor.getAction('editor.action.gotoLine')?.run()
-          }
+        const activeEditor = getActiveMonacoEditor()
+        if (activeEditor) {
+          activeEditor.focus()
+          activeEditor.getAction('editor.action.gotoLine')?.run()
         }
       },
     },
@@ -182,7 +233,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       shortcut: 'Ctrl+A',
       action: () => {
         if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
+          const activeEditor = getActiveMonacoEditor()
           if (activeEditor) {
             activeEditor.focus()
             const act = activeEditor.getAction('editor.action.selectAll')
@@ -202,7 +253,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       shortcut: 'Ctrl+X',
       action: () => {
         if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
+          const activeEditor = getActiveMonacoEditor()
           if (activeEditor) {
             activeEditor.focus()
             activeEditor.trigger('commandPalette', 'editor.action.clipboardCutAction')
@@ -217,7 +268,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       shortcut: 'Ctrl+C',
       action: () => {
         if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
+          const activeEditor = getActiveMonacoEditor()
           if (activeEditor) {
             activeEditor.focus()
             activeEditor.trigger('commandPalette', 'editor.action.clipboardCopyAction')
@@ -232,7 +283,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       shortcut: 'Ctrl+V',
       action: () => {
         if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
+          const activeEditor = getActiveMonacoEditor()
           if (activeEditor) {
             activeEditor.focus()
             activeEditor.trigger('commandPalette', 'editor.action.clipboardPasteAction')
@@ -249,7 +300,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:add-next-occurrence'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.addSelectionToNextFindMatch')?.run()
@@ -267,7 +318,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:select-all-occurrences'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.selectHighlights')?.run()
@@ -285,7 +336,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:add-cursor-above'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.insertCursorAbove')?.run()
@@ -303,7 +354,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:add-cursor-below'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.insertCursorBelow')?.run()
@@ -321,7 +372,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:add-cursors-to-line-ends'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.insertCursorAtEndOfEachLineSelected')?.run()
@@ -339,7 +390,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:expand-selection'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.smartSelect.expand')?.run()
@@ -357,7 +408,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:shrink-selection'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.smartSelect.shrink')?.run()
@@ -375,7 +426,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-column-selection'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.toggleColumnSelection')?.run()
@@ -393,7 +444,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         if (typeof window !== 'undefined') {
           window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-word-wrap'))
           if (window.monaco) {
-            const activeEditor = window.monaco.editor.getEditors()[0]
+            const activeEditor = getActiveMonacoEditor()
             if (activeEditor) {
               activeEditor.focus()
               activeEditor.getAction('editor.action.toggleWordWrap')?.run()

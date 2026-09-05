@@ -1,7 +1,14 @@
 import { useEffect, useState } from 'react'
 import { getLanguageLabelFromFileName } from '../utils/languageUtils.js'
 
-function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage, problems = [] }) {
+function EditorStatusBar({
+  editor,
+  activeFile,
+  editorSettings,
+  saveMessage,
+  problems = [],
+  paneId = null,
+}) {
   const [cursorPos, setCursorPos] = useState({ line: 1, column: 1 })
   const [lineCount, setLineCount] = useState(1)
   const [charCount, setCharCount] = useState(0)
@@ -98,6 +105,19 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage, prob
   return (
     <footer className="editor-status-bar" aria-label="Editor status bar">
       <div className="editor-status-bar__left">
+        {paneId ? (
+          <>
+            <span
+              className="editor-status-bar__item editor-status-bar__item--pane"
+              title={`Active: ${paneId === 'primary' ? 'Pane 1' : 'Pane 2'}`}
+            >
+              ◫ {paneId === 'primary' ? 'Pane 1' : 'Pane 2'}
+            </span>
+            <span className="editor-status-bar__divider" aria-hidden="true">
+              |
+            </span>
+          </>
+        ) : null}
         <button
           type="button"
           className="editor-status-bar__item editor-status-bar__item--problems"

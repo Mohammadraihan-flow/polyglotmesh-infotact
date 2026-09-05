@@ -58,7 +58,14 @@ const WORKSPACE_STORAGE_KEY = 'polyglotmesh-workspace'
 const SETTINGS_STORAGE_KEY = 'polyglotmesh-editor-settings'
 const LEGACY_SETTINGS_STORAGE_KEY = 'polyglotmesh_editor_settings'
 
-function saveWorkspaceToLocalStorage(files, openFileNames, activeFileName, recentFileNames) {
+function saveWorkspaceToLocalStorage(
+  files,
+  openFileNames,
+  activeFileName,
+  recentFileNames,
+  isSplit = false,
+  secondaryFileName = null,
+) {
   try {
     const payload = {
       files: files.map((file) => ({
@@ -73,6 +80,8 @@ function saveWorkspaceToLocalStorage(files, openFileNames, activeFileName, recen
       openFileNames: openFileNames ?? [],
       activeFileName: activeFileName ?? null,
       recentFileNames: recentFileNames ?? [],
+      isSplit: Boolean(isSplit),
+      secondaryFileName: secondaryFileName ?? null,
     }
     localStorage.setItem(WORKSPACE_STORAGE_KEY, JSON.stringify(payload))
   } catch (e) {
@@ -86,6 +95,8 @@ function getInitialWorkspace() {
     openFileNames: [],
     activeFileName: null,
     recentFileNames: [],
+    isSplit: false,
+    secondaryFileName: null,
   }
 
   try {
@@ -149,11 +160,19 @@ function getInitialWorkspace() {
       ? parsed.recentFileNames.filter((name) => validNamesSet.has(name)).slice(0, 5)
       : []
 
+    const isSplit = Boolean(parsed.isSplit)
+    let validSecondaryName = null
+    if (typeof parsed.secondaryFileName === 'string' && validNamesSet.has(parsed.secondaryFileName)) {
+      validSecondaryName = parsed.secondaryFileName
+    }
+
     return {
       files: validFiles,
       openFileNames: validOpenNames,
       activeFileName: validActiveName,
       recentFileNames: validRecentNames,
+      isSplit: isSplit && Boolean(validSecondaryName),
+      secondaryFileName: validSecondaryName,
     }
   } catch (e) {
     console.warn('PolyglotMesh: Unable to parse saved workspace from localStorage.', e)
@@ -282,6 +301,9 @@ function App() {
   const [openFileNames, setOpenFileNames] = useState(initialWorkspaceState.openFileNames)
   const [activeFileName, setActiveFileName] = useState(initialWorkspaceState.activeFileName)
   const [recentFileNames, setRecentFileNames] = useState(initialWorkspaceState.recentFileNames)
+  const [isSplit, setIsSplit] = useState(initialWorkspaceState.isSplit ?? false)
+  const [secondaryFileName, setSecondaryFileName] = useState(initialWorkspaceState.secondaryFileName ?? null)
+  const [activePane, setActivePane] = useState('primary')
   const [isRunning, setIsRunning] = useState(false)
   const [consoleMessage, setConsoleMessage] = useState('Click Run to execute your program.')
   const [editorSettings, setEditorSettings] = useState(getInitialSettings)
@@ -291,7 +313,7 @@ function App() {
   const runTimerRef = useRef(null)
   const saveTimerRef = useRef(null)
   const autoSaveTimerRef = useRef(null)
-  const pendingChangeRef = useRef(null)
+  const pendingChangesRef = useRef({})
 
   useEffect(() => {
     try {
@@ -330,6 +352,9 @@ function App() {
   const openFileNamesRef = useRef(openFileNames)
   const activeFileNameRef = useRef(activeFileName)
   const recentFileNamesRef = useRef(recentFileNames)
+  const isSplitRef = useRef(isSplit)
+  const secondaryFileNameRef = useRef(secondaryFileName)
+  const activePaneRef = useRef(activePane)
 
   useEffect(() => {
     filesRef.current = files
@@ -348,13 +373,27 @@ function App() {
   }, [recentFileNames])
 
   useEffect(() => {
+    isSplitRef.current = isSplit
+  }, [isSplit])
+
+  useEffect(() => {
+    secondaryFileNameRef.current = secondaryFileName
+  }, [secondaryFileName])
+
+  useEffect(() => {
+    activePaneRef.current = activePane
+  }, [activePane])
+
+  useEffect(() => {
     saveWorkspaceToLocalStorage(
       filesRef.current,
       openFileNames,
       activeFileName,
       recentFileNames,
+      isSplit,
+      secondaryFileName,
     )
-  }, [openFileNames, activeFileName, recentFileNames])
+  }, [openFileNames, activeFileName, recentFileNames, isSplit, secondaryFileName])
 
   const flushAutoSave = useCallback(() => {
     if (autoSaveTimerRef.current) {
@@ -362,15 +401,19 @@ function App() {
       autoSaveTimerRef.current = null
     }
 
-    if (pendingChangeRef.current) {
-      const { fileName, value } = pendingChangeRef.current
-      pendingChangeRef.current = null
+    const pending = pendingChangesRef.current
+    const pendingNames = Object.keys(pending)
+    if (pendingNames.length > 0) {
+      const changes = { ...pending }
+      pendingChangesRef.current = {}
 
-      const updatedFiles = filesRef.current.map((file) =>
-        file.name === fileName
-          ? { ...file, code: value, content: value, isDirty: false }
-          : file,
-      )
+      const updatedFiles = filesRef.current.map((file) => {
+        if (changes[file.name] !== undefined) {
+          const val = changes[file.name]
+          return { ...file, code: val, content: val, isDirty: false }
+        }
+        return file
+      })
 
       setFiles(updatedFiles)
       saveWorkspaceToLocalStorage(
@@ -378,6 +421,8 @@ function App() {
         openFileNamesRef.current,
         activeFileNameRef.current,
         recentFileNamesRef.current,
+        isSplitRef.current,
+        secondaryFileNameRef.current,
       )
 
       setSaveMessage('Workspace saved')
@@ -401,7 +446,15 @@ function App() {
     }
   }, [flushAutoSave])
 
-  const activeFile = files.find((file) => file.name === activeFileName) ?? null
+  const primaryFile = files.find((file) => file.name === activeFileName) ?? null
+  const secondaryFile =
+    isSplit && secondaryFileName
+      ? files.find((file) => file.name === secondaryFileName) ?? null
+      : null
+  const activeFile =
+    isSplit && activePane === 'secondary' && secondaryFile
+      ? secondaryFile
+      : primaryFile
   const activeLanguage = activeFile
     ? getLanguageLabelFromFileName(activeFile.name)
     : ''
@@ -421,12 +474,12 @@ function App() {
   const [referenceSymbol, setReferenceSymbol] = useState('')
   const [isLoadingReferences, setIsLoadingReferences] = useState(false)
 
-  // Clear references when active file changes to prevent stale results
+  // Clear references when active file or active pane changes to prevent stale results
   useEffect(() => {
     setReferences([])
     setReferenceSymbol('')
     setIsLoadingReferences(false)
-  }, [activeFileName])
+  }, [activeFileName, secondaryFileName, activePane])
 
   const handleReferencesFound = useCallback((refs, symbol) => {
     setReferences(refs)
@@ -494,6 +547,8 @@ function App() {
       nextOpen,
       uniqueName,
       recentFileNamesRef.current,
+      isSplitRef.current,
+      secondaryFileNameRef.current,
     )
 
     return {
@@ -526,18 +581,57 @@ function App() {
   }
 
   const handleSelectFile = useCallback(
-    (fileName) => {
+    (fileName, targetPane) => {
       flushAutoSave()
+      const pane = targetPane || (isSplitRef.current ? activePaneRef.current : 'primary')
+
+      if (isSplitRef.current) {
+        if (pane === 'secondary') {
+          // If already open in primary pane, switch focus to primary pane and notify user
+          if (fileName === activeFileNameRef.current) {
+            setActivePane('primary')
+            setSaveMessage(`${fileName} is already open in Pane 1`)
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+            saveTimerRef.current = setTimeout(() => setSaveMessage(''), 2500)
+            return
+          }
+          setOpenFileNames((prevOpen) =>
+            prevOpen.includes(fileName) ? prevOpen : [...prevOpen, fileName],
+          )
+          setSecondaryFileName(fileName)
+          setActivePane('secondary')
+          return
+        } else {
+          // pane === 'primary'
+          // If already open in secondary pane, switch focus to secondary pane and notify user
+          if (fileName === secondaryFileNameRef.current) {
+            setActivePane('secondary')
+            setSaveMessage(`${fileName} is already open in Pane 2`)
+            if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+            saveTimerRef.current = setTimeout(() => setSaveMessage(''), 2500)
+            return
+          }
+          setOpenFileNames((prevOpen) =>
+            prevOpen.includes(fileName) ? prevOpen : [...prevOpen, fileName],
+          )
+          setActiveFileName(fileName)
+          setActivePane('primary')
+          return
+        }
+      }
+
+      // Not split
       setOpenFileNames((prevOpen) =>
         prevOpen.includes(fileName) ? prevOpen : [...prevOpen, fileName],
       )
       setActiveFileName(fileName)
+      setActivePane('primary')
     },
     [flushAutoSave],
   )
 
   const handleCloseTab = useCallback(
-    (fileName) => {
+    (fileName, targetPane) => {
       flushAutoSave()
       const index = openFileNamesRef.current.indexOf(fileName)
       if (index === -1) return
@@ -553,11 +647,36 @@ function App() {
       const nextOpenNames = openFileNamesRef.current.filter((name) => name !== fileName)
       setOpenFileNames(nextOpenNames)
 
+      // Handle secondary pane if closed file was displayed there
+      if (isSplitRef.current && fileName === secondaryFileNameRef.current) {
+        const remainingSecondaryCandidates = nextOpenNames.filter(
+          (name) => name !== activeFileNameRef.current,
+        )
+        const nextSecondary =
+          remainingSecondaryCandidates[0] ??
+          filesRef.current
+            .map((f) => f.name)
+            .find(
+              (name) =>
+                name !== activeFileNameRef.current && name !== fileName,
+            ) ??
+          null
+        setSecondaryFileName(nextSecondary)
+      }
+
+      // Handle primary pane if closed file was displayed there
       if (fileName === activeFileNameRef.current) {
         if (nextOpenNames.length === 0) {
           setActiveFileName(null)
         } else {
-          const nextActive = nextOpenNames[index - 1] ?? nextOpenNames[index] ?? nextOpenNames[0]
+          const nonSecondaryOpen = nextOpenNames.filter(
+            (name) => !isSplitRef.current || name !== secondaryFileNameRef.current,
+          )
+          const nextActive =
+            nonSecondaryOpen[index - 1] ??
+            nonSecondaryOpen[index] ??
+            nonSecondaryOpen[0] ??
+            nextOpenNames[0]
           setActiveFileName(nextActive)
         }
       }
@@ -566,36 +685,45 @@ function App() {
   )
 
   const handleCloseActiveTab = useCallback(() => {
-    const currentActiveName = activeFileNameRef.current
-    if (!currentActiveName) return
-    handleCloseTab(currentActiveName)
+    const currentTargetName =
+      isSplitRef.current && activePaneRef.current === 'secondary' && secondaryFileNameRef.current
+        ? secondaryFileNameRef.current
+        : activeFileNameRef.current
+    if (!currentTargetName) return
+    handleCloseTab(currentTargetName)
   }, [handleCloseTab])
 
   const handleNextTab = useCallback(() => {
     flushAutoSave()
     const openNames = openFileNamesRef.current
     if (openNames.length <= 1) return
-    const currentIndex = openNames.indexOf(activeFileNameRef.current)
+    const currentActiveName =
+      isSplitRef.current && activePaneRef.current === 'secondary' && secondaryFileNameRef.current
+        ? secondaryFileNameRef.current
+        : activeFileNameRef.current
+    const currentIndex = openNames.indexOf(currentActiveName)
     const nextIndex = (currentIndex + 1) % openNames.length
-    setActiveFileName(openNames[nextIndex])
-  }, [flushAutoSave])
+    const nextFileName = openNames[nextIndex]
+    handleSelectFile(nextFileName)
+  }, [flushAutoSave, handleSelectFile])
 
   const handlePrevTab = useCallback(() => {
     flushAutoSave()
     const openNames = openFileNamesRef.current
     if (openNames.length <= 1) return
-    const currentIndex = openNames.indexOf(activeFileNameRef.current)
+    const currentActiveName =
+      isSplitRef.current && activePaneRef.current === 'secondary' && secondaryFileNameRef.current
+        ? secondaryFileNameRef.current
+        : activeFileNameRef.current
+    const currentIndex = openNames.indexOf(currentActiveName)
     const prevIndex = (currentIndex - 1 + openNames.length) % openNames.length
-    setActiveFileName(openNames[prevIndex])
-  }, [flushAutoSave])
+    const prevFileName = openNames[prevIndex]
+    handleSelectFile(prevFileName)
+  }, [flushAutoSave, handleSelectFile])
 
   const handleDeleteFile = useCallback((fileName) => {
-    if (pendingChangeRef.current?.fileName === fileName) {
-      pendingChangeRef.current = null
-      if (autoSaveTimerRef.current) {
-        clearTimeout(autoSaveTimerRef.current)
-        autoSaveTimerRef.current = null
-      }
+    if (pendingChangesRef.current?.[fileName]) {
+      delete pendingChangesRef.current[fileName]
     }
 
     if (typeof window !== 'undefined' && window.monaco) {
@@ -644,7 +772,23 @@ function App() {
       nextActive = currentActiveName
     }
 
-    saveWorkspaceToLocalStorage(nextFiles, nextOpenNames, nextActive, nextRecent)
+    let nextSecondary = secondaryFileNameRef.current
+    if (fileName === secondaryFileNameRef.current) {
+      const remainingSecondary = nextFiles
+        .map((f) => f.name)
+        .filter((name) => name !== nextActive)
+      nextSecondary = remainingSecondary[0] ?? null
+      setSecondaryFileName(nextSecondary)
+    }
+
+    saveWorkspaceToLocalStorage(
+      nextFiles,
+      nextOpenNames,
+      nextActive,
+      nextRecent,
+      isSplitRef.current,
+      nextSecondary,
+    )
   }, [])
 
   const handleRenameFile = useCallback(
@@ -730,7 +874,20 @@ function App() {
         setActiveFileName(trimmedNewName)
       }
 
-      saveWorkspaceToLocalStorage(nextFiles, nextOpen, nextActive, nextRecent)
+      let nextSecondary = secondaryFileNameRef.current
+      if (oldFileName === secondaryFileNameRef.current) {
+        nextSecondary = trimmedNewName
+        setSecondaryFileName(trimmedNewName)
+      }
+
+      saveWorkspaceToLocalStorage(
+        nextFiles,
+        nextOpen,
+        nextActive,
+        nextRecent,
+        isSplitRef.current,
+        nextSecondary,
+      )
 
       return { success: true, message: 'File renamed.' }
     },
@@ -738,18 +895,23 @@ function App() {
   )
 
   const handleEditorChange = useCallback(
-    (value) => {
-      const currentActiveName = activeFileNameRef.current
-      if (!currentActiveName) return
+    (value, targetFileName) => {
+      const targetFile =
+        targetFileName ||
+        (isSplitRef.current && activePaneRef.current === 'secondary'
+          ? secondaryFileNameRef.current
+          : activeFileNameRef.current)
+
+      if (!targetFile) return
 
       const newContent = value ?? ''
 
-      pendingChangeRef.current = { fileName: currentActiveName, value: newContent }
+      pendingChangesRef.current[targetFile] = newContent
       setSaveMessage('Saving...')
 
       setFiles((currentFiles) =>
         currentFiles.map((file) => {
-          if (file.name === currentActiveName) {
+          if (file.name === targetFile) {
             const currentContent = file.code ?? file.content ?? ''
             if (currentContent === newContent) return file
             return {
@@ -795,16 +957,20 @@ function App() {
 
   const handleSave = useCallback(() => {
     flushAutoSave()
-    const currentActiveName = activeFileNameRef.current
-    if (!currentActiveName) return
+    const currentTargetName =
+      isSplitRef.current && activePaneRef.current === 'secondary' && secondaryFileNameRef.current
+        ? secondaryFileNameRef.current
+        : activeFileNameRef.current
+
+    if (!currentTargetName) return
 
     setFiles((currentFiles) =>
       currentFiles.map((file) =>
-        file.name === currentActiveName ? { ...file, isDirty: false } : file,
+        file.name === currentTargetName ? { ...file, isDirty: false } : file,
       ),
     )
 
-    setSaveMessage(`Saved ${currentActiveName}`)
+    setSaveMessage(`Saved ${currentTargetName}`)
     if (saveTimerRef.current) {
       clearTimeout(saveTimerRef.current)
     }
@@ -814,13 +980,79 @@ function App() {
     }, 2500)
   }, [flushAutoSave])
 
+  const handleToggleSplit = useCallback(() => {
+    flushAutoSave()
+    setIsSplit((prev) => {
+      if (prev) {
+        setActivePane('primary')
+        return false
+      } else {
+        const curActive = activeFileNameRef.current
+        const openCandidates = openFileNamesRef.current.filter((name) => name !== curActive)
+        const allCandidates = filesRef.current
+          .map((f) => f.name)
+          .filter((name) => name !== curActive)
+
+        let candidateSecondary = null
+        if (
+          secondaryFileNameRef.current &&
+          secondaryFileNameRef.current !== curActive &&
+          filesRef.current.some((f) => f.name === secondaryFileNameRef.current)
+        ) {
+          candidateSecondary = secondaryFileNameRef.current
+        } else if (openCandidates.length > 0) {
+          candidateSecondary = openCandidates[0]
+        } else if (allCandidates.length > 0) {
+          candidateSecondary = allCandidates[0]
+        }
+
+        if (candidateSecondary && !openFileNamesRef.current.includes(candidateSecondary)) {
+          setOpenFileNames((prevOpen) => [...prevOpen, candidateSecondary])
+        }
+
+        setSecondaryFileName(candidateSecondary)
+        setActivePane('secondary')
+        return true
+      }
+    })
+  }, [flushAutoSave])
+
+  const handleCloseSplit = useCallback(() => {
+    flushAutoSave()
+    setIsSplit(false)
+    setActivePane('primary')
+  }, [flushAutoSave])
+
   useEffect(() => {
     const onSaveEvent = () => handleSave()
+    const onToggleSplitEvent = () => handleToggleSplit()
+    const onOpenSplitEvent = () => {
+      if (!isSplitRef.current) handleToggleSplit()
+    }
+    const onCloseSplitEvent = () => {
+      if (isSplitRef.current) handleCloseSplit()
+    }
+    const onFocusPaneEvent = (e) => {
+      const target = e?.detail?.pane
+      if (target === 'primary' || target === 'secondary') {
+        setActivePane(target)
+      }
+    }
+
     window.addEventListener('polyglotmesh:save', onSaveEvent)
+    window.addEventListener('polyglotmesh:toggle-split', onToggleSplitEvent)
+    window.addEventListener('polyglotmesh:open-split', onOpenSplitEvent)
+    window.addEventListener('polyglotmesh:close-split', onCloseSplitEvent)
+    window.addEventListener('polyglotmesh:focus-pane', onFocusPaneEvent)
+
     return () => {
       window.removeEventListener('polyglotmesh:save', onSaveEvent)
+      window.removeEventListener('polyglotmesh:toggle-split', onToggleSplitEvent)
+      window.removeEventListener('polyglotmesh:open-split', onOpenSplitEvent)
+      window.removeEventListener('polyglotmesh:close-split', onCloseSplitEvent)
+      window.removeEventListener('polyglotmesh:focus-pane', onFocusPaneEvent)
     }
-  }, [handleSave])
+  }, [handleSave, handleToggleSplit, handleCloseSplit])
 
   useEffect(
     () => () => {
@@ -924,12 +1156,23 @@ function App() {
         return
       }
 
+      // Split Editor Toggle: Ctrl+\ or Cmd+\
+      if (modifier && (key === '\\' || event.code === 'Backslash')) {
+        event.preventDefault()
+        event.stopPropagation()
+        handleToggleSplit()
+        return
+      }
+
       // 9. Ctrl+F / Cmd+F -> Open Monaco Find Widget
       if (modifier && key === 'f' && !event.shiftKey && !event.altKey) {
         event.preventDefault()
         event.stopPropagation()
         if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
+          const activeEditor =
+            window.__polyglotmeshActiveEditor ||
+            window.monaco.editor.getEditors().find((e) => e.hasTextFocus()) ||
+            window.monaco.editor.getEditors()[0]
           if (activeEditor) {
             activeEditor.focus()
             activeEditor.getAction('actions.find')?.run()
@@ -946,7 +1189,10 @@ function App() {
         event.preventDefault()
         event.stopPropagation()
         if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
+          const activeEditor =
+            window.__polyglotmeshActiveEditor ||
+            window.monaco.editor.getEditors().find((e) => e.hasTextFocus()) ||
+            window.monaco.editor.getEditors()[0]
           if (activeEditor) {
             activeEditor.focus()
             activeEditor.getAction('editor.action.startFindReplaceAction')?.run()
@@ -960,7 +1206,10 @@ function App() {
         event.preventDefault()
         event.stopPropagation()
         if (typeof window !== 'undefined' && window.monaco) {
-          const activeEditor = window.monaco.editor.getEditors()[0]
+          const activeEditor =
+            window.__polyglotmeshActiveEditor ||
+            window.monaco.editor.getEditors().find((e) => e.hasTextFocus()) ||
+            window.monaco.editor.getEditors()[0]
           if (activeEditor) {
             activeEditor.focus()
             const gotoAction = activeEditor.getAction('editor.action.gotoLine')
@@ -1055,6 +1304,7 @@ function App() {
       handleNextTab,
       handlePrevTab,
       handleRunClick,
+      handleToggleSplit,
     ],
   )
 
@@ -1089,6 +1339,13 @@ function App() {
         <section className="workspace" aria-label="PolyglotMesh workspace">
           <EditorPanel
             activeFile={activeFile}
+            primaryFile={primaryFile}
+            secondaryFile={secondaryFile}
+            isSplit={isSplit}
+            onToggleSplit={handleToggleSplit}
+            onCloseSplit={handleCloseSplit}
+            activePane={activePane}
+            onSetActivePane={setActivePane}
             openFiles={openFiles}
             files={files}
             onSelectFile={handleSelectFile}
@@ -1131,6 +1388,8 @@ function App() {
         onRun={handleRunClick}
         onSave={handleSave}
         onOpenSettings={() => setIsEditorSettingsOpen(true)}
+        isSplit={isSplit}
+        onToggleSplit={handleToggleSplit}
       />
     </main>
   )
