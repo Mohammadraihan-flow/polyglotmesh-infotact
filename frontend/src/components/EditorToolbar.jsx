@@ -1,4 +1,93 @@
-import React from 'react'
+import React, { useState, useRef, useEffect } from 'react'
+
+const Dropdown = ({ label, children }) => {
+  const [isOpen, setIsOpen] = useState(false)
+  const ref = useRef()
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  return (
+    <div className="toolbar-dropdown" ref={ref} style={{ position: 'relative', display: 'inline-block' }}>
+      <button
+        type="button"
+        className="editor-toolbar__btn"
+        onClick={() => setIsOpen(!isOpen)}
+        style={{ 
+          background: isOpen ? 'var(--button-hover-bg, rgba(255,255,255,0.1))' : 'transparent',
+          border: 'none',
+          color: 'var(--text, #fff)',
+          padding: '4px 12px',
+          cursor: 'pointer',
+          fontSize: '13px',
+          borderRadius: '4px'
+        }}
+      >
+        {label}
+      </button>
+      {isOpen && (
+        <div 
+          className="toolbar-dropdown-menu" 
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            zIndex: 1000,
+            background: 'var(--surface, #1e1e1e)',
+            border: '1px solid var(--border, #333)',
+            borderRadius: '4px',
+            boxShadow: '0 4px 12px rgba(0,0,0,0.5)',
+            minWidth: '180px',
+            display: 'flex',
+            flexDirection: 'column',
+            padding: '4px 0',
+            marginTop: '4px'
+          }}
+        >
+          {React.Children.map(children, child => {
+            if (!child) return null
+            return React.cloneElement(child, {
+              onClick: (e) => {
+                setIsOpen(false)
+                if (child.props.onClick) child.props.onClick(e)
+              },
+              style: {
+                ...child.props.style,
+                width: '100%',
+                textAlign: 'left',
+                padding: '8px 16px',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text, #d4d4d4)',
+                cursor: child.props.disabled ? 'not-allowed' : 'pointer',
+                opacity: child.props.disabled ? 0.5 : 1,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                fontSize: '13px'
+              },
+              onMouseEnter: (e) => {
+                if (!child.props.disabled) {
+                  e.currentTarget.style.background = 'var(--button-hover-bg, rgba(255,255,255,0.1))'
+                }
+              },
+              onMouseLeave: (e) => {
+                e.currentTarget.style.background = 'transparent'
+              }
+            })
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
 
 function EditorToolbar({
   activeFile,
@@ -26,385 +115,147 @@ function EditorToolbar({
   const isDirty = Boolean(activeFile?.isDirty)
 
   return (
-    <div className="editor-toolbar" role="toolbar" aria-label="Editor command toolbar">
-      <div className="editor-toolbar__group editor-toolbar__group--primary">
-        {/* Save */}
-        <button
-          type="button"
-          className={`command-palette-button save-button editor-toolbar__btn editor-toolbar__btn--save ${
-            isDirty ? 'editor-toolbar__btn--dirty' : ''
-          }`}
-          aria-label={
-            activeFile
-              ? isDirty
-                ? 'Save File (Ctrl+S) - Unsaved changes'
-                : 'Save File (Ctrl+S) - Saved'
-              : 'Save File (Ctrl+S)'
-          }
-          title={
-            activeFile
-              ? isDirty
-                ? 'Save (Ctrl+S) - Unsaved changes'
-                : 'Save (Ctrl+S) - Up to date'
-              : 'Save (Ctrl+S)'
-          }
-          onClick={onSave}
-          disabled={!activeFile}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              width="15"
-              height="15"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+    <div className="editor-toolbar" role="toolbar" aria-label="Editor command toolbar" style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 8px', borderBottom: '1px solid var(--border)' }}>
+      <div className="editor-toolbar__group" style={{ display: 'flex', gap: '4px' }}>
+        
+        {/* FILE MENU */}
+        <Dropdown label="File">
+          <button
+            type="button"
+            onClick={onSave}
+            disabled={!activeFile}
+            title={activeFile ? (isDirty ? 'Save (Ctrl+S) - Unsaved changes' : 'Save (Ctrl+S) - Up to date') : 'Save (Ctrl+S)'}
+          >
+            <span>💾</span>
+            <span>Save {isDirty && '*'}</span>
+          </button>
+        </Dropdown>
+
+        {/* EDIT MENU */}
+        <Dropdown label="Edit">
+          <button
+            type="button"
+            onClick={onFormatDocument}
+            disabled={!activeFile || isReadOnly}
+            title="Format Document (Shift+Alt+F)"
+          >
+            <span>✨</span>
+            <span>Format Document</span>
+          </button>
+          <button
+            type="button"
+            onClick={onQuickFix}
+            disabled={!activeFile || isReadOnly}
+            title="Code Actions / Quick Fix (Ctrl+.)"
+          >
+            <span>💡</span>
+            <span>Quick Fix</span>
+          </button>
+          <button
+            type="button"
+            onClick={onOpenCommandPalette}
+            title="Command Palette (Ctrl+Shift+P)"
+          >
+            <span>⌘</span>
+            <span>Command Palette</span>
+          </button>
+        </Dropdown>
+
+        {/* SELECTION MENU */}
+        <Dropdown label="Selection">
+          <button
+            type="button"
+            onClick={onGoToDefinition}
+            disabled={!activeFile}
+            title="Go to Definition (F12)"
+          >
+            <span>↗</span>
+            <span>Go to Definition</span>
+          </button>
+          <button
+            type="button"
+            onClick={onFindReferences}
+            disabled={!activeFile}
+            title="Find References (Shift+F12)"
+          >
+            <span>🔍</span>
+            <span>Find References</span>
+          </button>
+        </Dropdown>
+
+        {/* VIEW MENU */}
+        <Dropdown label="View">
+          <button
+            type="button"
+            onClick={() => onToggleReadOnly?.()}
+            disabled={!activeFile}
+          >
+            <span>{isReadOnly ? '👁️' : '✏️'}</span>
+            <span>{isReadOnly ? 'Switch to Edit Mode' : 'Switch to Preview Mode'}</span>
+          </button>
+          <button
+            type="button"
+            onClick={onToggleWordWrap}
+            disabled={!activeFile}
+          >
+            <span>{isWordWrapOn ? '✅' : '⬛'}</span>
+            <span>Word Wrap</span>
+          </button>
+          <button
+            type="button"
+            onClick={onToggleSplit}
+          >
+            <span>🪟</span>
+            <span>{isSplit ? 'Close Split' : 'Split Editor'}</span>
+          </button>
+          {isSplit && onResetLayout && (
+            <button
+              type="button"
+              onClick={onResetLayout}
             >
-              <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z" />
-              <polyline points="17 21 17 13 7 13 7 21" />
-              <polyline points="7 3 7 8 15 8" />
-            </svg>
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">Save</span>
-          {isDirty ? (
-            <span
-              className="editor-toolbar__dirty-badge"
-              title="Unsaved changes"
-              aria-hidden="true"
-            />
-          ) : null}
-        </button>
-
-        {/* Format Document */}
-        <button
-          type="button"
-          className="command-palette-button format-document-button editor-toolbar__btn editor-toolbar__btn--format"
-          aria-label={
-            isReadOnly
-              ? 'Format Document (Disabled in Preview Mode)'
-              : 'Format Document (Shift+Alt+F / Ctrl+Shift+I)'
-          }
-          title={
-            isReadOnly
-              ? 'Format Document (Disabled in Preview Mode)'
-              : 'Format Document (Shift+Alt+F / Ctrl+Shift+I)'
-          }
-          onClick={onFormatDocument}
-          disabled={!activeFile || isReadOnly}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            ✨
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">Format</span>
-        </button>
-
-        {/* Code Actions / Quick Fix */}
-        <button
-          type="button"
-          className="command-palette-button quick-fix-button editor-toolbar__btn editor-toolbar__btn--quickfix"
-          aria-label={
-            isReadOnly
-              ? 'Code Actions / Quick Fix (Disabled in Preview Mode)'
-              : 'Code Actions / Quick Fix (Ctrl+.)'
-          }
-          title={
-            isReadOnly
-              ? 'Code Actions / Quick Fix (Disabled in Preview Mode)'
-              : 'Code Actions / Quick Fix (Ctrl+.)'
-          }
-          onClick={onQuickFix}
-          disabled={!activeFile || isReadOnly}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            💡
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">Quick Fix</span>
-        </button>
+              <span>🔄</span>
+              <span>Reset Layout</span>
+            </button>
+          )}
+          <button type="button" onClick={onZoomIn} disabled={currentFontSize >= 32}>
+            <span>➕</span>
+            <span>Zoom In</span>
+          </button>
+          <button type="button" onClick={onZoomOut} disabled={currentFontSize <= 10}>
+            <span>➖</span>
+            <span>Zoom Out</span>
+          </button>
+          <button type="button" onClick={onResetZoom} disabled={currentFontSize === 14}>
+            <span>🔍</span>
+            <span>Reset Zoom ({currentFontSize}px)</span>
+          </button>
+        </Dropdown>
       </div>
 
-      <span className="editor-toolbar__divider" aria-hidden="true" />
-
-      <div className="editor-toolbar__group editor-toolbar__group--nav">
-        {/* Go to Definition */}
+      <div className="editor-toolbar__group" style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
         <button
           type="button"
-          className="command-palette-button goto-def-button editor-toolbar__btn editor-toolbar__btn--gotodef"
-          aria-label="Go to Definition (F12)"
-          title="Go to Definition (F12)"
-          onClick={onGoToDefinition}
-          disabled={!activeFile}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            ↗
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">Go to Def</span>
-        </button>
-
-        {/* Find References */}
-        <button
-          type="button"
-          className="command-palette-button references-button editor-toolbar__btn editor-toolbar__btn--references"
-          aria-label="Find References (Shift+F12)"
-          title="Find References (Shift+F12)"
-          onClick={onFindReferences}
-          disabled={!activeFile}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <circle cx="11" cy="11" r="8" />
-              <line x1="21" y1="21" x2="16.65" y2="16.65" />
-            </svg>
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">References</span>
-        </button>
-      </div>
-
-      <span className="editor-toolbar__divider" aria-hidden="true" />
-
-      <div className="editor-toolbar__group editor-toolbar__group--view">
-        {/* Preview / Read-Only Mode Toggle */}
-        <button
-          type="button"
-          className={`command-palette-button preview-mode-button editor-toolbar__btn editor-toolbar__btn--preview ${
-            isReadOnly ? 'editor-toolbar__btn--active editor-toolbar__btn--readonly' : ''
-          }`}
-          aria-label={
-            isReadOnly
-              ? 'Switch to Edit Mode (Alt+P) - Currently Preview Mode'
-              : 'Switch to Preview Mode (Alt+P) - Currently Edit Mode'
-          }
-          title={
-            isReadOnly
-              ? 'Preview Mode: Read-Only (Click or Alt+P to switch to Edit Mode)'
-              : 'Edit Mode (Click or Alt+P to switch to Preview Mode)'
-          }
-          onClick={() => onToggleReadOnly?.()}
-          disabled={!activeFile}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            {isReadOnly ? (
-              <svg
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-              </svg>
-            ) : (
-              <svg
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-                <path d="M7 11V7a5 5 0 0 1 9.9-1" />
-              </svg>
-            )}
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">
-            {isReadOnly ? 'Preview' : 'Edit'}
-          </span>
-        </button>
-
-        {/* Toggle Word Wrap */}
-        <button
-          type="button"
-          className={`command-palette-button word-wrap-button editor-toolbar__btn editor-toolbar__btn--wordwrap ${
-            isWordWrapOn ? 'editor-toolbar__btn--active' : ''
-          }`}
-          aria-label={`Toggle Word Wrap (Alt+Z) - Currently ${isWordWrapOn ? 'On' : 'Off'}`}
-          title={`Toggle Word Wrap (Alt+Z) - Currently ${isWordWrapOn ? 'On' : 'Off'}`}
-          onClick={onToggleWordWrap}
-          disabled={!activeFile}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <polyline points="9 10 4 15 9 20" />
-              <path d="M20 4v7a4 4 0 0 1-4 4H4" />
-            </svg>
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">Word Wrap</span>
-        </button>
-
-        {/* Command Palette */}
-        <button
-          type="button"
-          className="command-palette-button editor-toolbar__btn editor-toolbar__btn--palette"
-          aria-label="Command Palette (Ctrl+Shift+P)"
-          title="Command Palette (Ctrl+Shift+P)"
-          onClick={onOpenCommandPalette}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            ⌘
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">Palette</span>
-        </button>
-
-        {/* Split Editor */}
-        <button
-          type="button"
-          className={`command-palette-button split-editor-button editor-toolbar__btn editor-toolbar__btn--split ${
-            isSplit ? 'editor-toolbar__btn--active' : ''
-          }`}
-          aria-label={
-            isSplit
-              ? 'Close Split Editor (Ctrl+\\)'
-              : 'Split Editor Right (Ctrl+\\)'
-          }
-          title={
-            isSplit
-              ? 'Close Split Editor (Ctrl+\\)'
-              : 'Split Editor Right (Ctrl+\\)'
-          }
-          onClick={onToggleSplit}
-        >
-          <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-            <svg
-              viewBox="0 0 24 24"
-              width="14"
-              height="14"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
-            >
-              <rect x="3" y="3" width="18" height="18" rx="2" />
-              <line x1="12" y1="3" x2="12" y2="21" />
-            </svg>
-          </span>
-          <span className="command-palette-button__text editor-toolbar__label">
-            {isSplit ? 'Close Split' : 'Split'}
-          </span>
-        </button>
-
-        {/* Reset Split Layout */}
-        {isSplit && onResetLayout ? (
-          <button
-            type="button"
-            className="command-palette-button reset-layout-button editor-toolbar__btn editor-toolbar__btn--reset-layout"
-            aria-label="Reset Editor Layout (50/50)"
-            title="Reset Editor Layout (50/50)"
-            onClick={onResetLayout}
-          >
-            <span className="command-palette-button__icon editor-toolbar__icon" aria-hidden="true">
-              <svg
-                viewBox="0 0 24 24"
-                width="14"
-                height="14"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                aria-hidden="true"
-              >
-                <rect x="3" y="3" width="8" height="18" rx="1" />
-                <rect x="13" y="3" width="8" height="18" rx="1" />
-              </svg>
-            </span>
-            <span className="command-palette-button__text editor-toolbar__label">Reset Layout</span>
-          </button>
-        ) : null}
-      </div>
-
-      <span className="editor-toolbar__divider" aria-hidden="true" />
-
-      <div className="editor-toolbar__group editor-toolbar__group--controls">
-        {/* Zoom Controls */}
-        <div className="editor-panel__zoom-controls" role="group" aria-label="Editor Zoom Controls">
-          <button
-            type="button"
-            className="editor-panel__zoom-btn"
-            onClick={onZoomOut}
-            disabled={currentFontSize <= 10}
-            title="Zoom Out (Ctrl+-)"
-            aria-label="Zoom Out"
-          >
-            −
-          </button>
-          <button
-            type="button"
-            className={`editor-panel__zoom-reset-btn${
-              currentFontSize === 14 ? ' editor-panel__zoom-reset-btn--disabled' : ''
-            }`}
-            onClick={onResetZoom}
-            disabled={currentFontSize === 14}
-            title={`Reset Zoom (${currentFontSize}px)`}
-            aria-label="Reset Zoom"
-          >
-            {currentFontSize}px
-          </button>
-          <button
-            type="button"
-            className="editor-panel__zoom-btn"
-            onClick={onZoomIn}
-            disabled={currentFontSize >= 32}
-            title="Zoom In (Ctrl+=)"
-            aria-label="Zoom In"
-          >
-            +
-          </button>
-        </div>
-
-        {/* Settings Toggle */}
-        <button
-          type="button"
-          className="settings-button editor-toolbar__btn--settings"
-          aria-label="Editor Settings"
-          title="Editor Settings"
           onClick={onToggleSettings}
+          title="Editor Settings"
+          style={{ background: 'transparent', border: 'none', cursor: 'pointer' }}
         >
           ⚙️
         </button>
-
-        {/* Run Button */}
         <button
           type="button"
-          className="run-button editor-toolbar__btn--run"
           disabled={isRunning || !activeFile}
           onClick={onRunClick}
           title="Run Program (Ctrl+Enter)"
-          aria-label={isRunning ? 'Program running' : 'Run program (Ctrl+Enter)'}
+          style={{ 
+            background: isRunning ? 'var(--button-disabled-bg, #555)' : 'var(--button-primary-bg, #007acc)',
+            color: '#fff',
+            border: 'none',
+            padding: '4px 12px',
+            borderRadius: '4px',
+            cursor: isRunning || !activeFile ? 'not-allowed' : 'pointer'
+          }}
         >
-          {isRunning ? 'Running...' : 'Run'}
+          {isRunning ? 'Running...' : 'Run ▶️'}
         </button>
       </div>
     </div>
