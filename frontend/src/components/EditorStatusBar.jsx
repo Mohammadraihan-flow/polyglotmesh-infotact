@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { getLanguageLabelFromFileName } from '../utils/languageUtils.js'
 
-function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
+function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage, problems = [] }) {
   const [cursorPos, setCursorPos] = useState({ line: 1, column: 1 })
   const [lineCount, setLineCount] = useState(1)
   const [charCount, setCharCount] = useState(0)
@@ -92,9 +92,38 @@ function EditorStatusBar({ editor, activeFile, editorSettings, saveMessage }) {
   const parsedTabSize = Number(editorSettings?.tabSize)
   const tabSize = validTabSizes.includes(parsedTabSize) ? parsedTabSize : 4
 
+  const errorCount = problems.filter((p) => p.severityCode === 8).length
+  const warningCount = problems.filter((p) => p.severityCode === 4).length
+
   return (
     <footer className="editor-status-bar" aria-label="Editor status bar">
       <div className="editor-status-bar__left">
+        <button
+          type="button"
+          className="editor-status-bar__item editor-status-bar__item--problems"
+          onClick={() => window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-problems'))}
+          title="Toggle Problems Panel (Ctrl+Shift+M)"
+          aria-label={`Problems: ${errorCount} errors, ${warningCount} warnings`}
+        >
+          {problems.length > 0 ? (
+            <>
+              {errorCount > 0 ? (
+                <span className="status-bar-error">⛔ {errorCount}</span>
+              ) : null}
+              {warningCount > 0 ? (
+                <span className="status-bar-warning">⚠️ {warningCount}</span>
+              ) : null}
+              {errorCount === 0 && warningCount === 0 ? (
+                <span className="status-bar-info">ℹ️ {problems.length}</span>
+              ) : null}
+            </>
+          ) : (
+            <span className="status-bar-clean">✓ 0</span>
+          )}
+        </button>
+        <span className="editor-status-bar__divider" aria-hidden="true">
+          |
+        </span>
         <span className="editor-status-bar__item editor-status-bar__item--language">
           {languageLabel}
         </span>

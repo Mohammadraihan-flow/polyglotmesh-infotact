@@ -10,6 +10,7 @@ import {
   getMonacoLanguageFromFileName,
   LANGUAGE_DEFAULT_FILENAMES,
 } from './utils/languageUtils.js'
+import { useMonacoMarkers } from './hooks/useMonacoMarkers.js'
 import './App.css'
 
 const languages = [
@@ -406,6 +407,7 @@ function App() {
   const openFiles = openFileNames
     .map((name) => files.find((file) => file.name === name))
     .filter(Boolean)
+  const problems = useMonacoMarkers(openFiles, files)
 
   const handleCreateFile = useCallback((fileName) => {
     flushAutoSave()
@@ -965,6 +967,14 @@ function App() {
         return
       }
 
+      // 15. Ctrl+Shift+M / Cmd+Shift+M -> Toggle Problems Panel
+      if (modifier && event.shiftKey && key === 'm') {
+        event.preventDefault()
+        event.stopPropagation()
+        window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-problems'))
+        return
+      }
+
     },
     [
       isCommandPaletteOpen,
@@ -1018,9 +1028,18 @@ function App() {
             onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
             onCloseSettings={() => setIsEditorSettingsOpen(false)}
             saveMessage={saveMessage}
+            problems={problems}
           />
 
-          <ConsolePanel message={consoleMessage} isRunning={isRunning} />
+          <ConsolePanel
+            message={consoleMessage}
+            isRunning={isRunning}
+            activeFile={activeFile}
+            openFiles={openFiles}
+            files={files}
+            onSelectFile={handleSelectFile}
+            problems={problems}
+          />
         </section>
       </div>
 

@@ -235,6 +235,7 @@ function EditorPanel({
   onToggleSettings,
   onCloseSettings,
   saveMessage,
+  problems = [],
 }) {
   const safeEditorSettings = editorSettings || {}
 
@@ -956,6 +957,7 @@ function EditorPanel({
               activeFile={activeFile}
               editorSettings={editorSettings}
               saveMessage={saveMessage}
+              problems={problems}
             />
           </EditorErrorBoundary>
         ) : (

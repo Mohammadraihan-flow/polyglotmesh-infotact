@@ -98,6 +98,28 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
         }
       },
     },
+    {
+      id: 'view-problems',
+      label: 'View: Toggle Problems / Diagnostics',
+      description: 'Show Monaco diagnostics and problems panel',
+      shortcut: 'Ctrl+Shift+M',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:toggle-problems'))
+        }
+      },
+    },
+    {
+      id: 'view-console',
+      label: 'View: Console Output',
+      description: 'Show program execution log and console output',
+      shortcut: 'Console',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:show-console'))
+        }
+      },
+    },
   ]
 
   const filteredCommands = commands.filter((cmd) => {

@@ -694,6 +694,10 @@ function EditorSettings({
               <kbd className="editor-settings__kbd">Ctrl+. / Cmd+.</kbd>
             </div>
             <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Toggle Problems</span>
+              <kbd className="editor-settings__kbd">Ctrl+Shift+M / Cmd+Shift+M</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Zoom In / Out</span>
               <kbd className="editor-settings__kbd">Ctrl+= / Ctrl+-</kbd>
             </div>
