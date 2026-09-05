@@ -179,6 +179,7 @@ const defaultSettings = {
   cursorStyle: 'line',
   cursorSmoothCaretAnimation: 'on',
   selectionHighlight: true,
+  formatOnType: false,
   theme: 'vs-dark',
 }
 
@@ -256,6 +257,10 @@ const getInitialSettings = () => {
           typeof parsed.selectionHighlight === 'boolean'
             ? parsed.selectionHighlight
             : true,
+        formatOnType:
+          typeof parsed.formatOnType === 'boolean'
+            ? parsed.formatOnType
+            : false,
       }
     } else if (wordWrapVal) {
       settings = { ...defaultSettings, wordWrap: wordWrapVal }

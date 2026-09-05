@@ -44,7 +44,15 @@ const THEMES = [
   },
 ]
 
-function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
+function EditorSettings({
+  settings,
+  onChange,
+  onFoldAll,
+  onUnfoldAll,
+  onFormatDocument,
+  onFormatSelection,
+  activeFile,
+}) {
   const handleSettingChange = (key, value) => {
     onChange((currentSettings) => ({
       ...currentSettings,
@@ -563,6 +571,58 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
           </div>
         </div>
 
+        {/* Formatting Section */}
+        <div className="editor-settings__group">
+          <h5 className="editor-settings__group-title">Formatting & Indentation</h5>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Actions</span>
+            <div className="editor-settings__toggle-group" role="group" aria-label="Formatting Actions">
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onFormatDocument}
+                disabled={!activeFile}
+                title="Format entire active file (Shift+Alt+F / Ctrl+Shift+I)"
+              >
+                Format Document
+              </button>
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onFormatSelection}
+                disabled={!activeFile}
+                title="Format selected text (Ctrl+K Ctrl+F)"
+              >
+                Format Selection
+              </button>
+            </div>
+          </div>
+
+          <div className="editor-settings__section">
+            <span className="editor-settings__label">Format on Type</span>
+            <div className="editor-settings__toggle-group" role="radiogroup" aria-label="Format on Type">
+              {[
+                { label: 'On', value: true },
+                { label: 'Off', value: false },
+              ].map((option) => {
+                const isActive = (settings.formatOnType ?? false) === option.value
+
+                return (
+                  <button
+                    key={String(option.value)}
+                    type="button"
+                    className={`editor-settings__toggle${isActive ? ' editor-settings__toggle--active' : ''}`}
+                    onClick={() => handleSettingChange('formatOnType', option.value)}
+                  >
+                    {option.label}
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+        </div>
+
         {/* Keyboard Shortcuts Section */}
         <div className="editor-settings__group">
           <h5 className="editor-settings__group-title">Keyboard Shortcuts</h5>
@@ -610,6 +670,14 @@ function EditorSettings({ settings, onChange, onFoldAll, onUnfoldAll }) {
             <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Unfold Block</span>
               <kbd className="editor-settings__kbd">Ctrl+Shift+] / Cmd+Alt+]</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Format Document</span>
+              <kbd className="editor-settings__kbd">Shift+Alt+F / Ctrl+Shift+I</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Format Selection</span>
+              <kbd className="editor-settings__kbd">Ctrl+K Ctrl+F</kbd>
             </div>
             <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Zoom In / Out</span>

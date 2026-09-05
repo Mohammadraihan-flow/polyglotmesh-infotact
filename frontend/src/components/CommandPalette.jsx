@@ -28,6 +28,39 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       action: onOpenSettings,
     },
     {
+      id: 'format-document',
+      label: 'Format Document',
+      description: 'Format the entire active document',
+      shortcut: 'Shift+Alt+F / Ctrl+Shift+I',
+      action: () => {
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            activeEditor.getAction('editor.action.formatDocument')?.run()
+          }
+        }
+      },
+    },
+    {
+      id: 'format-selection',
+      label: 'Format Selection',
+      description: 'Format selected text in active document',
+      shortcut: 'Ctrl+K Ctrl+F',
+      action: () => {
+        if (typeof window !== 'undefined' && window.monaco) {
+          const activeEditor = window.monaco.editor.getEditors()[0]
+          if (activeEditor) {
+            activeEditor.focus()
+            const selection = activeEditor.getSelection()
+            if (selection && !selection.isEmpty()) {
+              activeEditor.getAction('editor.action.formatSelection')?.run()
+            }
+          }
+        }
+      },
+    },
+    {
       id: 'gotoline',
       label: 'Go to Line',
       description: 'Jump to a specific line and column',
@@ -55,8 +88,6 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
 
   useEffect(() => {
     if (isOpen) {
-      setQuery('')
-      setSelectedIndex(0)
       const timer = setTimeout(() => {
         inputRef.current?.focus()
       }, 50)
@@ -64,15 +95,17 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
     }
   }, [isOpen])
 
-  useEffect(() => {
-    setSelectedIndex(0)
-  }, [query])
-
   if (!isOpen) return null
+
+  const handleClose = () => {
+    setQuery('')
+    setSelectedIndex(0)
+    onClose()
+  }
 
   const handleSelectCommand = (cmd) => {
     cmd.action?.()
-    onClose()
+    handleClose()
   }
 
   const handleKeyDown = (e) => {
@@ -90,7 +123,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
     } else if (e.key === 'Escape') {
       e.preventDefault()
       e.stopPropagation()
-      onClose()
+      handleClose()
     }
   }
 
@@ -99,7 +132,7 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       className="command-palette-overlay"
       onClick={(e) => {
         if (e.target === e.currentTarget) {
-          onClose()
+          handleClose()
         }
       }}
       role="dialog"
@@ -117,7 +150,10 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
             className="command-palette__input"
             placeholder="Type a command (Run, Save, Settings)..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setSelectedIndex(0)
+            }}
             onKeyDown={handleKeyDown}
             autoComplete="off"
             spellCheck="false"

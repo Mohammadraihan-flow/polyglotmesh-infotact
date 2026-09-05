@@ -77,6 +77,7 @@ const baseEditorOptions = {
   multiCursorModifier: 'alt',
   multiCursorPaste: 'spread',
   matchBrackets: 'always',
+  formatOnType: false,
   find: {
     addExtraSpaceOnTop: false,
     autoFindInSelection: 'multiline',
@@ -324,6 +325,11 @@ function EditorPanel({
       ? safeEditorSettings.selectionHighlight
       : true
 
+  const formatOnTypeSetting =
+    typeof safeEditorSettings.formatOnType === 'boolean'
+      ? safeEditorSettings.formatOnType
+      : false
+
   const editorOptions = {
     ...baseEditorOptions,
     fontSize: safeEditorSettings.fontSize ?? 14,
@@ -379,6 +385,7 @@ function EditorPanel({
     multiCursorModifier: 'alt',
     multiCursorPaste: 'spread',
     matchBrackets: 'always',
+    formatOnType: formatOnTypeSetting,
     wordBasedSuggestions: autoSuggestionsSetting ? 'currentDocument' : 'off',
     snippetSuggestions: 'inline',
     acceptSuggestionOnEnter: 'on',
@@ -405,7 +412,7 @@ function EditorPanel({
     const editor = editorInstance || editorRef.current
     if (editor) {
       editor.focus()
-      const unfoldAction = editor.getAction('editor.unfoldAll')
+      const unfoldAction = editor.getAction('editor.action.unfoldAll')
       if (unfoldAction) {
         unfoldAction.run()
       } else {
@@ -413,6 +420,42 @@ function EditorPanel({
       }
     }
   }
+
+  const handleFormatDocument = useCallback(async () => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    try {
+      editor.focus()
+      const action = editor.getAction('editor.action.formatDocument')
+      if (action) {
+        await action.run()
+      } else {
+        editor.trigger('user', 'editor.action.formatDocument')
+      }
+    } catch {
+      // Ignore if formatting provider is unavailable
+    }
+  }, [editorInstance, activeFile])
+
+  const handleFormatSelection = useCallback(async () => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) return
+    try {
+      editor.focus()
+      const selection = editor.getSelection()
+      if (!selection || selection.isEmpty()) {
+        return
+      }
+      const action = editor.getAction('editor.action.formatSelection')
+      if (action) {
+        await action.run()
+      } else {
+        editor.trigger('user', 'editor.action.formatSelection')
+      }
+    } catch {
+      // Ignore if formatting provider is unavailable
+    }
+  }, [editorInstance, activeFile])
 
   const currentFontSize = editorSettings?.fontSize ?? 14
 
@@ -491,6 +534,12 @@ function EditorPanel({
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'P' || e.key === 'p')) {
         e.preventDefault()
         handleOpenCommandPalette()
+      } else if ((e.ctrlKey || e.metaKey) && e.shiftKey && (e.key === 'I' || e.key === 'i')) {
+        e.preventDefault()
+        handleFormatDocument()
+      } else if (e.shiftKey && e.altKey && (e.key === 'F' || e.key === 'f')) {
+        e.preventDefault()
+        handleFormatDocument()
       }
     }
 
@@ -498,7 +547,7 @@ function EditorPanel({
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown)
     }
-  }, [handleOpenCommandPalette])
+  }, [handleOpenCommandPalette, handleFormatDocument])
 
   useEffect(() => {
     if (editorRef.current) {
@@ -521,6 +570,7 @@ function EditorPanel({
     cursorStyleSetting,
     cursorSmoothCaretAnimationSetting,
     selectionHighlightSetting,
+    formatOnTypeSetting,
   ])
 
   useEffect(() => {
@@ -586,9 +636,24 @@ function EditorPanel({
                 onChange={onEditorSettingsChange}
                 onFoldAll={handleFoldAll}
                 onUnfoldAll={handleUnfoldAll}
+                onFormatDocument={handleFormatDocument}
+                onFormatSelection={handleFormatSelection}
+                activeFile={activeFile}
               />
             </div>
           ) : null}
+
+          <button
+            type="button"
+            className="command-palette-button format-document-button"
+            aria-label="Format Document"
+            title="Format Document (Shift+Alt+F / Ctrl+Shift+I)"
+            onClick={handleFormatDocument}
+            disabled={!activeFile}
+          >
+            <span className="command-palette-button__icon">✨</span>
+            <span className="command-palette-button__text">Format</span>
+          </button>
 
           <button
             type="button"
@@ -699,6 +764,12 @@ function EditorPanel({
                       } else {
                         editor.trigger('keyboard', 'editor.action.quickCommand')
                       }
+                    }
+                  )
+                  editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI,
+                    () => {
+                      handleFormatDocument()
                     }
                   )
                 } catch {
