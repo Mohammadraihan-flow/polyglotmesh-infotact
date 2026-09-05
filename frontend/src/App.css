@@ -994,6 +994,20 @@
   border-style: dashed;
 }
 
+.code-action-status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  border-radius: 999px;
+  background: var(--pill-bg);
+  color: var(--button-text);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
 .run-button {
   border: 1px solid var(--button-disabled-border);
   border-radius: 12px;

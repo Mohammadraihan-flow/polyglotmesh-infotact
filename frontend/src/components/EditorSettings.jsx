@@ -51,6 +51,7 @@ function EditorSettings({
   onUnfoldAll,
   onFormatDocument,
   onFormatSelection,
+  onQuickFix,
   activeFile,
 }) {
   const handleSettingChange = (key, value) => {
@@ -596,6 +597,15 @@ function EditorSettings({
               >
                 Format Selection
               </button>
+              <button
+                type="button"
+                className="editor-settings__toggle"
+                onClick={onQuickFix}
+                disabled={!activeFile}
+                title="Trigger Quick Fix / Code Actions at cursor (Ctrl+.)"
+              >
+                Quick Fix
+              </button>
             </div>
           </div>
 
@@ -678,6 +688,10 @@ function EditorSettings({
             <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Format Selection</span>
               <kbd className="editor-settings__kbd">Ctrl+K Ctrl+F</kbd>
+            </div>
+            <div className="editor-settings__shortcut-item">
+              <span className="editor-settings__shortcut-label">Quick Fix / Code Actions</span>
+              <kbd className="editor-settings__kbd">Ctrl+. / Cmd+.</kbd>
             </div>
             <div className="editor-settings__shortcut-item">
               <span className="editor-settings__shortcut-label">Zoom In / Out</span>

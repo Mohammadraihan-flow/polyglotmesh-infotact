@@ -61,6 +61,29 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       },
     },
     {
+      id: 'quick-fix',
+      label: 'Quick Fix / Code Actions',
+      description: 'Show code actions and quick fixes at cursor',
+      shortcut: 'Ctrl+.',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:quick-fix'))
+          if (window.monaco) {
+            const activeEditor = window.monaco.editor.getEditors()[0]
+            if (activeEditor) {
+              activeEditor.focus()
+              const action = activeEditor.getAction('editor.action.quickFix')
+              if (action) {
+                action.run()
+              } else {
+                activeEditor.trigger('commandPalette', 'editor.action.quickFix')
+              }
+            }
+          }
+        }
+      },
+    },
+    {
       id: 'gotoline',
       label: 'Go to Line',
       description: 'Jump to a specific line and column',

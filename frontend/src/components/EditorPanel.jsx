@@ -78,6 +78,7 @@ const baseEditorOptions = {
   multiCursorPaste: 'spread',
   matchBrackets: 'always',
   formatOnType: false,
+  lightbulb: { enabled: true },
   find: {
     addExtraSpaceOnTop: false,
     autoFindInSelection: 'multiline',
@@ -247,6 +248,8 @@ function EditorPanel({
   const editorRef = useRef(null)
   const monacoRef = useRef(null)
   const [editorInstance, setEditorInstance] = useState(null)
+  const [codeActionFeedback, setCodeActionFeedback] = useState(null)
+  const feedbackTimeoutRef = useRef(null)
   const globalMonaco = useMonaco()
 
   const validTabSizes = [2, 4, 8]
@@ -390,6 +393,7 @@ function EditorPanel({
     snippetSuggestions: 'inline',
     acceptSuggestionOnEnter: 'on',
     tabCompletion: 'on',
+    lightbulb: { enabled: true },
   }
 
   const viewStatesRef = useRef({})
@@ -456,6 +460,108 @@ function EditorPanel({
       // Ignore if formatting provider is unavailable
     }
   }, [editorInstance, activeFile])
+
+  const showCodeActionFeedback = useCallback((msg) => {
+    if (feedbackTimeoutRef.current) {
+      clearTimeout(feedbackTimeoutRef.current)
+    }
+    setCodeActionFeedback(msg)
+    feedbackTimeoutRef.current = setTimeout(() => {
+      setCodeActionFeedback(null)
+    }, 3000)
+  }, [])
+
+  useEffect(() => {
+    return () => {
+      if (feedbackTimeoutRef.current) {
+        clearTimeout(feedbackTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  const handleQuickFix = useCallback(async () => {
+    const editor = editorInstance || editorRef.current
+    if (!editor || !activeFile) {
+      showCodeActionFeedback('No active editor')
+      return
+    }
+
+    try {
+      editor.focus()
+      const model = editor.getModel()
+      if (!model) {
+        showCodeActionFeedback('No active editor')
+        return
+      }
+
+      let hasActions = false
+      const monaco = monacoRef.current || globalMonaco || (typeof window !== 'undefined' ? window.monaco : null)
+      if (monaco?.languages?.getCodeActions) {
+        try {
+          const position = editor.getPosition() || { lineNumber: 1, column: 1 }
+          const selection = editor.getSelection()
+          const range =
+            selection && !selection.isEmpty()
+              ? selection
+              : new monaco.Range(position.lineNumber, position.column, position.lineNumber, position.column)
+          const markers = monaco.editor?.getModelMarkers
+            ? monaco.editor.getModelMarkers({ resource: model.uri })
+            : []
+          const triggerType = monaco.languages.CodeActionTriggerType?.Invoke ?? 1
+
+          const tokenSource = new monaco.CancellationTokenSource()
+          const codeActionLists = await monaco.languages.getCodeActions(
+            model,
+            range,
+            {
+              trigger: triggerType,
+              markers,
+            },
+            tokenSource.token
+          )
+
+          if (codeActionLists && Array.isArray(codeActionLists)) {
+            for (const list of codeActionLists) {
+              if (list && list.actions && list.actions.length > 0) {
+                hasActions = true
+                break
+              }
+            }
+            for (const list of codeActionLists) {
+              if (list?.dispose) {
+                list.dispose()
+              }
+            }
+          }
+        } catch {
+          // If checking getCodeActions fails or is unsupported, fall through
+        }
+      }
+
+      const action = editor.getAction('editor.action.quickFix')
+      if (action) {
+        await action.run()
+      } else {
+        editor.trigger('user', 'editor.action.quickFix')
+      }
+
+      if (!hasActions) {
+        showCodeActionFeedback('No code actions available')
+      }
+    } catch {
+      showCodeActionFeedback('No code actions available')
+    }
+  }, [editorInstance, activeFile, globalMonaco, showCodeActionFeedback])
+
+  useEffect(() => {
+    const handleQuickFixEvent = () => {
+      handleQuickFix()
+    }
+    window.addEventListener('polyglotmesh:quick-fix', handleQuickFixEvent)
+    return () => {
+      window.removeEventListener('polyglotmesh:quick-fix', handleQuickFixEvent)
+    }
+  }, [handleQuickFix])
 
   const currentFontSize = editorSettings?.fontSize ?? 14
 
@@ -540,6 +646,9 @@ function EditorPanel({
       } else if (e.shiftKey && e.altKey && (e.key === 'F' || e.key === 'f')) {
         e.preventDefault()
         handleFormatDocument()
+      } else if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && e.key === '.') {
+        e.preventDefault()
+        handleQuickFix()
       }
     }
 
@@ -547,7 +656,7 @@ function EditorPanel({
     return () => {
       window.removeEventListener('keydown', handleGlobalKeyDown)
     }
-  }, [handleOpenCommandPalette, handleFormatDocument])
+  }, [handleOpenCommandPalette, handleFormatDocument, handleQuickFix])
 
   useEffect(() => {
     if (editorRef.current) {
@@ -625,6 +734,11 @@ function EditorPanel({
                 ✓ {saveMessage}
               </span>
             ) : null}
+            {codeActionFeedback ? (
+              <span className="code-action-status-badge" role="status">
+                ℹ {codeActionFeedback}
+              </span>
+            ) : null}
           </div>
         </div>
 
@@ -638,10 +752,23 @@ function EditorPanel({
                 onUnfoldAll={handleUnfoldAll}
                 onFormatDocument={handleFormatDocument}
                 onFormatSelection={handleFormatSelection}
+                onQuickFix={handleQuickFix}
                 activeFile={activeFile}
               />
             </div>
           ) : null}
+
+          <button
+            type="button"
+            className="command-palette-button quick-fix-button"
+            aria-label="Quick Fix / Code Actions"
+            title="Quick Fix / Code Actions (Ctrl+.)"
+            onClick={handleQuickFix}
+            disabled={!activeFile}
+          >
+            <span className="command-palette-button__icon">💡</span>
+            <span className="command-palette-button__text">Quick Fix</span>
+          </button>
 
           <button
             type="button"
@@ -770,6 +897,12 @@ function EditorPanel({
                     monaco.KeyMod.CtrlCmd | monaco.KeyMod.Shift | monaco.KeyCode.KeyI,
                     () => {
                       handleFormatDocument()
+                    }
+                  )
+                  editor.addCommand(
+                    monaco.KeyMod.CtrlCmd | monaco.KeyCode.Period,
+                    () => {
+                      handleQuickFix()
                     }
                   )
                 } catch {
