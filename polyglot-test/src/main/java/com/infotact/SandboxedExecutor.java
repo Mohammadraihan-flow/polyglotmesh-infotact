@@ -8,15 +8,24 @@ import org.graalvm.polyglot.proxy.ProxyObject;
 import java.io.OutputStream;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
-import java.util.Set;
-public class SandboxedExecutor {
+public class SandboxedExecutor
+{
 	private static final long TIMEOUT_SECONDS = 10;
 	private static final Set<String> ALLOWED_LANGUAGES = Set.of("python", "js");
+    private static Context.Builder createSecureContext(String language) {
+        return Context.newBuilder(language)
+                .allowAllAccess(false)
+                .allowHostAccess(HostAccess.NONE)
+                .allowIO(false)
+                .allowCreateThread(false)
+                .allowNativeAccess(false);
+    }
 	public static String execute(String lang, String code)
 	{
 	    if (lang == null || lang.isBlank())
@@ -26,6 +35,7 @@ public class SandboxedExecutor {
 	    String normalizedLang = lang.trim().toLowerCase();
 	    if (!ALLOWED_LANGUAGES.contains(normalizedLang))
 		{
+	    	
 	        return "ERROR: Unsupported language: " + normalizedLang;
 	    }
 	    if (code == null || code.isBlank())
@@ -46,12 +56,7 @@ public class SandboxedExecutor {
 	                    sb.append((char) b);
 	                }
 	            };
-	            try (Context ctx = Context.newBuilder(normalizedLang)
-	                    .allowAllAccess(false)
-	                    .allowHostAccess(HostAccess.NONE)
-	                    .allowIO(false)
-	                    .allowCreateThread(false)
-	                    .allowNativeAccess(false)
+	            try (Context ctx = createSecureContext(normalizedLang)
 	                    .resourceLimits(limits)
 	                    .out(capture)
 	                    .build()) {
@@ -85,13 +90,7 @@ public class SandboxedExecutor {
 	}
     public static void testMockMongoQueryToPython()
     {
-        try (Context ctx = Context.newBuilder("python")
-                .allowAllAccess(false)
-                .allowHostAccess(HostAccess.NONE)
-                .allowIO(false)
-                .allowCreateThread(false)
-                .allowNativeAccess(false)
-                .build())
+    	try (Context ctx = createSecureContext("python").build())
         {
         	Map<String, Object> product =MockMongoData.findProductByName("laptop");
         if (product == null)
@@ -110,13 +109,7 @@ public class SandboxedExecutor {
         }
     }
     public static void testMockMongoMultipleResultsToPython() {
-        try (Context ctx = Context.newBuilder("python")
-                .allowAllAccess(false)
-                .allowHostAccess(HostAccess.NONE)
-                .allowIO(false)
-                .allowCreateThread(false)
-                .allowNativeAccess(false)
-                .build())
+    	try (Context ctx = createSecureContext("python").build())
         {
             List<Map<String, Object>> products = MockMongoData.findProductsByMaxPrice(50000);
             System.out.println("Products found by price query: " + products.size());
@@ -138,13 +131,7 @@ public class SandboxedExecutor {
     }
     public static void testMockMongoCombinedQueryToPython()
     {
-        try (Context ctx = Context.newBuilder("python")
-                .allowAllAccess(false)
-                .allowHostAccess(HostAccess.NONE)
-                .allowIO(false)
-                .allowCreateThread(false)
-                .allowNativeAccess(false)
-                .build())
+    	try (Context ctx = createSecureContext("python").build())
         {
             List<Map<String, Object>> products = MockMongoData.findProductsByPriceAndQuantity(50000, 3);
             System.out.println("Products found by combined query: " + products.size());
@@ -163,13 +150,7 @@ public class SandboxedExecutor {
     }
     public static void testMockMongoSortedQueryToPython()
     {
-        try (Context ctx = Context.newBuilder("python")
-                .allowAllAccess(false)
-                .allowHostAccess(HostAccess.NONE)
-                .allowIO(false)
-                .allowCreateThread(false)
-                .allowNativeAccess(false)
-                .build())
+    	try (Context ctx = createSecureContext("python").build())
         {
             List<Map<String, Object>> products = MockMongoData.findProductsSortedByPrice();
             System.out.println("Products sorted by price:");
@@ -188,13 +169,7 @@ public class SandboxedExecutor {
     }
     public static void testMockMongoPythonAggregation()
     {
-        try (Context ctx = Context.newBuilder("python")
-                .allowAllAccess(false)
-                .allowHostAccess(HostAccess.NONE)
-                .allowIO(false)
-                .allowCreateThread(false)
-                .allowNativeAccess(false)
-                .build()) {
+    	try (Context ctx = createSecureContext("python").build()) {
             List<Map<String, Object>> products = MockMongoData.findProductsByMaxPrice(50000);
             int total = 0;
             for (Map<String, Object> product : products)
@@ -218,6 +193,39 @@ public class SandboxedExecutor {
     {
         return product.get("product").toString();
     }
+    public static void testMockMongoToJavaScript() {
+
+    	try (Context ctx = createSecureContext("js").build()){
+
+            Map<String, Object> product =
+                    MockMongoData.findProductByName("Laptop");
+
+            if (product == null) {
+                System.out.println("Product not found.");
+                return;
+            }
+
+            ProxyObject proxyData =
+                    ProxyObject.fromMap(product);
+
+            ctx.getBindings("js")
+                    .putMember("data", proxyData);
+
+            var result = ctx.eval(
+                    "js",
+                    "data.price * data.quantity"
+            );
+
+            System.out.println(
+                    "JavaScript processed queried product: " + result
+            );
+
+        }
+        catch (Exception e)
+        {
+            System.out.println("ERROR: " + e.getMessage());
+        }
+    }
     public static void main(String[] args)
     {
         System.out.println(execute("python", "print('Sandboxed Python running')"));
@@ -227,5 +235,6 @@ public class SandboxedExecutor {
         testMockMongoCombinedQueryToPython();
         testMockMongoSortedQueryToPython();
         testMockMongoPythonAggregation();
+        testMockMongoToJavaScript();
     }
 }
