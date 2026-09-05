@@ -99,6 +99,17 @@ function CommandPalette({ isOpen, onClose, onRun, onSave, onOpenSettings }) {
       },
     },
     {
+      id: 'view-outline',
+      label: 'View: Open Outline / Symbol Navigation',
+      description: 'Show symbols and outline hierarchy for active file',
+      shortcut: 'Ctrl+Shift+O',
+      action: () => {
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('polyglotmesh:open-outline'))
+        }
+      },
+    },
+    {
       id: 'view-problems',
       label: 'View: Toggle Problems / Diagnostics',
       description: 'Show Monaco diagnostics and problems panel',

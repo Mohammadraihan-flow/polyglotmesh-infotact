@@ -11,6 +11,7 @@ import {
   LANGUAGE_DEFAULT_FILENAMES,
 } from './utils/languageUtils.js'
 import { useMonacoMarkers } from './hooks/useMonacoMarkers.js'
+import { useMonacoSymbols } from './hooks/useMonacoSymbols.js'
 import './App.css'
 
 const languages = [
@@ -408,6 +409,13 @@ function App() {
     .map((name) => files.find((file) => file.name === name))
     .filter(Boolean)
   const problems = useMonacoMarkers(openFiles, files)
+  const {
+    symbols,
+    isLoading: isLoadingSymbols,
+    hasProvider: hasSymbolProvider,
+    error: symbolError,
+    refresh: handleRefreshSymbols,
+  } = useMonacoSymbols(activeFile)
 
   const handleCreateFile = useCallback((fileName) => {
     flushAutoSave()
@@ -975,6 +983,14 @@ function App() {
         return
       }
 
+      // 16. Ctrl+Shift+O / Cmd+Shift+O -> Open Outline / Symbol Navigation
+      if (modifier && event.shiftKey && key === 'o') {
+        event.preventDefault()
+        event.stopPropagation()
+        window.dispatchEvent(new CustomEvent('polyglotmesh:open-outline'))
+        return
+      }
+
     },
     [
       isCommandPaletteOpen,
@@ -1002,12 +1018,18 @@ function App() {
       <div className="ide-body">
         <Sidebar
           files={files}
+          activeFile={activeFile}
           activeFileName={activeFile?.name}
           recentFileNames={recentFileNames}
           onSelectFile={handleSelectFile}
           onRenameFile={handleRenameFile}
           onDeleteFile={handleDeleteFile}
           onToggleSettings={() => setIsEditorSettingsOpen((s) => !s)}
+          symbols={symbols}
+          isLoadingSymbols={isLoadingSymbols}
+          hasSymbolProvider={hasSymbolProvider}
+          symbolError={symbolError}
+          onRefreshSymbols={handleRefreshSymbols}
         />
 
         <section className="workspace" aria-label="PolyglotMesh workspace">
