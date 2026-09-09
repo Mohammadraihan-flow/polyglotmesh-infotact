@@ -24,6 +24,7 @@ public class ExecutionController {
 
         String language = request.getLanguage();
 
+        // Validate code
         if (request.getCode() == null || request.getCode().isBlank()) {
             return new ExecutionResponse(
                     null,
@@ -31,6 +32,7 @@ public class ExecutionController {
             );
         }
 
+        // Validate language
         if (language == null || !SUPPORTED_LANGUAGES.contains(language)) {
             return new ExecutionResponse(
                     null,
@@ -41,9 +43,16 @@ public class ExecutionController {
         ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
 
         try (Context context = Context.newBuilder(language)
+                // Prevent guest code from accessing Java host objects
                 .allowHostAccess(false)
+
+                // Prevent file system and network I/O
                 .allowIO(false)
-                .option("sandbox.MaxCPUTime", "2s")
+
+                // Limit guest CPU execution time
+                .option("sandbox.MaxCPUTime", "10s")
+
+                // Capture program output
                 .out(new PrintStream(outputStream))
                 .build()) {
 
