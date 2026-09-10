@@ -268,7 +268,6 @@ function ConsolePanel({
           aria-live="polite"
         >
           <p className="console-panel__message">{message}</p>
-          <p className="console-panel__hint">The current run state is simulated in the frontend only.</p>
         </div>
       ) : currentTab === 'problems' ? (
         <div

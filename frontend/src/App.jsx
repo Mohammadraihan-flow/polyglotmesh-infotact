@@ -864,25 +864,77 @@ function App() {
     [flushAutoSave],
   )
 
-  const handleRunClick = useCallback(() => {
+  const handleRunClick = useCallback(async () => {
     if (isRunning) {
       return
     }
 
-    if (runTimerRef.current) {
-      clearTimeout(runTimerRef.current)
+    if (!activeFile) {
+      setConsoleMessage('No active file selected.')
+      return
+    }
+
+    const fileName = activeFile.name || ''
+    const code = activeFile.code || ''
+
+    if (!code.trim()) {
+      setConsoleMessage('Code cannot be empty.')
+      return
+    }
+
+    let language
+
+    if (fileName.toLowerCase().endsWith('.py')) {
+      language = 'python'
+    } else if (
+      fileName.toLowerCase().endsWith('.js') ||
+      fileName.toLowerCase().endsWith('.mjs')
+    ) {
+      language = 'js'
+    } else {
+      setConsoleMessage(
+        'Unsupported file type. Use a Python (.py) or JavaScript (.js/.mjs) file.'
+      )
+      return
     }
 
     setIsRunning(true)
-    setConsoleMessage('Execution started...')
+    setConsoleMessage('Executing on GraalVM backend...')
 
-    runTimerRef.current = window.setTimeout(() => {
+    try {
+      const response = await fetch('/api/execute', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          language,
+          code,
+        }),
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        setConsoleMessage(
+          result.error || `Backend error: HTTP ${response.status}`
+        )
+        return
+      }
+
+      if (result.error) {
+        setConsoleMessage(result.error)
+      } else {
+        setConsoleMessage(
+          result.output || 'Program executed successfully with no output.'
+        )
+      }
+    } catch (error) {
+      setConsoleMessage(`Could not connect to backend: ${error.message}`)
+    } finally {
       setIsRunning(false)
-      setConsoleMessage('Ready for backend execution.')
-      runTimerRef.current = null
-    }, 1000)
-  }, [isRunning])
-
+    }
+  }, [isRunning, activeFile])
   const handleSave = useCallback(() => {
     flushAutoSave()
     const currentTargetName =
