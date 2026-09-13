@@ -105,6 +105,9 @@
                     <buildArgs>
                         <!-- Limit Native Image build parallelism -->
                         <buildArg>--parallelism=2</buildArg>
+
+                        <!-- Initialize JDK CLDR locale data at runtime -->
+                        <buildArg>--initialize-at-run-time=sun.text.resources.cldr</buildArg>
                     </buildArgs>
                 </configuration>
 
