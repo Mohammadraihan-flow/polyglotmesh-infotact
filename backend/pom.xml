@@ -94,25 +94,6 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
 
-            <!-- ========================= -->
-            <!-- GraalVM Native Image -->
-            <!-- ========================= -->
-            <plugin>
-                <groupId>org.graalvm.buildtools</groupId>
-                <artifactId>native-maven-plugin</artifactId>
-
-                <configuration>
-                    <buildArgs>
-                        <!-- Limit Native Image build parallelism -->
-                        <buildArg>--parallelism=2</buildArg>
-
-                        <!-- Initialize JDK CLDR locale data at runtime -->
-                        <buildArg>--initialize-at-run-time=sun.text.resources.cldr</buildArg>
-                    </buildArgs>
-                </configuration>
-
-            </plugin>
-
         </plugins>
     </build>
 
